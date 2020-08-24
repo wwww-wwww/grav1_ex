@@ -1,5 +1,5 @@
 defmodule Grav1.Client do
-  defstruct socket: nil,
+  defstruct socket_id: nil,
     workers: [],
     name: ""
 end
@@ -21,7 +21,7 @@ defmodule Grav1.WorkerAgent do
 
   def connect(socket) do
     Agent.update(__MODULE__, fn val ->
-      client = %Client{socket_id: socket.assigns.id, name: socket.assigns.name}
+      client = %Client{socket_id: socket.assigns.socket_id, name: socket.assigns.name}
       new_clients = Map.put(val.clients, socket.assigns.socket_id, client)
       %{val | clients: new_clients}
     end)

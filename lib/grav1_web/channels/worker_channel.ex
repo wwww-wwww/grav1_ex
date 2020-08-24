@@ -22,7 +22,7 @@ defmodule Grav1Web.WorkerChannel do
   end
   
   def terminate(_, socket) do
-
+    WorkerAgent.disconnect(socket)
     IO.inspect("client is gone :(")
   end
 

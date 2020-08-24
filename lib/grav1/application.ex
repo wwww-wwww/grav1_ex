@@ -11,7 +11,6 @@ defmodule Grav1.Application do
       Grav1Web.Telemetry,
       Grav1Web.Counter,
       {Phoenix.PubSub, name: Grav1.PubSub},
-      Grav1.Presence,
       Grav1.WorkerAgent,
       Grav1Web.Endpoint
     ]

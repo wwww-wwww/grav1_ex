@@ -1,16 +1,41 @@
+defmodule Grav1.Client do
+  defstruct socket: nil,
+    workers: [],
+    name: ""
+end
+
 defmodule Grav1.WorkerAgent do
   use Agent
 
   alias Grav1Web.Endpoint
   
-  alias Grav1.{Repo, User}
+  alias Grav1.{Repo, User, Client}
 
   alias Phoenix.HTML
 
-  defstruct workers: []
+  defstruct clients: %{}
 
   def start_link(_) do
     Agent.start_link(fn -> %__MODULE__{} end, name: __MODULE__)
+  end
+
+  def connect(socket) do
+    Agent.update(__MODULE__, fn val ->
+      client = %Client{socket_id: socket.assigns.id, name: socket.assigns.name}
+      new_clients = Map.put(val.clients, socket.assigns.socket_id, client)
+      %{val | clients: new_clients}
+    end)
+  end
+
+  def disconnect(socket) do
+    Agent.update(__MODULE__, fn val ->
+      new_clients = Map.delete(val.clients, socket.assigns.socket_id)
+      %{val | clients: new_clients}
+    end)
+  end
+
+  def get() do
+    Agent.get(__MODULE__, fn val -> val end)
   end
 
   def chat(channel, socket, msg) do

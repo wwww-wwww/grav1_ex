@@ -1,46 +1,37 @@
 defmodule Grav1Web.WorkerChannel do
   use Phoenix.Channel
 
-  alias Grav1.Presence
-
-  alias Grav1Web.WorkerAgent
+  alias Grav1.WorkerAgent
 
   def join("worker", %{"name" => name}, socket) do
     send(self(), {:after_join, nil})
+    :ok = Grav1Web.Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
     {:ok, socket |> assign(:name, name)}
   end
 
   def join("worker", _, socket) do
     send(self(), {:after_join, nil})
+    :ok = Grav1Web.Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
     {:ok, socket |> assign(:name, socket.assigns.socket_id)}
   end
 
   def handle_info({:after_join, _}, socket) do
-    presence = Presence.list(socket)
-
-    Presence.track(socket, socket.assigns.user_id, %{name: socket.assigns.name})
-    
-    push(socket, "presence_state", Presence.list(socket))
-
-    if not Map.has_key?(presence, socket.assigns.user_id) do
-      #Grav1Web.RoomsLive.update()
-      IO.inspect("new client!")
-    end
+    WorkerAgent.connect(socket)
 
     {:noreply, socket}
   end
   
   def terminate(_, socket) do
-    Presence.untrack(socket, socket.assigns.user_id)
-    presence = Presence.list(socket)
-    if not Map.has_key?(presence, socket.assigns.user_id) do
-      IO.inspect("client is gone :(")
-    end
+
+    IO.inspect("client is gone :(")
+  end
+
+  def handle_info(%Phoenix.Socket.Broadcast{topic: _, event: ev, payload: payload}, socket) do
+    push(socket, ev, payload)
+    {:noreply, socket}
   end
 
   def handle_in("blah", %{}, socket) do
-    
-
     {:noreply, socket}
   end
 end

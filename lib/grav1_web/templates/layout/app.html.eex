@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Grav1 · Phoenix Framework</title>
+    <link rel="stylesheet" href='<%= Routes.static_path(@conn, "/css/app.css") %>'/>
+    <script defer type="text/javascript" src='<%= Routes.static_path(@conn, "/js/app.js") %>'></script>
+  </head>
+  <body>
+    <header>
+      <nav role="navigation">
+        <%= link("Home", to: Routes.page_path(@conn, :index), class: if(action_name(@conn) == :index, do: "header-active")) %>
+        <%= if logged_in?(@conn) do %>
+          <%= link("Profile", to: Routes.user_path(@conn, :show_user), class: if(action_name(@conn) == :show_user, do: "header-active")) %>
+          <%= link("Sign Out", to: Routes.user_path(@conn, :sign_out)) %>
+        <% else %>
+          <%= link("Sign Up", to: Routes.user_path(@conn, :sign_up), class: if(action_name(@conn) == :sign_up, do: "header-active")) %>
+          <%= link("Sign In", to: Routes.user_path(@conn, :sign_in), class: if(action_name(@conn) == :sign_in, do: "header-active")) %>
+        <% end %>
+      </nav>
+    </header>
+    <main role="main" class="container">
+      <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
+      <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
+      <%= @inner_content %>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+<style>
+  div > span:not(:last-child) {
+    margin-right: 0.5em;
+  }
+</style>
+
+<div><span>name:</span><span><%= @user.name %></span></div>
+<div><span>level:</span><span><%= @user.level %></span></div>
+<div><span>key:</span><span><%= @user.key %></span></div>

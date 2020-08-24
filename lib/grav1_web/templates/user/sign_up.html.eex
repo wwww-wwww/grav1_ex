@@ -1,0 +1,16 @@
+<style>
+	button::after {
+		background-color: rgba(80, 210, 80, 0.6);
+	}
+</style><div class="card">
+	<div class="card-title">
+		Sign up
+	</div>
+	<div class="card-body">
+		<%= form_for(@changeset, Routes.user_path(@conn, :sign_up), [class: "form"], fn f -> %>
+			<%= text_input(f, :username, placeholder: "Username") %>
+			<%= text_input(f, :password, placeholder: "Password", type: "password") %>
+			<%= submit "Sign up" %>
+		<% end) %>
+	</div>
+</div>

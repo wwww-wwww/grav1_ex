@@ -29,6 +29,7 @@ defmodule Grav1Web.Router do
     pipe_through [:browser, :auth]
 
     get "/", PageController, :index
+    get "/workers", PageController, :workers
 
     scope "/" do
       pipe_through :logged_out

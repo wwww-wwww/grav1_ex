@@ -10,9 +10,7 @@ defmodule Grav1.WorkerAgent do
 
   alias Grav1Web.Endpoint
   
-  alias Grav1.{Repo, User, Client}
-
-  alias Phoenix.HTML
+  alias Grav1.{Repo, User, Client, Projects}
 
   defstruct clients: %{}
 

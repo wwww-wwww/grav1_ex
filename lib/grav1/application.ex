@@ -12,7 +12,9 @@ defmodule Grav1.Application do
       Grav1Web.Counter,
       {Phoenix.PubSub, name: Grav1.PubSub},
       Grav1.WorkerAgent,
-      Grav1Web.Endpoint
+      Grav1Web.Endpoint,
+      Grav1.Projects,
+      Grav1.ProjectsExecutor
     ]
 
     opts = [strategy: :one_for_one, name: Grav1.Supervisor]

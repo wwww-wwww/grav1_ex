@@ -5,18 +5,43 @@ defmodule Grav1.Split do
   end
 
   defp get_keyframes(input) do
+    {frames, total_frames} = case Path.extname(String.downcase(input)) do
+      ".mkv" -> get_keyframes_ebml(input)
+      _ -> {:nothing, :nothing}
+    end
 
+    case {frames, total_frames} do
+      {:nothing, _} ->
+        if false do # if vapoursynth supported
+          get_keyframes_vs_ffms2(input)
+        else
+          get_keyframes_ffmpeg(input)
+        end
+      {frames, :nothing} ->
+        {frames, get_frames(input)}
+    end
+  end
+
+  defp get_frames(input, fast \\ true) do
+    if fast and false do # vapoursynth
+    else
+      # run ffmpeg -f null -
+    end
   end
 
   defp get_keyframes_ebml(input) do
     
   end
 
-  defp get_keyframes_vapoursynth(input) do
+  defp get_keyframes_vs_ffms2(input) do
     
   end
 
   defp get_keyframes_ffmpeg(input) do
+
+  end
+
+  defp get_aom_keyframes(input) do
     
   end
 
@@ -68,7 +93,7 @@ defmodule Grav1.Split do
     c = current_frame_dict
     f = future_frame_dict
     
-    qmode = True
+    qmode = true
     #todo: allow user to set whether we"re testing for constant-q mode keyframe placement or not. it"s not a big difference.
     
     is_keyframe = 0
@@ -131,12 +156,8 @@ defmodule Grav1.Split do
       #If there is tolerable prediction for at least the next 3 frames then break out else discard this potential key frame and move on
       boost_score > 30 and i > 3
     else
-      False
+      false
     end
-  end
-
-  defp get_aom_keyframes(input) do
-    
   end
 
 end

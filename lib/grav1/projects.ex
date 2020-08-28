@@ -37,12 +37,16 @@ defmodule Grav1.ProjectsExecutor do
     {:ok, state}
   end
 
+  def do_action(:split, %{input: input, path_split: path_split, min_frames: min_frames, max_frames: max_frames}) do
+    Grav1.Split.split(input, path_split, min_frames, max_frames)
+  end
+
   def handle_cast(:loop, state) do
     new_actions = case :queue.out(state.action_queue) do
-      {{:value, action}, tail} ->
+      {{:value, {action, opts}}, tail} ->
         GenServer.cast(__MODULE__, :loop)
 
-        IO.inspect(head)
+        do_action(action, opts)
 
         tail
       {:empty, tail} ->

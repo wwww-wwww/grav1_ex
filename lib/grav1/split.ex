@@ -1,5 +1,17 @@
 defmodule Grav1.Split do
 
+  @re_ffmpeg_frames ~r/frame= *([^ ]+?) /
+  @re_python_aom ~r/frame *([^ ]+)/
+
+  @fields [
+    "frame", "weight", "intra_error", "frame_avg_wavelet_energy",
+    "coded_error", "sr_coded_error", "tr_coded_error", "pcnt_inter",
+    "pcnt_motion", "pcnt_second_ref", "pcnt_third_ref", "pcnt_neutral",
+    "intra_skip_pct", "inactive_zone_rows", "inactive_zone_cols", "MVr",
+    "mvr_abs", "MVc", "mvc_abs", "MVrv", "MVcv", "mv_in_out_count",
+    "new_mv_count", "duration", "count", "raw_error_stdev"
+  ]
+
   def split(input, path_split, min_frames, max_frames) do
     IO.inspect("started split")
   end
@@ -21,8 +33,6 @@ defmodule Grav1.Split do
         {frames, get_frames(input)}
     end
   end
-
-  @re_ffmpeg_frames ~r/frame= *([^ ]+?) /
 
   defp stream_port(port, re, callback, frames \\ 0) do
     receive do
@@ -88,8 +98,6 @@ defmodule Grav1.Split do
     end
   end
 
-  @re_python_aom ~r/frame *([^ ]+)/
-
   defp python_aom_stream(port, callback, frame \\ 0) do
     receive do
       {^port, {:data, data}} ->
@@ -142,18 +150,41 @@ defmodule Grav1.Split do
     case python_aom_stream(port, callback) do
       :error -> :error
       {:ok, frames} ->
-        IO.inspect(frames)
+        filename = "fpf.log"
+
+        case File.open(filename, [:binary, :read]) do
+          {:error, _} -> :error
+          {:ok, file} ->
+            bytes = IO.binread(file, :all)
+            stats = Enum.chunk((for <<field::little-float <- bytes>>, do: field), 26)
+
+            fpf_frames = Enum.count(stats)
+
+            dict_list = Enum.reduce(stats, [], fn x, acc ->
+              frame_stats = @fields
+              |> Enum.zip(x)
+              |> Map.new
+              acc ++ [frame_stats]
+            end)
+
+            File.close(file)
+
+            #intentionally skipping 0th frame and last 16 frames
+            {_, keyframes} = Enum.reduce(1..(fpf_frames-16), {1, [0]}, fn x, acc ->
+              {frame_count_so_far, keyframes} = acc
+
+              is_keyframe = test_candidate_kf(dict_list, x, frame_count_so_far)
+
+              if is_keyframe do
+                {1, keyframes ++ [x]}
+              else
+                {frame_count_so_far + 1, keyframes}
+              end
+            end)
+            keyframes
+        end
     end
   end
-
-  @fields [
-    "frame", "weight", "intra_error", "frame_avg_wavelet_energy",
-    "coded_error", "sr_coded_error", "tr_coded_error", "pcnt_inter",
-    "pcnt_motion", "pcnt_second_ref", "pcnt_third_ref", "pcnt_neutral",
-    "intra_skip_pct", "inactive_zone_rows", "inactive_zone_cols", "MVr",
-    "mvr_abs", "MVc", "mvc_abs", "MVrv", "MVcv", "mv_in_out_count",
-    "new_mv_count", "duration", "count", "raw_error_stdev"
-  ]
 
   defp get_second_ref_usage_thresh(frame_count_so_far) do
     adapt_upto = 32
@@ -227,9 +258,8 @@ defmodule Grav1.Split do
         pcnt_inter = Map.get(lnf, "pcnt_inter")
 
         next_iiratio = @boost_factor * Map.get(lnf, "intra_error") / double_divide_check(Map.get(lnf, "coded_error"))
-
         next_iiratio = min(next_iiratio, @kf_ii_max)
-          
+
         #Cumulative effect of decay in prediction quality.
         new_decay_accumulator = if pcnt_inter > 0.85 do
           decay_accumulator * pcnt_inter

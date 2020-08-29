@@ -156,31 +156,30 @@ defmodule Grav1.Split do
           {:error, _} -> :error
           {:ok, file} ->
             bytes = IO.binread(file, :all)
-            stats = Enum.chunk((for <<field::little-float <- bytes>>, do: field), 26)
+            File.close(file)
 
-            fpf_frames = Enum.count(stats)
-
-            dict_list = Enum.reduce(stats, [], fn x, acc ->
+            dict_list = (for <<field::little-float <- bytes>>, do: field)
+            |> Enum.chunk(26)
+            |> Enum.reduce([], fn x, acc ->
               frame_stats = @fields
               |> Enum.zip(x)
               |> Map.new
               acc ++ [frame_stats]
             end)
 
-            File.close(file)
+            fpf_frames = Enum.count(dict_list)
 
             #intentionally skipping 0th frame and last 16 frames
             {_, keyframes} = Enum.reduce(1..(fpf_frames-16), {1, [0]}, fn x, acc ->
               {frame_count_so_far, keyframes} = acc
 
-              is_keyframe = test_candidate_kf(dict_list, x, frame_count_so_far)
-
-              if is_keyframe do
+              if test_candidate_kf(dict_list, x, frame_count_so_far) do
                 {1, keyframes ++ [x]}
               else
                 {frame_count_so_far + 1, keyframes}
               end
             end)
+
             keyframes
         end
     end

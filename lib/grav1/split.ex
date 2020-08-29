@@ -22,10 +22,40 @@ defmodule Grav1.Split do
     end
   end
 
-  defp get_frames(input, fast \\ true) do
+  @re_ffmpeg_frames ~r/frame= *([^ ]+?) /
+
+  defp stream_port(port, re, callback, frames \\ 0) do
+    receive do
+      {^port, {:data, data}} ->
+        case Regex.run(re, data) do
+          nil -> stream_port(port, re, callback, frames)
+          [_, frames_str] ->
+            case Integer.parse(frames_str) do
+              :error -> stream_port(port, re, callback, frames)
+              {new_frames, _} ->
+                if callback != nil, do: callback.(new_frames)
+
+                stream_port(port, re, callback, new_frames)
+            end
+        end
+      {^port, {:exit_status, 0}} -> frames
+      {^port, {:exit_status, status}} ->
+        IO.inspect("Command error, status #{status}")
+    end
+  end
+
+  def get_frames(input, fast \\ true, callback \\ nil) do
     if fast and false do # vapoursynth
     else
-      # run ffmpeg -f null -
+      fast_args = if fast, do: ["-c", "copy"], else: []
+      args = ["-i", input] ++ fast_args ++ ["-f", "null", "-"]
+
+      port = Port.open(
+        {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+        [:stderr_to_stdout, :binary, :exit_status, args: args]
+      )
+      
+      stream_port(port, @re_ffmpeg_frames, callback)
     end
   end
 
@@ -41,8 +71,79 @@ defmodule Grav1.Split do
 
   end
 
-  defp get_aom_keyframes(input) do
+  defp pipe(port1, port2) do
+    receive do
+      {^port1, {:exit_status, status}} ->
+        IO.inspect("port1 exited, status #{status}")
+      {^port2, {:exit_status, status}} ->
+        IO.inspect("port2 exited, status #{status}")
+      {^port2, {:data, data}} ->
+        IO.inspect(data)
+        pipe(port1, port2)
+      {^port1, {:data, data}} ->
+        Port.command(port2, data)
+        pipe(port1, port2)
+      b ->
+        IO.inspect(b)
+    end
+  end
+
+  @re_python_aom ~r/frame *([^ ]+)/
+
+  defp python_aom_stream(port, callback, frame \\ 0) do
+    receive do
+      {^port, {:data, data}} ->
+        case Regex.run(@re_python_aom, data) do
+          nil ->
+            python_aom_stream(port, callback, frame)
+          [_, frame_str] ->
+            case Integer.parse(frame_str) do
+              :error -> python_aom_stream(port, callback, frame)
+              {new_frame, _} ->
+                if callback != nil and frame != new_frame, do: callback.(new_frame)
+
+                python_aom_stream(port, callback, new_frame)
+            end
+        end
+      {^port, {:exit_status, 0}} -> {:ok, frame}
+      {^port, {:exit_status, status}} -> :error
+    end
+  end
+
+  def get_aom_keyframes(input, callback \\ nil) do
+    """
+    ffmpeg_args = ["-i", input, "-pix_fmt", "yuv420p", "-map", "0:v:0", "-vsync", "0", "-strict", "-1", "-f", "yuv4mpegpipe", "-"]
+
+    null = case :os.type do
+      {:win32, _} -> "NUL"
+      _ -> "/dev/null"
+    end
+
+    aomenc_args = ["-", "-o", null, "--ivf", "--passes=2", "--fpf=fpf.log", "--pass=1", "--auto-alt-ref=1", "-w", "1280", "-h", "720"]
+
+    port_ffmpeg = Port.open(
+      {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+      [:binary, :exit_status, args: ffmpeg_args]
+    )
+
+    port_aomenc = Port.open(
+      {:spawn_executable, Application.fetch_env!(:grav1, :path_aomenc)},
+      [:stderr_to_stdout, :binary, :exit_status, args: aomenc_args]
+    )
+
+    pipe(port_ffmpeg, port_aomenc)
+    """
+    # until i can get piping to work
+    port = Port.open(
+      {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
+      [:binary, :exit_status, args: ["-u", "aom_firstpass.py", input]]
+    )
     
+    case python_aom_stream(port, callback) do
+      :error -> :error
+      {:ok, frames} ->
+        IO.inspect(frames)
+    end
   end
 
   @fields [
@@ -79,10 +180,10 @@ defmodule Grav1.Split do
   @boost_factor 12.5
   @intra_vs_inter_thresh 2.0
   @very_low_inter_thresh 0.05
-  @kf_II_err_threshold 2.5
+  @kf_ii_err_threshold 2.5
   @err_change_threshold 0.4
-  @II_improvement_threshold 3.5
-  @kf_II_max 128.0
+  @ii_improvement_threshold 3.5
+  @kf_ii_max 128.0
 
   defp test_candidate_kf(dict_list, current_frame_index, frame_count_so_far) do
     previous_frame_dict = dict_list |> Enum.at(current_frame_index - 1)
@@ -95,8 +196,6 @@ defmodule Grav1.Split do
     
     qmode = true
     #todo: allow user to set whether we"re testing for constant-q mode keyframe placement or not. it"s not a big difference.
-    
-    is_keyframe = 0
     
     pcnt_intra = 1.0 - Map.get(c, "pcnt_inter")
     modified_pcnt_inter = Map.get(c, "pcnt_inter") - Map.get(c, "pcnt_neutral")
@@ -111,25 +210,25 @@ defmodule Grav1.Split do
         (
           pcnt_intra > @min_intra_level and
           pcnt_intra > (@intra_vs_inter_thresh * modified_pcnt_inter) and
-          Map.get(c, "intra_error") / double_divide_check(Map.get(c, "coded_error")) < @kf_II_err_threshold and
+          Map.get(c, "intra_error") / double_divide_check(Map.get(c, "coded_error")) < @kf_ii_err_threshold and
           (
             abs(Map.get(p, "coded_error") - Map.get(c, "coded_error")) / double_divide_check(Map.get(c, "coded_error")) > @err_change_threshold or
             abs(Map.get(p, "intra_error") - Map.get(c, "intra_error")) / double_divide_check(Map.get(c, "intra_error")) > @err_change_threshold or
-            Map.get(f, "intra_error") / double_divide_check(Map.get(f, "coded_error")) > @II_improvement_threshold
+            Map.get(f, "intra_error") / double_divide_check(Map.get(f, "coded_error")) > @ii_improvement_threshold
           )
         )
       ) do
 
       %{boost_score: boost_score, final_i: i} = Enum.reduce_while(0..15,
         %{boost_score: 0, old_boost_score: 0, decay_accumulator: 1, final_i: 0},
-        fn i, %{boost_score: boost_score, old_boost_score: old_boost_score, decay_accumulator: decay_accumulator, final_i: final_i} ->
+        fn i, %{boost_score: boost_score, old_boost_score: old_boost_score, decay_accumulator: decay_accumulator} ->
 
         lnf = dict_list |> Enum.at(current_frame_index + 1 + i)
         pcnt_inter = Map.get(lnf, "pcnt_inter")
 
         next_iiratio = @boost_factor * Map.get(lnf, "intra_error") / double_divide_check(Map.get(lnf, "coded_error"))
 
-        next_iiratio = min(next_iiratio, @kf_II_max)
+        next_iiratio = min(next_iiratio, @kf_ii_max)
           
         #Cumulative effect of decay in prediction quality.
         new_decay_accumulator = if pcnt_inter > 0.85 do

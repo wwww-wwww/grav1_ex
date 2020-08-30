@@ -45,7 +45,7 @@ def get_aom_keyframes(src):
         new_frame = int(match.group(1))
         if new_frame != frame:
           frame = new_frame
-          sys.stdout.write(f"frame {frame}")
+          sys.stdout.write(f"frame {frame}\n")
 
 if len(sys.argv) > 1:
   get_aom_keyframes(sys.argv[1])

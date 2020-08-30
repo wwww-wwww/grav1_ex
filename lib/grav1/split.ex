@@ -1,6 +1,8 @@
 defmodule Grav1.Split do
 
   @re_ffmpeg_frames ~r/frame= *([^ ]+?) /
+  @re_ffmpeg_frames2 ~r/([0-9]+?) frames successfully decoded/
+  @re_ffmpeg_keyframe ~r/n:([0-9]+)\.[0-9]+ pts:.+key:(.).+pict_type:(.)/
   @re_python_aom ~r/frame *([^ ]+)/
 
   @fields [
@@ -12,11 +14,29 @@ defmodule Grav1.Split do
     "new_mv_count", "duration", "count", "raw_error_stdev"
   ]
 
-  def split(input, path_split, min_frames, max_frames) do
+  @min_intra_level 0.25
+  @boost_factor 12.5
+  @intra_vs_inter_thresh 2.0
+  @very_low_inter_thresh 0.05
+  @kf_ii_err_threshold 2.5
+  @err_change_threshold 0.4
+  @ii_improvement_threshold 3.5
+  @kf_ii_max 128.0
+
+  def split(input, path_split, min_frames, max_frames, callback) do
     IO.inspect("started split")
+    source_keyframes = get_keyframes(input, callback)
+    aom_keyframes = get_aom_keyframes(input, callback)
+    {source_keyframes, aom_keyframes}
   end
 
-  defp get_keyframes(input) do
+  def verify_split(input, path_split, segments, callback) do
+  end
+
+  def correct_split(input, output, start, length, callback) do
+  end
+
+  defp get_keyframes(input, callback \\ nil) do
     {frames, total_frames} = case Path.extname(String.downcase(input)) do
       ".mkv" -> get_keyframes_ebml(input)
       _ -> {:nothing, :nothing}
@@ -27,30 +47,38 @@ defmodule Grav1.Split do
         if false do # if vapoursynth supported
           get_keyframes_vs_ffms2(input)
         else
-          get_keyframes_ffmpeg(input)
+          get_keyframes_ffmpeg(input, callback)
         end
       {frames, :nothing} ->
-        {frames, get_frames(input)}
+        {frames, get_frames(input, true, callback)}
     end
   end
 
-  defp stream_port(port, re, callback, frames \\ 0) do
+  defp stream_port(port, acc, transform, line \\ "") do
     receive do
       {^port, {:data, data}} ->
-        case Regex.run(re, data) do
-          nil -> stream_port(port, re, callback, frames)
-          [_, frames_str] ->
-            case Integer.parse(frames_str) do
-              :error -> stream_port(port, re, callback, frames)
-              {new_frames, _} ->
-                if callback != nil, do: callback.(new_frames)
-
-                stream_port(port, re, callback, new_frames)
-            end
+        new_line = line <> data
+        case :binary.match(new_line, "\n") do
+          :nomatch -> stream_port(port, acc, transform, new_line)
+          _ ->
+            {new_acc, remaining} = Regex.split(~r/(?<=\n)/, new_line)
+            |> Enum.reduce({acc, ""}, fn x, {inner_acc, inner_line} ->
+              if String.ends_with?(x, "\n") do
+                {transform.(x, inner_acc), ""}
+              else
+                {inner_acc, x}
+              end
+            end)
+            stream_port(port, new_acc, transform, remaining)
         end
-      {^port, {:exit_status, 0}} -> frames
+      {^port, {:exit_status, 0}} ->
+        if String.length(line) > 0 do
+          transform.(line, acc)
+        else
+          acc
+        end
       {^port, {:exit_status, status}} ->
-        IO.inspect("Command error, status #{status}")
+        {:error, status, acc}
     end
   end
 
@@ -65,7 +93,19 @@ defmodule Grav1.Split do
         [:stderr_to_stdout, :binary, :exit_status, args: args]
       )
       
-      stream_port(port, @re_ffmpeg_frames, callback)
+      stream_port(port, 0, fn line, acc ->
+        case Regex.run(@re_ffmpeg_frames, line) do
+          nil -> acc
+          [_, frames_str] ->
+            case Integer.parse(frames_str) do
+              :error -> acc
+              {new_frames, _} ->
+                if callback != nil and new_frames != acc, do: callback.(new_frames)
+
+                new_frames
+            end
+        end
+      end)
     end
   end
 
@@ -77,8 +117,49 @@ defmodule Grav1.Split do
     
   end
 
-  defp get_keyframes_ffmpeg(input) do
+  def get_keyframes_ffmpeg(input, callback \\ nil) do
+    args = [
+      "-hide_banner",
+      "-i", input,
+      "-map", "0:v:0",
+      "-vf", "select=eq(pict_type\\,PICT_TYPE_I)",
+      "-f", "null",
+      "-vsync", "0",
+      "-loglevel", "debug", "-"
+    ]
+  
+    port = Port.open(
+      {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+      [:stderr_to_stdout, :binary, :exit_status, args: args]
+    )
+    
+    stream_port(port, {[], 0}, fn line, acc ->
+      {keyframes, frames} = acc
 
+      case Regex.run(@re_ffmpeg_keyframe, line) do
+        nil ->
+          case Regex.run(@re_ffmpeg_frames2, line) do
+            nil -> acc
+            [_, frame_str] ->
+              case Integer.parse(frame_str) do
+                :error -> acc
+                {new_frame, _} ->
+                  if callback != nil and frames != new_frame, do: callback.(new_frame)
+
+                  {keyframes, new_frame}
+              end
+          end
+        [_, frame_str, key, pict_type] ->
+          case Integer.parse(frame_str) do
+            :error -> acc
+            {new_frame, _} ->
+              if callback != nil and frames != new_frame, do: callback.(new_frame)
+
+              if key == "1" and pict_type == "I", do: {keyframes ++ [new_frame], frames}, else: acc
+          end
+      end
+
+    end)
   end
 
   defp pipe(port1, port2) do
@@ -98,28 +179,8 @@ defmodule Grav1.Split do
     end
   end
 
-  defp python_aom_stream(port, callback, frame \\ 0) do
-    receive do
-      {^port, {:data, data}} ->
-        case Regex.run(@re_python_aom, data) do
-          nil ->
-            python_aom_stream(port, callback, frame)
-          [_, frame_str] ->
-            case Integer.parse(frame_str) do
-              :error -> python_aom_stream(port, callback, frame)
-              {new_frame, _} ->
-                if callback != nil and frame != new_frame, do: callback.(new_frame)
-
-                python_aom_stream(port, callback, new_frame)
-            end
-        end
-      {^port, {:exit_status, 0}} -> {:ok, frame}
-      {^port, {:exit_status, status}} -> :error
-    end
-  end
-
   def get_aom_keyframes(input, callback \\ nil) do
-    """
+    _ = """
     ffmpeg_args = ["-i", input, "-pix_fmt", "yuv420p", "-map", "0:v:0", "-vsync", "0", "-strict", "-1", "-f", "yuv4mpegpipe", "-"]
 
     null = case :os.type do
@@ -147,9 +208,23 @@ defmodule Grav1.Split do
       [:binary, :exit_status, args: ["-u", "aom_firstpass.py", input]]
     )
     
-    case python_aom_stream(port, callback) do
-      :error -> :error
-      {:ok, frames} ->
+    result = stream_port(port, 0, fn line, acc ->
+      case Regex.run(@re_python_aom, line) do
+        nil -> acc
+        [_, frame_str] ->
+          case Integer.parse(frame_str) do
+            :error -> acc
+            {new_frame, _} ->
+              if callback != nil and acc != new_frame, do: callback.(new_frame)
+
+              new_frame
+          end
+      end
+    end)
+
+    case result do
+      {:error, _} -> :error
+      _ ->
         filename = "fpf.log"
 
         case File.open(filename, [:binary, :read]) do
@@ -159,7 +234,7 @@ defmodule Grav1.Split do
             File.close(file)
 
             dict_list = (for <<field::little-float <- bytes>>, do: field)
-            |> Enum.chunk(26)
+            |> Enum.chunk_every(26)
             |> Enum.reduce([], fn x, acc ->
               frame_stats = @fields
               |> Enum.zip(x)
@@ -203,17 +278,6 @@ defmodule Grav1.Split do
       x + 0.000001
     end
   end
-
-  # For more documentation on the below, see https://aomedia.googlesource.com/aom/+/8ac928be918de0d502b7b492708d57ad4d817676/av1/encoder/pass2_strategy.c#1897
-    
-  @min_intra_level 0.25
-  @boost_factor 12.5
-  @intra_vs_inter_thresh 2.0
-  @very_low_inter_thresh 0.05
-  @kf_ii_err_threshold 2.5
-  @err_change_threshold 0.4
-  @ii_improvement_threshold 3.5
-  @kf_ii_max 128.0
 
   defp test_candidate_kf(dict_list, current_frame_index, frame_count_so_far) do
     previous_frame_dict = dict_list |> Enum.at(current_frame_index - 1)

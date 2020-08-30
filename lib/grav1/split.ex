@@ -25,8 +25,16 @@ defmodule Grav1.Split do
 
   def split(input, path_split, min_frames, max_frames, callback) do
     IO.inspect("started split")
-    {source_keyframes, total_frames} = get_keyframes(input, callback)
-    aom_keyframes = get_aom_keyframes(input, callback)
+    {source_keyframes, total_frames} = get_keyframes(input, fn x -> callback.(:source_keyframes, x) end)
+
+    aom_keyframes = get_aom_keyframes(input, fn x -> callback.(:aom_keyframes, x, total_frames) end)
+    |> kf_min_dist(min_frames, total_frames)
+    |> ensure_total_frames(total_frames)
+    |> kf_max_dist(min_frames, max_frames, source_keyframes)
+
+    {frames, splits, segments} = partition_keyframes(source_keyframes, aom_keyframes, total_frames)
+
+    # 
 
     {source_keyframes, aom_keyframes}
   end
@@ -416,49 +424,102 @@ defmodule Grav1.Split do
     end
   end
 
-  defp kf_max_dist(aom_keyframes, min_dist, max_dist, original_keyframes \\ [], tolerance \\ 5) do
-    aom_keyframes
-    |> Enum.zip(tl(aom_keyframes))
-    |> Enum.reduce([Enum.at(aom_keyframes, 0)], fn {frame, next_frame}, acc ->
+  defp kf_min_dist(aom_keyframes, min_frames, total_frames) do
+    if min_frames != -1 do
+      aom_keyframes = aom_keyframes ++ [total_frames]
+      aom_scenes = aom_keyframes
+      |> Enum.zip(tl(aom_keyframes))
 
-      {_, _, keyframes} = Enum.reduce_while(frame..next_frame, {frame, next_frame - frame, []}, fn _, {frame_inner, length, keyframes} ->
+      {_, scenes} = aom_scenes
+      |> Enum.zip(tl(aom_scenes) ++ [{nil, nil}])
+      |> Enum.with_index()
+      |> Enum.reduce({0, []}, fn {{{frame, next_frame}, {next_scene_frame, next_scene_next_frame}}, i}, {acc, scenes} ->
+        length = next_frame - frame
+
+        scene_frame = frame - acc
+        scene_length = length + acc
+
         cond do
-          length <= max_dist -> {:halt, {frame_inner, length, keyframes}}
-          length - max_dist >= max_dist ->
-            candidate_kfs = original_keyframes
-            |> Enum.reduce([], fn candidate_kf, acc ->
-              dist = abs(frame_inner + max_dist - candidate_kf)
-              if dist < tolerance, do: acc ++ [{candidate_kf, dist}], else: acc
-            end)
-            |> Enum.sort(fn {_, dist1}, {_, dist2} -> dist2 > dist1 end)
-
-            new_frame = case candidate_kfs do
-              [{kf, _} | _] -> kf
-              _ -> frame_inner + max_dist
+          scene_length >= min_frames -> {0, scenes ++ [{scene_frame, scene_length}]}
+          length(scenes) == 0 -> {scene_length, scenes}
+          true ->
+            {prev_frame, prev_length} = List.last(scenes)
+            if i < length(aom_scenes) - 2 do
+              if prev_length < min_frames do
+                {acc, (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++ [{prev_frame, prev_length + scene_length}]}
+              else
+                next_scene_length = next_scene_next_frame - next_scene_frame
+                if next_scene_length + scene_length < prev_length + scene_length do
+                  {scene_length, scenes}
+                else
+                  {acc, (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++ [{prev_frame, prev_length + scene_length}]}
+                end
+              end
+            else
+              {acc, (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++ [{prev_frame, prev_length + scene_length}]}
             end
-
-            {:cont, {new_frame, next_frame - new_frame, keyframes ++ [new_frame]}}
-
-          floor(length / 2) > min_dist ->
-            candidate_kfs = original_keyframes
-            |> Enum.reduce([], fn candidate_kf, acc ->
-              dist = abs(frame_inner + floor(length / 2) - candidate_kf)
-              if dist < tolerance, do: acc ++ [{candidate_kf, dist}], else: acc
-            end)
-            |> Enum.sort(fn {_, dist1}, {_, dist2} -> dist2 > dist1 end)
-
-            new_frame = case candidate_kfs do
-              [{kf, _} | _] -> kf
-              _ -> floor(frame_inner + length / 2)
-            end
-            
-            {:cont, {new_frame, next_frame - new_frame, keyframes ++ [new_frame]}}
-          true -> {:halt, {frame_inner, length, keyframes}}
         end
       end)
+    else
+      aom_keyframes
+    end
+  end
 
-      acc ++ keyframes ++ [next_frame]
-    end)
+  defp kf_max_dist(aom_keyframes, min_dist, max_dist, original_keyframes \\ [], tolerance \\ 5) do
+    if max_dist != -1 do
+      aom_keyframes
+      |> Enum.zip(tl(aom_keyframes))
+      |> Enum.reduce([Enum.at(aom_keyframes, 0)], fn {frame, next_frame}, acc ->
+
+        {_, _, keyframes} = Enum.reduce_while(frame..next_frame, {frame, next_frame - frame, []}, fn _, {frame_inner, length, keyframes} ->
+          cond do
+            length <= max_dist -> {:halt, {frame_inner, length, keyframes}}
+            length - max_dist >= max_dist ->
+              candidate_kfs = original_keyframes
+              |> Enum.reduce([], fn candidate_kf, acc ->
+                dist = abs(frame_inner + max_dist - candidate_kf)
+                if dist < tolerance, do: acc ++ [{candidate_kf, dist}], else: acc
+              end)
+              |> Enum.sort(fn {_, dist1}, {_, dist2} -> dist2 > dist1 end)
+
+              new_frame = case candidate_kfs do
+                [{kf, _} | _] -> kf
+                _ -> frame_inner + max_dist
+              end
+
+              {:cont, {new_frame, next_frame - new_frame, keyframes ++ [new_frame]}}
+
+            floor(length / 2) > min_dist ->
+              candidate_kfs = original_keyframes
+              |> Enum.reduce([], fn candidate_kf, acc ->
+                dist = abs(frame_inner + floor(length / 2) - candidate_kf)
+                if dist < tolerance, do: acc ++ [{candidate_kf, dist}], else: acc
+              end)
+              |> Enum.sort(fn {_, dist1}, {_, dist2} -> dist2 > dist1 end)
+
+              new_frame = case candidate_kfs do
+                [{kf, _} | _] -> kf
+                _ -> floor(frame_inner + length / 2)
+              end
+              
+              {:cont, {new_frame, next_frame - new_frame, keyframes ++ [new_frame]}}
+            true -> {:halt, {frame_inner, length, keyframes}}
+          end
+        end)
+
+        acc ++ keyframes ++ [next_frame]
+      end)
+    else
+      aom_keyframes
+    end
+  end
+
+  defp ensure_total_frames(aom_keyframes, total_frames) do
+    if total_frames in aom_keyframes do
+      aom_keyframes
+    else
+      aom_keyframes ++ [total_frames]
+    end
   end
 
   defp partition_keyframes(original_keyframes, aom_keyframes, total_frames) do

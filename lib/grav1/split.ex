@@ -42,7 +42,7 @@ defmodule Grav1.Split do
       num_frames = get_frames(path_segment)
 
       misalignment = total_frames != start
-      if misalignment, do:callback.(:log, "misalignment at #{segment} expected: #{start}, got: #{total_frames}")
+      if misalignment, do: callback.(:log, "misalignment at #{segment} expected: #{start}, got: #{total_frames}")
 
       bad_framecount = num_frames != length
       if bad_framecount, do: callback.(:log, "bad framecount #{segment} expected: #{length}, got: #{num_frames}")
@@ -55,8 +55,9 @@ defmodule Grav1.Split do
       end
 
       if misalignment or bad_framecount or bad_framecount_slow do
-        File.mkdir_p(Path.join(path_split, "old"))
-        File.rename(path_segment, Path.join(path_split, "old", file))
+        path_old = Path.join(path_split, "old")
+        File.mkdir_p(path_old)
+        File.rename(path_segment, Path.join(path_old, file))
         correct_split(input, path_segment, start, length, fn x -> callback.(:correct, x) end)
       end
 
@@ -68,7 +69,20 @@ defmodule Grav1.Split do
   def correct_split(input, output, start, length, callback) do
     port = Port.open(
       {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
-      [:binary, :exit_status, args: ["-u", "vspipe_correct_split.py", path_vspipe, path_ffmpeg, input, output, start, length]]
+      [
+        :binary,
+        :exit_status,
+        args: [
+          "-u",
+          "vspipe_correct_split.py",
+          Application.fetch_env!(:grav1, :path_vspipe),
+          Application.fetch_env!(:grav1, :path_ffmpeg),
+          input,
+          output,
+          start,
+          length
+        ]
+      ]
     )
     
     stream_port(port, 0, fn line, acc ->
@@ -400,6 +414,96 @@ defmodule Grav1.Split do
     else
       false
     end
+  end
+
+  defp kf_max_dist(aom_keyframes, min_dist, max_dist, original_keyframes \\ [], tolerance \\ 5) do
+    aom_keyframes
+    |> Enum.zip(tl(aom_keyframes))
+    |> Enum.reduce([Enum.at(aom_keyframes, 0)], fn {frame, next_frame}, acc ->
+
+      {_, _, keyframes} = Enum.reduce_while(frame..next_frame, {frame, next_frame - frame, []}, fn _, {frame_inner, length, keyframes} ->
+        cond do
+          length <= max_dist -> {:halt, {frame_inner, length, keyframes}}
+          length - max_dist >= max_dist ->
+            candidate_kfs = original_keyframes
+            |> Enum.reduce([], fn candidate_kf, acc ->
+              dist = abs(frame_inner + max_dist - candidate_kf)
+              if dist < tolerance, do: acc ++ [{candidate_kf, dist}], else: acc
+            end)
+            |> Enum.sort(fn {_, dist1}, {_, dist2} -> dist2 > dist1 end)
+
+            new_frame = case candidate_kfs do
+              [{kf, _} | _] -> kf
+              _ -> frame_inner + max_dist
+            end
+
+            {:cont, {new_frame, next_frame - new_frame, keyframes ++ [new_frame]}}
+
+          floor(length / 2) > min_dist ->
+            candidate_kfs = original_keyframes
+            |> Enum.reduce([], fn candidate_kf, acc ->
+              dist = abs(frame_inner + floor(length / 2) - candidate_kf)
+              if dist < tolerance, do: acc ++ [{candidate_kf, dist}], else: acc
+            end)
+            |> Enum.sort(fn {_, dist1}, {_, dist2} -> dist2 > dist1 end)
+
+            new_frame = case candidate_kfs do
+              [{kf, _} | _] -> kf
+              _ -> floor(frame_inner + length / 2)
+            end
+            
+            {:cont, {new_frame, next_frame - new_frame, keyframes ++ [new_frame]}}
+          true -> {:halt, {frame_inner, length, keyframes}}
+        end
+      end)
+
+      acc ++ keyframes ++ [next_frame]
+    end)
+  end
+
+  defp partition_keyframes(original_keyframes, aom_keyframes, total_frames) do
+    original_keyframes = original_keyframes ++ [total_frames]
+
+    {frames, segments, _} = aom_keyframes
+    |> Enum.zip(tl(aom_keyframes))
+    |> Enum.reduce({[], %{}, 0}, fn {frame, next_frame}, acc ->
+      {frames, splits, last_end} = acc
+
+      length = next_frame - frame
+
+      {new_frames, split_n, start} = if frame in original_keyframes do
+        {frames ++ [frame], length(frames), 0}
+      else
+        largest = original_keyframes
+        |> Enum.filter(fn x -> x < frame end)
+        |> Enum.max()
+        
+        if largest in frames or largest < last_end do
+          {frames, length(frames) - 1, frame - List.last(frames)}
+        else
+          {frames ++ [largest], length(frames), frame - largest}
+        end
+      end
+
+      split_name = split_n |> Integer.to_string() |> String.pad_leading(5, "0")
+      segment_n = length(Map.keys(splits)) |> Integer.to_string() |> String.pad_leading(5, "0")
+
+      new_split = %{segment: "#{split_name}.mkv", start: start, frames: length}
+
+      {new_frames, splits |> Map.put(segment_n, new_split), frame + length}
+    end)
+
+    splits = frames
+    |> Enum.zip(tl(frames) ++ [total_frames])
+    |> Enum.with_index()
+    |> Enum.reduce(%{}, fn {{frame, next_frame}, i}, acc ->
+      segment_n = i
+      |> Integer.to_string()
+      |> String.pad_leading(5, "0")
+      acc |> Map.put(segment_n, %{start: frame, length: next_frame - frame})
+    end)
+
+    {frames, splits, segments}
   end
 
 end

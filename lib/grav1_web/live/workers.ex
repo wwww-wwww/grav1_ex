@@ -1,7 +1,7 @@
 defmodule Grav1Web.WorkersLive do
   use Phoenix.LiveView
   
-  @topic "workers_updates"
+  @topic "workers_live"
 
   def render(assigns) do
     Grav1Web.PageView.render("workers.html", assigns)

@@ -17,6 +17,8 @@ defmodule Grav1.Project do
 
     field :grain_tables, :boolean, default: false
 
+    field :log, {:array, :string}, default: [], virtual: true
+
     has_many :segments, Grav1.Segment
 
     timestamps()

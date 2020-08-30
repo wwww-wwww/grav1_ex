@@ -25,25 +25,33 @@ defmodule Grav1.Split do
 
   def split(input, path_split, min_frames, max_frames, callback) do
     IO.inspect("started split")
-    {source_keyframes, total_frames} = get_keyframes(input, fn x -> callback.(:source_keyframes, x) end)
 
-    aom_keyframes = get_aom_keyframes(input, fn x -> callback.(:aom_keyframes, x, total_frames) end)
+    {source_keyframes, total_frames} = get_keyframes(input, fn x -> callback.({:progress, :source_keyframes}, x) end)
+
+    callback.(:log, "")
+
+    aom_keyframes = input
+    |> get_aom_keyframes(fn x -> callback.({:progress, :aom_keyframes}, {x, total_frames}) end)
     |> kf_min_dist(min_frames, total_frames)
     |> ensure_total_frames(total_frames)
     |> kf_max_dist(min_frames, max_frames, source_keyframes)
 
     {frames, splits, segments} = partition_keyframes(source_keyframes, aom_keyframes, total_frames)
 
-    # 
+    IO.inspect(source_keyframes)
+    IO.inspect(aom_keyframes)
+    IO.inspect(frames)
+    IO.inspect(splits)
+    IO.inspect(segments)
 
-    {source_keyframes, aom_keyframes}
+    {source_keyframes, aom_keyframes, }
   end
 
-  def verify_split(input, path_split, segments, callback) do
-    segments
+  def verify_split(input, path_split, splits, callback) do
+    splits
     |> Enum.with_index(1)
     |> Enum.reduce(0, fn {segment, i}, total_frames ->
-      %{file: file, n: n, start: start, length: length} = segment
+      %{file: file, start: start, length: length} = segment
 
       path_segment = Path.join(path_split, file)
 
@@ -66,10 +74,10 @@ defmodule Grav1.Split do
         path_old = Path.join(path_split, "old")
         File.mkdir_p(path_old)
         File.rename(path_segment, Path.join(path_old, file))
-        correct_split(input, path_segment, start, length, fn x -> callback.(:correct, x) end)
+        correct_split(input, path_segment, start, length, fn x -> callback.({:progress, :correct}, {x, length}) end)
       end
 
-      if callback != nil, do: callback.(:verify, i)
+      if callback != nil, do: callback.({:progress, :verify}, {i, length(splits)})
       total_frames + num_frames
     end) 
   end
@@ -522,7 +530,7 @@ defmodule Grav1.Split do
     end
   end
 
-  defp partition_keyframes(original_keyframes, aom_keyframes, total_frames) do
+  def partition_keyframes(original_keyframes, aom_keyframes, total_frames) do
     original_keyframes = original_keyframes ++ [total_frames]
 
     {frames, segments, _} = aom_keyframes
@@ -557,11 +565,11 @@ defmodule Grav1.Split do
     splits = frames
     |> Enum.zip(tl(frames) ++ [total_frames])
     |> Enum.with_index()
-    |> Enum.reduce(%{}, fn {{frame, next_frame}, i}, acc ->
-      segment_n = i
+    |> Enum.reduce([], fn {{frame, next_frame}, i}, acc ->
+      split_name = i
       |> Integer.to_string()
       |> String.pad_leading(5, "0")
-      acc |> Map.put(segment_n, %{start: frame, length: next_frame - frame})
+      acc ++ [%{file: "#{split_name}.mkv", start: frame, length: next_frame - frame}]
     end)
 
     {frames, splits, segments}

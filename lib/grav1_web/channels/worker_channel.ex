@@ -15,17 +15,17 @@ defmodule Grav1Web.WorkerChannel do
     {:ok, socket |> assign(:name, socket.assigns.socket_id)}
   end
 
+  def terminate(_, socket) do
+    WorkerAgent.disconnect(socket)
+    IO.inspect("client is gone :(")
+  end
+
   def handle_info({:after_join, _}, socket) do
     WorkerAgent.connect(socket)
 
     {:noreply, socket}
   end
   
-  def terminate(_, socket) do
-    WorkerAgent.disconnect(socket)
-    IO.inspect("client is gone :(")
-  end
-
   def handle_info(%Phoenix.Socket.Broadcast{topic: _, event: ev, payload: payload}, socket) do
     push(socket, ev, payload)
     {:noreply, socket}

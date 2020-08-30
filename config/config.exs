@@ -12,6 +12,7 @@ config :grav1,
   path_ffmpeg: System.find_executable("ffmpeg"),
   path_aomenc: System.find_executable("aomenc"),
   path_dav1d: System.find_executable("dav1d"),
+  path_vspipe: System.find_executable("vspipe"),
   path_python: System.find_executable("python")
 
 # Configures the endpoint

@@ -25,33 +25,65 @@ defmodule Grav1.Split do
 
   def split(input, path_split, min_frames, max_frames, callback) do
     IO.inspect("started split")
-    source_keyframes = get_keyframes(input, callback)
+    {source_keyframes, total_frames} = get_keyframes(input, callback)
     aom_keyframes = get_aom_keyframes(input, callback)
+
     {source_keyframes, aom_keyframes}
   end
 
   def verify_split(input, path_split, segments, callback) do
+    segments
+    |> Enum.with_index(1)
+    |> Enum.reduce(0, fn {segment, i}, total_frames ->
+      %{file: file, n: n, start: start, length: length} = segment
+
+      path_segment = Path.join(path_split, file)
+
+      num_frames = get_frames(path_segment)
+
+      misalignment = total_frames != start
+      if misalignment, do:callback.(:log, "misalignment at #{segment} expected: #{start}, got: #{total_frames}")
+
+      bad_framecount = num_frames != length
+      if bad_framecount, do: callback.(:log, "bad framecount #{segment} expected: #{length}, got: #{num_frames}")
+
+      bad_framecount_slow = true and case get_frames(path_segment, false) do # if not using vs_ffms2
+        ^num_frames -> false
+        num_frames_slow ->
+          callback.(:log, "bad framecount #{segment} expected: #{num_frames}, got: #{num_frames_slow}")
+          true
+      end
+
+      if misalignment or bad_framecount or bad_framecount_slow do
+        File.mkdir_p(Path.join(path_split, "old"))
+        File.rename(path_segment, Path.join(path_split, "old", file))
+        correct_split(input, path_segment, start, length, fn x -> callback.(:correct, x) end)
+      end
+
+      if callback != nil, do: callback.(:verify, i)
+      total_frames + num_frames
+    end) 
   end
 
   def correct_split(input, output, start, length, callback) do
-  end
+    port = Port.open(
+      {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
+      [:binary, :exit_status, args: ["-u", "vspipe_correct_split.py", path_vspipe, path_ffmpeg, input, output, start, length]]
+    )
+    
+    stream_port(port, 0, fn line, acc ->
+      case Regex.run(@re_python_aom, line) do
+        nil -> acc
+        [_, frame_str] ->
+          case Integer.parse(frame_str) do
+            :error -> acc
+            {new_frame, _} ->
+              if callback != nil and acc != new_frame, do: callback.(new_frame)
 
-  defp get_keyframes(input, callback \\ nil) do
-    {frames, total_frames} = case Path.extname(String.downcase(input)) do
-      ".mkv" -> get_keyframes_ebml(input)
-      _ -> {:nothing, :nothing}
-    end
-
-    case {frames, total_frames} do
-      {:nothing, _} ->
-        if false do # if vapoursynth supported
-          get_keyframes_vs_ffms2(input)
-        else
-          get_keyframes_ffmpeg(input, callback)
-        end
-      {frames, :nothing} ->
-        {frames, get_frames(input, true, callback)}
-    end
+              new_frame
+          end
+      end
+    end)
   end
 
   defp stream_port(port, acc, transform, line \\ "") do
@@ -106,6 +138,24 @@ defmodule Grav1.Split do
             end
         end
       end)
+    end
+  end
+
+  defp get_keyframes(input, callback \\ nil) do
+    {frames, total_frames} = case Path.extname(String.downcase(input)) do
+      ".mkv" -> {:nothing, :nothing}#get_keyframes_ebml(input)
+      _ -> {:nothing, :nothing}
+    end
+
+    case {frames, total_frames} do
+      {:nothing, _} ->
+        if false do # if vapoursynth supported
+          get_keyframes_vs_ffms2(input)
+        else
+          get_keyframes_ffmpeg(input, callback)
+        end
+      {frames, :nothing} ->
+        {frames, get_frames(input, true, callback)}
     end
   end
 

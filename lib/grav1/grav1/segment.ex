@@ -3,6 +3,7 @@ defmodule Grav1.Segment do
   import Ecto.Changeset
 
   schema "segments" do
+    field :n, :integer
     field :file, :string
     field :start, :integer
     field :frames, :integer

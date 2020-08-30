@@ -3,6 +3,7 @@ defmodule Grav1.Repo.Migrations.CreateSegments do
 
   def change do
     create table(:segments) do
+      add :n, :integer
       add :file, :string
       add :start, :integer
       add :frames, :integer

@@ -11,8 +11,8 @@ defmodule Grav1.Repo.Migrations.CreateProjects do
   
       add :input_frames, :integer
   
-      add :encoder_params, :string
-      add :ffmpeg_params, :string
+      add :encoder_params, {:array, :string}
+      add :ffmpeg_params, {:array, :string}
   
       add :split_min_frames, :integer, default: nil
       add :split_max_frames, :integer, default: nil

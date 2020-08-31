@@ -9,8 +9,8 @@ defmodule Grav1.Project do
 
     field :input_frames, :integer
 
-    field :encoder_params, :string
-    field :ffmpeg_params, :string
+    field :encoder_params, {:array, :string}
+    field :ffmpeg_params, {:array, :string}
 
     field :split_min_frames, :integer, default: nil
     field :split_max_frames, :integer, default: nil

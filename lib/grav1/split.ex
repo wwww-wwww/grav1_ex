@@ -371,24 +371,24 @@ defmodule Grav1.Split do
     qmode = true
     #todo: allow user to set whether we"re testing for constant-q mode keyframe placement or not. it"s not a big difference.
     
-    pcnt_intra = 1.0 - Map.get(c, "pcnt_inter")
-    modified_pcnt_inter = Map.get(c, "pcnt_inter") - Map.get(c, "pcnt_neutral")
+    pcnt_intra = 1.0 - c["pcnt_inter"]
+    modified_pcnt_inter = c["pcnt_inter"] - c["pcnt_neutral"]
     
     second_ref_usage_thresh = get_second_ref_usage_thresh(frame_count_so_far)
     
     if not qmode or frame_count_so_far > 2 and
-      Map.get(c, "pcnt_second_ref") < second_ref_usage_thresh and
-      Map.get(f, "pcnt_second_ref") < second_ref_usage_thresh and
+      c["pcnt_second_ref"] < second_ref_usage_thresh and
+      f["pcnt_second_ref"] < second_ref_usage_thresh and
       (
-        Map.get(c, "pcnt_inter") < @very_low_inter_thresh or
+        c["pcnt_inter"] < @very_low_inter_thresh or
         (
           pcnt_intra > @min_intra_level and
           pcnt_intra > (@intra_vs_inter_thresh * modified_pcnt_inter) and
-          Map.get(c, "intra_error") / double_divide_check(Map.get(c, "coded_error")) < @kf_ii_err_threshold and
+          c["intra_error"] / double_divide_check(c["coded_error"]) < @kf_ii_err_threshold and
           (
-            abs(Map.get(p, "coded_error") - Map.get(c, "coded_error")) / double_divide_check(Map.get(c, "coded_error")) > @err_change_threshold or
-            abs(Map.get(p, "intra_error") - Map.get(c, "intra_error")) / double_divide_check(Map.get(c, "intra_error")) > @err_change_threshold or
-            Map.get(f, "intra_error") / double_divide_check(Map.get(f, "coded_error")) > @ii_improvement_threshold
+            abs(p["coded_error"] - c["coded_error"]) / double_divide_check(c["coded_error"]) > @err_change_threshold or
+            abs(p["intra_error"] - c["intra_error"]) / double_divide_check(c["intra_error"]) > @err_change_threshold or
+            f["intra_error"] / double_divide_check(f["coded_error"]) > @ii_improvement_threshold
           )
         )
       ) do
@@ -398,9 +398,9 @@ defmodule Grav1.Split do
         fn i, %{boost_score: boost_score, old_boost_score: old_boost_score, decay_accumulator: decay_accumulator} ->
 
         lnf = dict_list |> Enum.at(current_frame_index + 1 + i)
-        pcnt_inter = Map.get(lnf, "pcnt_inter")
+        pcnt_inter = lnf["pcnt_inter"]
 
-        next_iiratio = @boost_factor * Map.get(lnf, "intra_error") / double_divide_check(Map.get(lnf, "coded_error"))
+        next_iiratio = @boost_factor * lnf["intra_error"] / double_divide_check(lnf["coded_error"])
         next_iiratio = min(next_iiratio, @kf_ii_max)
 
         #Cumulative effect of decay in prediction quality.
@@ -416,9 +416,9 @@ defmodule Grav1.Split do
         #Test various breakout clauses.
         if pcnt_inter < 0.05 or
           next_iiratio < 1.5 or
-          (pcnt_inter - Map.get(lnf, "pcnt_neutral") < 0.20 and next_iiratio < 3.0) or
+          (pcnt_inter - lnf["pcnt_neutral"] < 0.20 and next_iiratio < 3.0) or
           new_boost_score - old_boost_score < 3.0 or
-          Map.get(lnf, "intra_error") < 200 do
+          lnf["intra_error"] < 200 do
           {:halt, %{boost_score: new_boost_score, final_i: i}}
         else
           {:cont, %{boost_score: new_boost_score, old_boost_score: new_boost_score, decay_accumulator: new_decay_accumulator, final_i: i}}

@@ -2,4 +2,11 @@
 <br>
 <%= link("workers", to: Routes.page_path(@conn, :workers)) %>
 
-<script defer type="text/javascript" src='<%= Routes.static_path(@app, "/js/projects.js") %>'></script>
+<%= for {p, version} <- Application.get_all_env(:versions) do %>
+  <div>
+    <span><%= p %></span>
+    <span><%= version %></span>
+  </div>
+<% end %>
+
+<script defer type="text/javascript" src='<%= Routes.static_path(@conn, "/js/app.js") %>'></script>

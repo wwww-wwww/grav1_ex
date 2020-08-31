@@ -17,8 +17,26 @@ defmodule Grav1.Application do
       Grav1.ProjectsExecutor
     ]
 
+    get_version(:ffmpeg, Application.fetch_env!(:grav1, :path_ffmpeg), ["-version"], ~r/ffmpeg version (.+?) /)
+    get_version(:aomenc, Application.fetch_env!(:grav1, :path_aomenc), ["--help"], ~r/AOMedia Project AV1 Encoder (.+?) /)
+    get_version(:dav1d, Application.fetch_env!(:grav1, :path_dav1d), ["-v"], ~r/([^\r\n]+)/)
+    get_version(:python, Application.fetch_env!(:grav1, :path_python), ["-V"], ~r/([^\r\n]+)/)
+
     opts = [strategy: :one_for_one, name: Grav1.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  def get_version(key, executable, args, re) do
+    version = case System.cmd(executable, args, stderr_to_stdout: true) do
+      {resp, 0} ->
+        case Regex.run(re, resp) do
+          nil -> :error
+          [_, version] -> version
+        end
+      _ -> :notfound
+    end
+    Application.put_env(:versions, key, version)
+    version
   end
 
   # Tell Phoenix to update the endpoint configuration

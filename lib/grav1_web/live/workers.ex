@@ -4,7 +4,7 @@ defmodule Grav1Web.WorkersLive do
   @topic "workers_live"
 
   def render(assigns) do
-    Grav1Web.PageView.render("workers.html", assigns)
+    Grav1Web.LiveView.render("workers.html", assigns)
   end
 
   def get_workers() do

@@ -23,6 +23,7 @@ defmodule Grav1Web do
 
       import Plug.Conn
       import Grav1Web.Gettext
+      import Phoenix.LiveView.Controller
       alias Grav1Web.Router.Helpers, as: Routes
     end
   end
@@ -48,6 +49,7 @@ defmodule Grav1Web do
 
       import Plug.Conn
       import Phoenix.Controller
+      import Phoenix.LiveView.Router
     end
   end
 
@@ -69,6 +71,8 @@ defmodule Grav1Web do
       import Grav1Web.ErrorHelpers
       import Grav1Web.Gettext
       alias Grav1Web.Router.Helpers, as: Routes
+
+      import Phoenix.LiveView.Helpers
     end
   end
 

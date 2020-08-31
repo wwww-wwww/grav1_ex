@@ -10,7 +10,7 @@ defmodule Grav1Web.PageController do
   end
 
   def projects(conn, _params) do
-    live_render(conn, Grav1Web.ProjectsLive)
+    render(conn, "projects.html")
   end
 
   def workers(conn, _params) do

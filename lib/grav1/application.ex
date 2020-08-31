@@ -19,6 +19,7 @@ defmodule Grav1.Application do
 
     get_version(:ffmpeg, Application.fetch_env!(:grav1, :path_ffmpeg), ["-version"], ~r/ffmpeg version (.+?) /)
     get_version(:aomenc, Application.fetch_env!(:grav1, :path_aomenc), ["--help"], ~r/AOMedia Project AV1 Encoder (.+?) /)
+    get_version(:vpxenc, Application.fetch_env!(:grav1, :path_vpxenc), ["--help"], ~r/WebM Project VP9 Encoder (.+?) /)
     get_version(:dav1d, Application.fetch_env!(:grav1, :path_dav1d), ["-v"], ~r/([^\r\n]+)/)
     get_version(:python, Application.fetch_env!(:grav1, :path_python), ["-V"], ~r/([^\r\n]+)/)
 

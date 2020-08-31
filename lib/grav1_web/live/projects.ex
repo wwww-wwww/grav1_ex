@@ -24,12 +24,6 @@ defmodule Grav1Web.ProjectsLive do
     {:noreply, socket |> assign(projects: projects)}
   end
 
-  def handle_event("add_project", %{"project" => params}, socket) do
-    IO.inspect(Project.changeset(%Project{}, params))
-
-    {:noreply, socket}
-  end
-
   def update() do
     Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{projects: get_projects()})
   end

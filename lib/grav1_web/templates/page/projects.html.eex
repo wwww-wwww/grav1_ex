@@ -1,24 +1,46 @@
 <%= live_render(@conn, Grav1Web.ProjectsLive) %>
 
+<% encoder_params = Grav1.Encoder.params() %>
+<% encoders = encoder_params |> Map.keys() %>
+
 <div>
-  <%= f = form_for(:project, "#", phx_submit: :add_project) %>
+  <%= f = form_for(:project, "#") %>
     <label for="select_encoder">encoder</label>
     <select id="select_encoder">
-      <%= for encoder <- Grav1.Encoder.__enum_map__() do %>
+      <%= for encoder <- encoders do %>
       <option><%= encoder %></option>
       <% end %>
     </select>
 
     <div id="encoder_params" phx-hook="encoders">
-      <%= for encoder <- Grav1.Encoder.__enum_map__() do %>
+      <%= for encoder <- encoders do %>
         <div id="params_<%= encoder %>" class="hidden">
           <h1><%= encoder %> params</h1>
-          <%= for {param_name, param} <- Grav1.Encoder.params() |> Map.get(encoder) do %>
+
+          <% {simple, advanced} = encoder_params[encoder] %>
+
+          <div id="<%= encoder %>_params_simple">
             <div>
-              <label for="opt_<%= encoder %>_<%= param_name %>"><%= param_name %></label>
-              <%= render_encoder_param(encoder, param_name, param) %>
+              <%= for {param_name, param} <- simple do %>
+                <div>
+                  <label for="opt_<%= encoder %>_<%= param_name %>"><%= param_name %></label>
+                  <%= render_encoder_param(encoder, param_name, param) %>
+                </div>
+              <% end %>
             </div>
-          <% end %>
+          </div>
+
+          <div id="<%= encoder %>_params_advanced">
+            <div>advanced</div>
+            <div>
+              <%= for {param_name, param} <- advanced do %>
+                <div>
+                  <label for="opt_<%= encoder %>_<%= param_name %>"><%= param_name %></label>
+                  <%= render_encoder_param(encoder, param_name, param) %>
+                </div>
+              <% end %>
+            </div>
+          </div>
         </div>
       <% end %>
     </div>
@@ -33,18 +55,16 @@
 </style>
 
 <script>
-  for (const encoder of encoder_params.children) {
-    for (const encoder_param of encoder.children) {
-      for (const opt of encoder_param.children) {
-        if (opt.getAttribute("requires")) {
-          const e = document.getElementById(opt.getAttribute("requires"))
-          const onchange = () => opt.parentElement.classList.toggle("hidden", e.value != opt.getAttribute("requires-value"))
-          e.addEventListener("change", onchange)
-          onchange()
-        }
-      }
+  for (const opt of document.getElementsByClassName("param")) {
+    if (opt.getAttribute("requires")) {
+      const e = document.getElementById(opt.getAttribute("requires"))
+      const required_values = JSON.parse(opt.getAttribute("requires-value"))
+      const onchange = () => opt.parentElement.classList.toggle("hidden", !required_values.includes(e.value))
+      e.addEventListener("change", onchange)
+      onchange()
     }
   }
+
   function show_params() {
     for (const encoder_param of encoder_params.children) {
       encoder_param.classList.toggle("hidden", encoder_param.id != `params_${select_encoder.value}`) 

@@ -46,6 +46,8 @@ defmodule Grav1Web.Router do
     scope "/" do
       pipe_through :logged_in
 
+      post "/add_project", ProjectController, :add_project
+
       scope "/user" do
         get "/", UserController, :show_user
         post "/generate_apikey", UserController, :generate_apikey

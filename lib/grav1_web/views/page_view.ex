@@ -14,18 +14,7 @@ defmodule Grav1Web.PageView do
     |> Enum.map(fn {a, b} ->
       b = b
       |> Tuple.to_list()
-      |> Enum.reduce([], fn param, acc ->
-        new_param = param |> Enum.reduce([], fn {param_name, prop}, acc ->
-          new_prop = case prop do
-            %{requires: {required, vals}} ->
-              %{prop | requires: required}
-              |> Map.put(:requires_value, vals)
-            _ -> prop
-          end
-          acc ++ [{param_name, new_prop}]
-        end)
-        acc ++ new_param
-      end)
+      |> List.flatten()
       |> Map.new()
       {a, b}
     end)

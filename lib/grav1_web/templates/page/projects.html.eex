@@ -6,7 +6,7 @@
 <div id="encoders" style="display: none"><%= encoders_json() %></div>
 
 <div>
-  <%= form_for(:project, Routes.project_path(@conn, :add_project), style: "display: none") %></form>
+  <%= form_for(:project, Routes.project_path(@conn, :add_project), id: "form_add_project", style: "display: none") %></form>
 
   <label for="select_encoder">encoder</label>
   <select id="select_encoder">
@@ -68,7 +68,7 @@
       const e = document.getElementById(`opt_${encoder_name}_${param_name}`)
       if (param.requires) {
         const req_e = document.getElementById(`opt_${encoder_name}_${param.requires}`)
-        const onchange = () => e.parentElement.classList.toggle("hidden", !param.requires_value.includes(req_e.value))
+        const onchange = () => e.parentElement.classList.toggle("hidden", !param.requires_values.includes(req_e.value))
         req_e.addEventListener("change", onchange)
         onchange()
       }
@@ -84,7 +84,7 @@
       const e = document.getElementById(`opt_${selected_encoder}_${param_name}`)
       if (param.requires) {
         const req_e = document.getElementById(`opt_${selected_encoder}_${param.requires}`)
-        if (param.requires_value.includes(req_e)) continue
+        if (param.requires_values.includes(req_e)) continue
       }
       if (param_name == "resolution") {
         const res_dims = e.value.split("x")

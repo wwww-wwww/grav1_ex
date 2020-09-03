@@ -102,7 +102,7 @@ defmodule Grav1.Split do
     )
     
     stream_port(port, 0, fn line, acc ->
-      case Regex.run(@re_python_aom, line) do
+      case Regex.scan(@re_python_aom, line) |> List.last() do
         nil -> acc
         [_, frame_str] ->
           case Integer.parse(frame_str) do
@@ -116,47 +116,19 @@ defmodule Grav1.Split do
     end)
   end
 
-  defp stream_port(port, acc, transform, line \\ "") do
-    receive do
-      {^port, {:data, data}} ->
-        new_line = line <> data
-        case :binary.match(new_line, "\n") do
-          :nomatch -> stream_port(port, acc, transform, new_line)
-          _ ->
-            {new_acc, remaining} = Regex.split(~r/(?<=\n)/, new_line)
-            |> Enum.reduce({acc, ""}, fn x, {inner_acc, inner_line} ->
-              if String.ends_with?(x, "\n") do
-                {transform.(x, inner_acc), ""}
-              else
-                {inner_acc, x}
-              end
-            end)
-            stream_port(port, new_acc, transform, remaining)
-        end
-      {^port, {:exit_status, 0}} ->
-        if String.length(line) > 0 do
-          transform.(line, acc)
-        else
-          acc
-        end
-      {^port, {:exit_status, status}} ->
-        {:error, status, acc}
-    end
-  end
-
   def get_frames(input, fast \\ true, callback \\ nil) do
     if fast and false do # vapoursynth
     else
       fast_args = if fast, do: ["-c", "copy"], else: []
-      args = ["-i", input] ++ fast_args ++ ["-f", "null", "-"]
+      args = ["-hide_banner", "-i", input, "-map", "0:v:0"] ++ fast_args ++ ["-f", "null", "-"]
 
       port = Port.open(
         {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
-        [:stderr_to_stdout, :binary, :exit_status, args: args]
+        [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
       )
       
       stream_port(port, 0, fn line, acc ->
-        case Regex.run(@re_ffmpeg_frames, line) do
+        case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
           nil -> acc
           [_, frames_str] ->
             case Integer.parse(frames_str) do
@@ -210,15 +182,15 @@ defmodule Grav1.Split do
   
     port = Port.open(
       {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
-      [:stderr_to_stdout, :binary, :exit_status, args: args]
+      [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
     )
     
     stream_port(port, {[], 0}, fn line, acc ->
       {keyframes, frames} = acc
 
-      case Regex.run(@re_ffmpeg_keyframe, line) do
+      case Regex.scan(@re_ffmpeg_keyframe, line) |> List.last() do
         nil ->
-          case Regex.run(@re_ffmpeg_frames2, line) do
+          case Regex.scan(@re_ffmpeg_frames2, line) |> List.last() do
             nil -> acc
             [_, frame_str] ->
               case Integer.parse(frame_str) do
@@ -285,11 +257,11 @@ defmodule Grav1.Split do
     # until i can get piping to work
     port = Port.open(
       {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
-      [:binary, :exit_status, args: ["-u", "aom_firstpass.py", input]]
+      [:binary, :exit_status, :line, args: ["-u", "aom_firstpass.py", input]]
     )
     
     result = stream_port(port, 0, fn line, acc ->
-      case Regex.run(@re_python_aom, line) do
+      case Regex.scan(@re_python_aom, line) |> List.last() do
         nil -> acc
         [_, frame_str] ->
           case Integer.parse(frame_str) do
@@ -575,4 +547,12 @@ defmodule Grav1.Split do
     {frames, splits, segments}
   end
 
+  defp stream_port(port, acc, transform) do
+    receive do
+      {^port, {:data, {_, data}}} -> stream_port(port, transform.(data, acc), transform)
+      {^port, {:exit_status, 0}} -> acc
+      {^port, {:exit_status, status}} -> {:error, status, acc}
+    end
+  end
+  
 end

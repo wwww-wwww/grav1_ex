@@ -103,28 +103,3 @@ select_encoder.addEventListener("change", () => {
 })
 
 show_params()
-/*
-post(`${server}/api/add_project`, payload, e => {
-      const resp = JSON.parse(e)
-      confirm_modal.close()
-      if (!("success" in resp)) {
-        const err_modal = new Modal({title: "Error"})
-        const reason_t = create_element(err_modal, "div")
-        reason_t.textContent = "Reason:"
-        const reason = create_element(err_modal, "div")
-        reason.textContent = e
-        err_modal.show()
-      } else if (!resp["success"]) {
-        const err_modal = new Modal({title: "Error"})
-        const reason_t = create_element(err_modal, "div")
-        reason_t.textContent = "Reason:"
-        const reason = create_element(err_modal, "div")
-        reason.textContent = resp["reason"]
-        err_modal.show()
-      } else {
-        update_projects()
-        if (password.length > 0)
-          set_cookie(`pw-${server}`, password)
-      }
-    })*/
-console.log("ASD")

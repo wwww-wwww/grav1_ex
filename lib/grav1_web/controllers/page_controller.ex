@@ -9,10 +9,6 @@ defmodule Grav1Web.PageController do
     render(conn, "index.html")
   end
 
-  def projects(conn, _params) do
-    render(conn, "projects.html")
-  end
-
   def workers(conn, _params) do
     live_render(conn, Grav1Web.WorkersLive)
   end

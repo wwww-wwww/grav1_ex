@@ -11,13 +11,13 @@
   <body>
     <header>
       <nav role="navigation">
-        <%= link("Home", to: Routes.page_path(@conn, :index), class: if(action_name(@conn) == :index, do: "header-active")) %>
+        <%= link("Home", to: Routes.page_path(@conn, :index), class: if(title(@conn, assigns) == :index, do: "header-active")) %>
         <%= if logged_in?(@conn) do %>
-          <%= link("Profile", to: Routes.user_path(@conn, :show_user), class: if(action_name(@conn) == :show_user, do: "header-active")) %>
+          <%= link("Profile", to: Routes.user_path(@conn, :show_user), class: if(title(@conn, assigns) == :show_user, do: "header-active")) %>
           <%= link("Sign Out", to: Routes.user_path(@conn, :sign_out)) %>
         <% else %>
-          <%= link("Sign Up", to: Routes.user_path(@conn, :sign_up), class: if(action_name(@conn) == :sign_up, do: "header-active")) %>
-          <%= link("Sign In", to: Routes.user_path(@conn, :sign_in), class: if(action_name(@conn) == :sign_in, do: "header-active")) %>
+          <%= link("Sign Up", to: Routes.user_path(@conn, :sign_up), class: if(title(@conn, assigns) == :sign_up, do: "header-active")) %>
+          <%= link("Sign In", to: Routes.user_path(@conn, :sign_in), class: if(title(@conn, assigns) == :sign_in, do: "header-active")) %>
         <% end %>
       </nav>
     </header>

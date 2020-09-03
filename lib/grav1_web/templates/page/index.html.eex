@@ -1,4 +1,4 @@
-<%= link("projects", to: Routes.page_path(@conn, :projects)) %>
+<%= link("projects", to: Routes.live_path(@conn, Grav1Web.ProjectsLive)) %>
 <br>
 <%= link("workers", to: Routes.page_path(@conn, :workers)) %>
 

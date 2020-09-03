@@ -20,6 +20,11 @@ defmodule Grav1Web.ProjectsLive do
     |> assign(project_changeset: Project.changeset(%Project{}))}
   end
 
+  def handle_event("add_project", %{"files" => files, "params" => params}, socket) do
+    IO.inspect(params)
+    {:reply, %{success: true}, socket}
+  end
+
   def handle_info(%{topic: @topic, payload: %{projects: projects}}, socket) do
     {:noreply, socket |> assign(projects: projects)}
   end

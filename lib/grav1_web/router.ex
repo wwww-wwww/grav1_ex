@@ -29,7 +29,7 @@ defmodule Grav1Web.Router do
     pipe_through [:browser, :auth]
 
     get "/", PageController, :index
-    get "/projects", PageController, :projects
+    live "/projects", ProjectsLive, layout: {Grav1Web.LayoutView, "app.html"}
     get "/workers", PageController, :workers
 
     scope "/" do
@@ -45,8 +45,6 @@ defmodule Grav1Web.Router do
 
     scope "/" do
       pipe_through :logged_in
-
-      post "/add_project", ProjectController, :add_project
 
       scope "/user" do
         get "/", UserController, :show_user

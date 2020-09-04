@@ -18,7 +18,7 @@ module.exports = (env, options) => {
     },
     entry: {
       'app': glob.sync('./vendor/**/*.js').concat(['./js/app.js']),
-      'projects': glob.sync('./vendor/**/*.js').concat(['./js/projects.js'])
+      'index': glob.sync('./vendor/**/*.js').concat(['./js/index.js'])
     },
     output: {
       filename: '[name].js',
@@ -46,7 +46,7 @@ module.exports = (env, options) => {
       ]
     },
     plugins: [
-      new MiniCssExtractPlugin({ filename: '../css/app.css' }),
+      new MiniCssExtractPlugin({ filename: '../css/[name].css' }),
       new CopyWebpackPlugin([{ from: 'static/', to: '../' }])
     ]
     .concat(devMode ? [new HardSourceWebpackPlugin()] : [])

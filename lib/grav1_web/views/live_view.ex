@@ -36,4 +36,11 @@ defmodule Grav1Web.LiveView do
     end
   end
 
+  def render_page(socket, page) do
+    case page do
+      {component, _} -> component
+      nil -> ""
+    end
+  end
+
 end

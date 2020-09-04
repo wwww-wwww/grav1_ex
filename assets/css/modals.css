@@ -1,0 +1,105 @@
+.modal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  z-index: 100;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  animation: fadein3 0.2s;
+}
+
+.modal-top {
+  display: flex;
+  align-items: center;
+}
+
+.modal-header {
+  font-size: 1em;
+  flex: 1;
+}
+
+.modal-tab-button {
+  height: 100%;
+  border: none;
+  border-right: 1px solid rgb(0, 0, 0)
+}
+
+.modal-title {
+  font-family: 'Google Sans', sans-serif;
+  margin: 0 0.5em;
+  line-height: 1.5em;
+  box-decoration-break: clone;
+}
+
+.modal-back {
+  background: rgba(0, 0, 0, 0.2);
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.modal-inner {
+  margin: 0.5em;
+  display: flex;
+  flex-direction: column;
+  background-color: rgb(255, 255, 255);
+  border: 1px solid rgb(0, 0, 0);
+  max-width: 100%;
+  max-height: 100%;
+  animation: fadein2 0.2s;
+  z-index: 101;
+}
+
+.modal-content {
+  padding: 0.5em;
+  max-width: 100%;
+  max-height: 100%;
+  flex: 1;
+}
+
+.modal-close {
+  width: 2em;
+  height: 2em;
+  border: none;
+}
+
+.modal-row {
+  display: flex;
+  justify-content: center;
+}
+
+.modal-row:not(:last-child) {
+  margin-bottom: 0.5em;
+}
+
+.modal-row:not(:last-child) {
+  margin-bottom: 0.5em;
+}
+
+.modal-row > label {
+  flex: 1;
+  margin-right: 0.5em;
+}
+
+.modal-row-inline {
+  display: inline-flex;
+}
+
+.modal-row-inline:not(:last-child) {
+  margin-right: 0.5em;
+}
+
+@keyframes fadein3 {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadein2 {
+  from { transform: scale(1.1); }
+  to   { transform: scale(1); }
+}
+

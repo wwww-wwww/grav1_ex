@@ -1,14 +1,35 @@
-<table>
-  <tr>
-  </tr>
-  <%= for %{id: id} <- @projects do %>
-    <tr>
-      <%= id %>
-    </tr>
-  <% end %>
-</table>
+<div class="body_inner">
+  <div id="sidebar_left">
+    <div class="list_projects-controls">
+      <div class="row">
+        <input id="input_filter_projects" placeholder="Filter"/>
+      </div>
+      <div class="row sort">
+        <select id="select_projects_sort" disabled>
+          <option>Sort by Newest</option>
+          <option>Sort by Oldest</option>
+          <option>Sort by Priority</option>
+        </select>
+        <select id="select_projects_filter">
+          <option>Show All</option>
+          <option>Show Ongoing</option>
+          <option>Show Completed</option>
+        </select>
+      </div>
+    </div>
+    <div id="list_projects">
+      <%= for %{id: id} <- @projects do %>
+        <div id="proj_<%= id %>" data-id="<%= id %>" phx-hook="view_project">
+          <div>filename</div>
+        </div>
+      <% end %>
+    </div>
+  </div>
 
-<div phx-update="ignore">
+  <%= render_page(@socket, @page) %>
+</div>
+
+<div style="" phx-update="ignore">
   <% encoder_params = Grav1.Encoder.params() %>
   <% encoders = encoder_params |> Map.keys() %>
 
@@ -68,4 +89,5 @@
   }
 </style>
 
-<script defer type="text/javascript" src='<%= Routes.static_path(@socket, "/js/projects.js") %>'></script>
+<link rel="stylesheet" href='<%= Routes.static_path(@socket, "/css/index.css") %>'/>
+<script defer type="text/javascript" src='<%= Routes.static_path(@socket, "/js/index.js") %>'></script>

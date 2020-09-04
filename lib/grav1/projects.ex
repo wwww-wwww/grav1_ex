@@ -18,7 +18,7 @@ defmodule Grav1.Projects do
     Agent.get(__MODULE__, fn val -> val.projects end)
   end
 
-  def ensure_not_empty(input) do
+  defp ensure_not_empty(input) do
     case input do
       {:error, message} -> {:error, message}
       [] -> {:error, ["Files can't be empty."]}
@@ -26,7 +26,7 @@ defmodule Grav1.Projects do
     end
   end
 
-  def ensure_exist(input) do
+  defp ensure_exist(input) do
     case input do
       {:error, message} -> {:error, message}
       files ->

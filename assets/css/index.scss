@@ -1,0 +1,480 @@
+html {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+html, body {
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  animation: fadein2 0.5s;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadein2 0.25s;
+}
+
+main, main > div {
+  display: flex;
+  flex: 1;
+}
+
+#background {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  z-index: -1;
+  opacity: 0;
+  transition: 0.5s opacity;
+  filter: blur(4px);
+}
+
+#sidebar_left {
+  overflow-y: none;
+  border-right: 1px solid rgba(0, 0, 0, 0.5);
+  width: 100%;
+  height: 100%;
+  width: 17.5em;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.project {
+  border-top: 1px solid rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+  position: relative;
+  margin-bottom: 0.25em;
+  animation: fadein 0.2s;
+  background-color: rgba(255, 255, 255, 0.6);
+  padding: 0.25em 0.5em;
+  cursor: pointer;
+}
+
+.project:hover {
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.4), 0px -2px 4px rgba(0, 0, 0, 0.2);
+  background-color: rgba(230, 230, 230, 0.6);
+}
+
+.project.selected {
+  background-color: rgba(230, 230, 230, 0.6);
+}
+
+.project > .top {
+  font-size: 0.9em;
+  margin-bottom: 0.25em;
+}
+
+.project > .bottom {
+  font-size: 0.7em;
+  width: 100%;
+  position: relative;
+  line-height: 1em;
+  display: flex;
+  justify-content: center;
+}
+
+.project > .bottom  > * {
+  z-index: 0;
+}
+
+.project > .bottom > .progress_bar {
+  height: 100%;
+  width: 0%;
+  background-color: rgba(80, 210, 240, 0.4);
+  position: absolute;
+  left: 0;
+  transition: 1s width;
+}
+
+.project > .bottom > div:not(:first-child) {
+  padding: 0 0.2em;
+
+}
+
+.project > .bottom > .progress_left {
+  flex: 1;
+}
+
+.project > .bottom > .progress_center {
+  text-align: center;
+}
+
+.project > .bottom > .progress_right {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.project > div:first-child > div:last-child {
+  font-size: 0.8em;
+}
+
+.scene_list {
+  flex: 1;
+  overflow-y: scroll;
+}
+.scene_list > .scenes {
+  padding: 0.1em;
+  margin: 0;
+}
+.scene_list > .scenes > div {
+  border-radius: 3px;
+  font-family: "Consolas", "Courier New", Courier, monospace;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  padding: 0.25em;
+  margin: 0.1em;
+  text-decoration: none;
+  min-width: 5.2em;
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.6);
+}
+.scene_list > .scenes > div > div:first-child {
+  display: inline-block;
+}
+.scene_list > .scenes > div .link, .scenes > div .link:visited {
+  color: rgb(50, 120, 255);
+  text-decoration: none;
+  cursor: pointer;
+}
+.scene_list > .scenes > div > div:last-child {
+  font-size: 0.7em;
+  white-space: pre;
+}
+.scene_list > .scenes > div > button {
+  font-size: 0.7em;
+}
+.form {
+  border: 1px solid black;
+  display: inline-block;
+  padding: 0.5em;
+}
+.form > .field {
+  display: flex;
+}
+.form > .field:not(:first-child) {
+  margin-top: 0.25em;
+}
+.form > .field > label {
+  flex: 1;
+  margin-right: 1em;
+}
+body > header {
+  display: flex;
+  border-bottom: 1px solid black;
+  align-items: stretch;
+  padding: 0.25em;
+  background-color: rgba(255, 255, 255, 0.7);
+}
+#text_refresh {
+  flex: 1;
+  text-align: right;
+  align-self: center;
+  margin: 0 0.5em;
+}
+.square {
+  width: 1.5em;
+  height: 1.5em;
+  line-height: 1em;
+  padding: 0;
+  font-size: 1.4em;
+  background: none;
+  border: none;
+  background-color: rgba(100, 100, 100, 0);
+  transition: 0.1s background-color;
+  position: relative;
+}
+
+.circle {
+  width: 1.5em;
+  height: 1.5em;
+  line-height: 1em;
+  padding: 0;
+  font-size: 1.4em;
+  background: none;
+  border: none;
+  background-color: rgba(255, 255, 255, 0);
+  border-radius: 1.4em;
+  transition: 0.1s background-color;
+  position: relative;
+}
+
+.circle:active {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.circle::before {
+  top: 0;
+  left: 0;
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.6);
+  border-radius: 1.4em;
+  display: block;
+  opacity: 0;
+}
+
+.circle:hover::before {
+  opacity: 0.5;
+}
+
+.circle:active::before {
+  opacity: 1;
+}
+
+button {
+  padding: 0.1em 0.5em;
+}
+
+#list_cover {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.5);
+  z-index: 1;
+}
+
+.body_inner {
+  display: flex;
+  overflow: hidden;
+  flex: 1;
+}
+
+#list_projects {
+  overflow-y: scroll;
+  border-top: 1px solid rgba(0, 0, 0, 0.5);
+  flex: 1;
+  padding-top: 0.25em;
+}
+
+.list_projects-controls {
+  display: flex;
+  flex-direction: column;
+}
+
+.list_projects-controls > .row {
+  margin: 0.25em 0.25em 0 0.25em;
+  display: flex;
+  align-items: center;
+}
+
+.list_projects-controls > .row:last-child {
+  margin-bottom: 0.25em;
+}
+
+.list_projects-controls > .sort {
+  flex-shrink: 0;
+}
+
+.list_projects-controls > .sort > *:not(:last-child) {
+  margin-right: 0.25em;
+  flex: 1;
+}
+
+#input_filter_projects {
+  flex: 1;
+}
+
+.project_page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.project_page > .header {
+  padding: 0.5em;
+  display: flex;
+  background-color: rgba(255, 255, 255, 0.6);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+}
+
+.project_page > .header > .left {
+  flex: 1;
+}
+
+.project_page > .header > .left > div {
+  min-height: 1.3em;
+}
+
+.project_page > .header > .right {
+  display: flex;
+  align-items: center;
+  padding: 0 0.5em;
+}
+
+.project_page > .header > .left > .id,
+.project_page > .header > .left > .settings {
+  font-size: 0.75em;
+}
+
+#page {
+  flex: 1;
+  overflow: hidden;
+}
+
+#page > * {
+  animation: fadein2 0.25s;
+  overflow: auto;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(-1em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadein2 {
+  from {
+    transform: scale(0.99);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+button {
+  cursor: pointer;
+}
+
+.notification {
+  position: fixed;
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 0.5em;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 1px solid rgb(50, 50, 50);
+}
+
+.notification.error {
+  color: red;
+}
+
+#page_info table{
+  border-collapse: collapse;
+}
+
+#page_info table tr:not(:last-child) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+}
+
+#page_info table td {
+  padding: 0.1em 0.4em;
+}
+
+#page_info table tr:nth-child(2n) {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+#page_info {
+  padding: 0.25em;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+#page_info > div {
+  margin-bottom: 0.25em;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+#page_info > div > *:first-child {
+  padding: 0.2em 0.5em;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  display: block;
+}
+
+#page_info > div > div:last-child,
+#page_info > div > span:last-child {
+  padding: 0.25em 0.5em;
+  display: block;
+}
+
+#page_info > div > div span:first-child {
+  margin-right: 0.25em;
+}
+#page_info > div > div span:first-child::after {
+  content: ":";
+}
+
+#page_settings {
+  padding: 0.5em;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+#page_settings > div{
+  margin-bottom: 0.5em;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+#page_settings > div > *:first-child:not(:last-child) {
+  padding: 0.2em 0.5em;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  display: block;
+}
+
+#page_settings > div > *:last-child {
+  padding: 0.25em 0.5em;
+  display: block;
+}
+
+#page_settings > div > *:first-child:last-child {
+  padding: 0.2em 0.5em;
+  display: block;
+}
+
+.range {
+  margin: 0 0.5em 0 0;
+  width: 10em;
+}
+
+.input_number {
+  width: 4em;
+}
+
+#connect_splash {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+#connect_info {
+  margin: auto;
+}
+
+/*
+@import url("modals.css");
+@import url("buttons.css");
+@import url("add_project.css");
+@import url("settings.css");
+*/

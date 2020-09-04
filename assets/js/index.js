@@ -1,3 +1,5 @@
+import "../css/index.scss"
+
 import {create_element} from "./util"
 import Modal from "./modals"
 
@@ -76,10 +78,14 @@ hooks.add_project = {
         })
       })
     })
-  },
+  }
+}
 
-  updated() {
-    console.log("Updated", this)
+hooks.view_project = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      this.pushEvent("view_project", {id: this.el.dataset.id})
+    })
   }
 }
 

@@ -6,11 +6,13 @@ defmodule Grav1.Repo.Migrations.CreateProjects do
 
     create table(:projects) do
       add :input, :string
-      add :encoder, Grav1.Encoder.type()
+      add :name, :string, default: nil
       add :priority, :integer, default: 0
   
       add :input_frames, :integer
   
+      add :encoder, Grav1.Encoder.type()
+
       add :encoder_params, {:array, :string}
       add :ffmpeg_params, {:array, :string}
   
@@ -18,6 +20,8 @@ defmodule Grav1.Repo.Migrations.CreateProjects do
       add :split_max_frames, :integer, default: nil
   
       add :grain_tables, :boolean, default: false
+
+      add :state, :integer, default: 0
 
       timestamps()
     end

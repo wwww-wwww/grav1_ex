@@ -42,7 +42,17 @@ hooks.add_project = {
           params.push(param_name)
         }
       }
-      
+
+      const files = []
+      for (const c of files_list.children) {
+        if (c.tagName == "DIV" && c.children[0].value.length > 0) {
+          let filename = c.children[0].value
+          if (filename[0] == "\"" && filename.substr(-1) == "\"")
+            filename = filename.substr(1, filename.length - 2)
+          files.push(filename)
+        }
+      }
+
       const confirm_modal = new Modal({title: "Create Project"})
       confirm_modal.show()
 
@@ -52,7 +62,7 @@ hooks.add_project = {
       confirm_modal.confirm.textContent = "Confirm"
       confirm_modal.confirm.focus()
       confirm_modal.confirm.addEventListener("click", () => {
-        this.pushEvent("add_project", {files: [], params: params}, (reply, _ref) => {
+        this.pushEvent("add_project", {encoder: selected_encoder, files: files, encoder_params: params}, (reply, _ref) => {
           confirm_modal.close()
           if (reply.success) {
           } else {
@@ -103,3 +113,18 @@ select_encoder.addEventListener("change", () => {
 })
 
 show_params()
+
+files_list_add.addEventListener("click", () => {
+  const e = create_element(null, "div")
+
+  e.input = create_element(e, "input")
+
+  e.remove = create_element(e, "button", "material-icons")
+  e.remove.textContent = "clear"
+  e.remove.addEventListener("click", () => {
+    files_list.removeChild(e)
+  })
+
+  files_list.insertBefore(e, files_list_add)
+  e.input.focus()
+})

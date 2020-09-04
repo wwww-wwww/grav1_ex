@@ -12,7 +12,7 @@ defmodule Grav1Web.ProjectsLive do
   def get_projects() do
     Projects.get_projects()
   end
-  
+
   def mount(_, _, socket) do
     if connected?(socket), do: Grav1Web.Endpoint.subscribe(@topic)
     {:ok, socket
@@ -20,9 +20,13 @@ defmodule Grav1Web.ProjectsLive do
     |> assign(project_changeset: Project.changeset(%Project{}))}
   end
 
-  def handle_event("add_project", %{"files" => files, "params" => params}, socket) do
-    IO.inspect(params)
-    {:reply, %{success: true}, socket}
+  def handle_event("add_project", %{"files" => files, "encoder" => encoder, "encoder_params" => encoder_params}, socket) do
+    case Projects.add_project(files, encoder, encoder_params) do
+      {:error, reason} ->
+        {:reply, %{success: false, reason: reason}, socket}
+      _ ->
+        {:reply, %{success: true}, socket}
+    end
   end
 
   def handle_info(%{topic: @topic, payload: %{projects: projects}}, socket) do

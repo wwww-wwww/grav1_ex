@@ -1,9 +1,9 @@
 <table>
   <tr>
   </tr>
-  <%= for project <- @projects do %>
+  <%= for %{id: id} <- @projects do %>
     <tr>
-      <%= project %>
+      <%= id %>
     </tr>
   <% end %>
 </table>
@@ -21,6 +21,12 @@
     <% end %>
   </select>
 
+  <div>
+    <div>Files</div>
+    <div id="files_list">
+      <button id="files_list_add" class="material-icons">add</button>
+    </div>
+  </div>
   <div id="encoder_params">
     <%= for encoder <- encoders do %>
       <div id="params_<%= encoder %>" class="hidden">

@@ -13,8 +13,8 @@ defmodule Grav1Web.ProjectController do
       "priority" => priority,
       "id" => id
     } = params
+
     IO.inspect(params)
     text(conn, "")
   end
-  
 end

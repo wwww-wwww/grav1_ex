@@ -1,6 +1,6 @@
 defmodule Grav1Web.WorkersLive do
   use Phoenix.LiveView
-  
+
   @topic "workers_live"
 
   def render(assigns) do
@@ -10,7 +10,7 @@ defmodule Grav1Web.WorkersLive do
   def get_workers() do
     Grav1.WorkerAgent.get()
   end
-  
+
   def mount(_, _, socket) do
     if connected?(socket), do: Grav1Web.Endpoint.subscribe(@topic)
     {:ok, socket |> assign(workers: get_workers())}

@@ -2,7 +2,7 @@ defmodule Grav1Web.PageController do
   use Grav1Web, :controller
 
   import Phoenix.LiveView.Controller
-  
+
   alias Grav1.User
 
   def index(conn, _params) do
@@ -15,6 +15,7 @@ defmodule Grav1Web.PageController do
 
   def sign_up(conn, _) do
     changeset = User.changeset(%User{})
+
     conn
     |> put_view(Grav1Web.UserView)
     |> render("sign_up.html", changeset: changeset)

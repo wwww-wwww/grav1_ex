@@ -1,4 +1,3 @@
-
 defmodule Grav1Web.UserSocket do
   use Phoenix.Socket
 
@@ -8,21 +7,22 @@ defmodule Grav1Web.UserSocket do
     case Guardian.Phoenix.Socket.authenticate(socket, Grav1.Guardian, token) do
       {:ok, authed_socket} ->
         {:ok,
-          authed_socket
-          |> assign(:socket_id, new_id())
-          |> assign(:user_id, Guardian.Phoenix.Socket.current_resource(authed_socket).username)
-        }
-      _ -> :error
+         authed_socket
+         |> assign(:socket_id, new_id())
+         |> assign(:user_id, Guardian.Phoenix.Socket.current_resource(authed_socket).username)}
+
+      _ ->
+        :error
     end
   end
 
   def connect(_, socket, _) do
     socket_id = new_id()
+
     {:ok,
-      socket
-      |> assign(:socket_id, socket_id)
-      |> assign(:user_id, "$" <> socket_id)
-    }
+     socket
+     |> assign(:socket_id, socket_id)
+     |> assign(:user_id, "$" <> socket_id)}
   end
 
   def id(socket) do
@@ -43,6 +43,6 @@ defmodule Grav1Web.Counter do
   end
 
   def inc do
-    Agent.get_and_update(__MODULE__, &({&1, &1 + 1}))
+    Agent.get_and_update(__MODULE__, &{&1, &1 + 1})
   end
 end

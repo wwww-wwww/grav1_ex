@@ -4,5 +4,4 @@ defmodule Grav1Web.ProjectComponent do
   def render(assigns) do
     Grav1Web.LiveView.render("project.html", assigns)
   end
-
 end

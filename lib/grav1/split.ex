@@ -1,17 +1,36 @@
 defmodule Grav1.Split do
-
   @re_ffmpeg_frames ~r/frame= *([^ ]+?) /
   @re_ffmpeg_frames2 ~r/([0-9]+?) frames successfully decoded/
   @re_ffmpeg_keyframe ~r/n:([0-9]+)\.[0-9]+ pts:.+key:(.).+pict_type:(.)/
   @re_python_aom ~r/frame *([^ ]+)/
 
   @fields [
-    "frame", "weight", "intra_error", "frame_avg_wavelet_energy",
-    "coded_error", "sr_coded_error", "tr_coded_error", "pcnt_inter",
-    "pcnt_motion", "pcnt_second_ref", "pcnt_third_ref", "pcnt_neutral",
-    "intra_skip_pct", "inactive_zone_rows", "inactive_zone_cols", "MVr",
-    "mvr_abs", "MVc", "mvc_abs", "MVrv", "MVcv", "mv_in_out_count",
-    "new_mv_count", "duration", "count", "raw_error_stdev"
+    "frame",
+    "weight",
+    "intra_error",
+    "frame_avg_wavelet_energy",
+    "coded_error",
+    "sr_coded_error",
+    "tr_coded_error",
+    "pcnt_inter",
+    "pcnt_motion",
+    "pcnt_second_ref",
+    "pcnt_third_ref",
+    "pcnt_neutral",
+    "intra_skip_pct",
+    "inactive_zone_rows",
+    "inactive_zone_cols",
+    "MVr",
+    "mvr_abs",
+    "MVc",
+    "mvc_abs",
+    "MVrv",
+    "MVcv",
+    "mv_in_out_count",
+    "new_mv_count",
+    "duration",
+    "count",
+    "raw_error_stdev"
   ]
 
   @min_intra_level 0.25
@@ -26,17 +45,20 @@ defmodule Grav1.Split do
   def split(input, path_split, min_frames, max_frames, callback) do
     IO.inspect("started split")
 
-    {source_keyframes, total_frames} = get_keyframes(input, fn x -> callback.({:progress, :source_keyframes}, x) end)
+    {source_keyframes, total_frames} =
+      get_keyframes(input, fn x -> callback.({:progress, :source_keyframes}, x) end)
 
     callback.(:log, "")
 
-    aom_keyframes = input
-    |> get_aom_keyframes(fn x -> callback.({:progress, :aom_keyframes}, {x, total_frames}) end)
-    |> kf_min_dist(min_frames, total_frames)
-    |> ensure_total_frames(total_frames)
-    |> kf_max_dist(min_frames, max_frames, source_keyframes)
+    aom_keyframes =
+      input
+      |> get_aom_keyframes(fn x -> callback.({:progress, :aom_keyframes}, {x, total_frames}) end)
+      |> kf_min_dist(min_frames, total_frames)
+      |> ensure_total_frames(total_frames)
+      |> kf_max_dist(min_frames, max_frames, source_keyframes)
 
-    {frames, splits, segments} = partition_keyframes(source_keyframes, aom_keyframes, total_frames)
+    {frames, splits, segments} =
+      partition_keyframes(source_keyframes, aom_keyframes, total_frames)
 
     IO.inspect(source_keyframes)
     IO.inspect(aom_keyframes)
@@ -44,7 +66,7 @@ defmodule Grav1.Split do
     IO.inspect(splits)
     IO.inspect(segments)
 
-    {source_keyframes, aom_keyframes, }
+    {source_keyframes, aom_keyframes}
   end
 
   def verify_split(input, path_split, splits, callback) do
@@ -58,55 +80,76 @@ defmodule Grav1.Split do
       num_frames = get_frames(path_segment)
 
       misalignment = total_frames != start
-      if misalignment, do: callback.(:log, "misalignment at #{segment} expected: #{start}, got: #{total_frames}")
+
+      if misalignment,
+        do: callback.(:log, "misalignment at #{segment} expected: #{start}, got: #{total_frames}")
 
       bad_framecount = num_frames != length
-      if bad_framecount, do: callback.(:log, "bad framecount #{segment} expected: #{length}, got: #{num_frames}")
 
-      bad_framecount_slow = true and case get_frames(path_segment, false) do # if not using vs_ffms2
-        ^num_frames -> false
-        num_frames_slow ->
-          callback.(:log, "bad framecount #{segment} expected: #{num_frames}, got: #{num_frames_slow}")
-          true
-      end
+      if bad_framecount,
+        do: callback.(:log, "bad framecount #{segment} expected: #{length}, got: #{num_frames}")
+
+      # if not using vs_ffms2
+      bad_framecount_slow =
+        true and
+          case get_frames(path_segment, false) do
+            ^num_frames ->
+              false
+
+            num_frames_slow ->
+              callback.(
+                :log,
+                "bad framecount #{segment} expected: #{num_frames}, got: #{num_frames_slow}"
+              )
+
+              true
+          end
 
       if misalignment or bad_framecount or bad_framecount_slow do
         path_old = Path.join(path_split, "old")
         File.mkdir_p(path_old)
         File.rename(path_segment, Path.join(path_old, file))
-        correct_split(input, path_segment, start, length, fn x -> callback.({:progress, :correct}, {x, length}) end)
+
+        correct_split(input, path_segment, start, length, fn x ->
+          callback.({:progress, :correct}, {x, length})
+        end)
       end
 
       if callback != nil, do: callback.({:progress, :verify}, {i, length(splits)})
       total_frames + num_frames
-    end) 
+    end)
   end
 
   def correct_split(input, output, start, length, callback) do
-    port = Port.open(
-      {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
-      [
-        :binary,
-        :exit_status,
-        args: [
-          "-u",
-          "vspipe_correct_split.py",
-          Application.fetch_env!(:grav1, :path_vspipe),
-          Application.fetch_env!(:grav1, :path_ffmpeg),
-          input,
-          output,
-          start,
-          length
+    port =
+      Port.open(
+        {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
+        [
+          :binary,
+          :exit_status,
+          args: [
+            "-u",
+            "vspipe_correct_split.py",
+            Application.fetch_env!(:grav1, :path_vspipe),
+            Application.fetch_env!(:grav1, :path_ffmpeg),
+            input,
+            output,
+            start,
+            length
+          ]
         ]
-      ]
-    )
-    
+      )
+
     stream_port(port, 0, fn line, acc ->
       case Regex.scan(@re_python_aom, line) |> List.last() do
-        nil -> acc
+        nil ->
+          acc
+
         [_, frame_str] ->
           case Integer.parse(frame_str) do
-            :error -> acc
+            :error ->
+              acc
+
             {new_frame, _} ->
               if callback != nil and acc != new_frame, do: callback.(new_frame)
 
@@ -117,22 +160,28 @@ defmodule Grav1.Split do
   end
 
   def get_frames(input, fast \\ true, callback \\ nil) do
-    if fast and false do # vapoursynth
+    # vapoursynth
+    if fast and false do
     else
       fast_args = if fast, do: ["-c", "copy"], else: []
       args = ["-hide_banner", "-i", input, "-map", "0:v:0"] ++ fast_args ++ ["-f", "null", "-"]
 
-      port = Port.open(
-        {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
-        [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
-      )
-      
+      port =
+        Port.open(
+          {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+          [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
+        )
+
       stream_port(port, 0, fn line, acc ->
         case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
-          nil -> acc
+          nil ->
+            acc
+
           [_, frames_str] ->
             case Integer.parse(frames_str) do
-              :error -> acc
+              :error ->
+                acc
+
               {new_frames, _} ->
                 if callback != nil and new_frames != acc, do: callback.(new_frames)
 
@@ -144,29 +193,31 @@ defmodule Grav1.Split do
   end
 
   defp get_keyframes(input, callback \\ nil) do
-    {frames, total_frames} = case Path.extname(String.downcase(input)) do
-      ".mkv" -> {:nothing, :nothing}#get_keyframes_ebml(input)
-      _ -> {:nothing, :nothing}
-    end
+    {frames, total_frames} =
+      case Path.extname(String.downcase(input)) do
+        # get_keyframes_ebml(input)
+        ".mkv" -> {:nothing, :nothing}
+        _ -> {:nothing, :nothing}
+      end
 
     case {frames, total_frames} do
       {:nothing, _} ->
-        if false do # if vapoursynth supported
+        # if vapoursynth supported
+        if false do
           get_keyframes_vs_ffms2(input)
         else
           get_keyframes_ffmpeg(input, callback)
         end
+
       {frames, :nothing} ->
         {frames, get_frames(input, true, callback)}
     end
   end
 
   defp get_keyframes_ebml(input) do
-    
   end
 
   defp get_keyframes_vs_ffms2(input) do
-    
   end
 
   def get_keyframes_ffmpeg(input, callback \\ nil) do
@@ -179,38 +230,47 @@ defmodule Grav1.Split do
       "-vsync", "0",
       "-loglevel", "debug", "-"
     ]
-  
-    port = Port.open(
-      {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
-      [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
-    )
-    
+
+    port =
+      Port.open(
+        {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+        [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
+      )
+
     stream_port(port, {[], 0}, fn line, acc ->
       {keyframes, frames} = acc
 
       case Regex.scan(@re_ffmpeg_keyframe, line) |> List.last() do
         nil ->
           case Regex.scan(@re_ffmpeg_frames2, line) |> List.last() do
-            nil -> acc
+            nil ->
+              acc
+
             [_, frame_str] ->
               case Integer.parse(frame_str) do
-                :error -> acc
+                :error ->
+                  acc
+
                 {new_frame, _} ->
                   if callback != nil and frames != new_frame, do: callback.(new_frame)
 
                   {keyframes, new_frame}
               end
           end
+
         [_, frame_str, key, pict_type] ->
           case Integer.parse(frame_str) do
-            :error -> acc
+            :error ->
+              acc
+
             {new_frame, _} ->
               if callback != nil and frames != new_frame, do: callback.(new_frame)
 
-              if key == "1" and pict_type == "I", do: {keyframes ++ [new_frame], frames}, else: acc
+              if key == "1" and pict_type == "I",
+                do: {keyframes ++ [new_frame], frames},
+                else: acc
           end
       end
-
     end)
   end
 
@@ -218,14 +278,18 @@ defmodule Grav1.Split do
     receive do
       {^port1, {:exit_status, status}} ->
         IO.inspect("port1 exited, status #{status}")
+
       {^port2, {:exit_status, status}} ->
         IO.inspect("port2 exited, status #{status}")
+
       {^port2, {:data, data}} ->
         IO.inspect(data)
         pipe(port1, port2)
+
       {^port1, {:data, data}} ->
         Port.command(port2, data)
         pipe(port1, port2)
+
       b ->
         IO.inspect(b)
     end
@@ -254,58 +318,73 @@ defmodule Grav1.Split do
 
     pipe(port_ffmpeg, port_aomenc)
     """
-    # until i can get piping to work
-    port = Port.open(
-      {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
-      [:binary, :exit_status, :line, args: ["-u", "aom_firstpass.py", input]]
-    )
-    
-    result = stream_port(port, 0, fn line, acc ->
-      case Regex.scan(@re_python_aom, line) |> List.last() do
-        nil -> acc
-        [_, frame_str] ->
-          case Integer.parse(frame_str) do
-            :error -> acc
-            {new_frame, _} ->
-              if callback != nil and acc != new_frame, do: callback.(new_frame)
 
-              new_frame
-          end
-      end
-    end)
+    # until i can get piping to work
+    port =
+      Port.open(
+        {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
+        [:binary, :exit_status, :line, args: ["-u", "aom_firstpass.py", input]]
+      )
+
+    result =
+      stream_port(port, 0, fn line, acc ->
+        case Regex.scan(@re_python_aom, line) |> List.last() do
+          nil ->
+            acc
+
+          [_, frame_str] ->
+            case Integer.parse(frame_str) do
+              :error ->
+                acc
+
+              {new_frame, _} ->
+                if callback != nil and acc != new_frame, do: callback.(new_frame)
+
+                new_frame
+            end
+        end
+      end)
 
     case result do
-      {:error, _} -> :error
+      {:error, _} ->
+        :error
+
       _ ->
         filename = "fpf.log"
 
         case File.open(filename, [:binary, :read]) do
-          {:error, _} -> :error
+          {:error, _} ->
+            :error
+
           {:ok, file} ->
             bytes = IO.binread(file, :all)
             File.close(file)
 
-            dict_list = (for <<field::little-float <- bytes>>, do: field)
-            |> Enum.chunk_every(26)
-            |> Enum.reduce([], fn x, acc ->
-              frame_stats = @fields
-              |> Enum.zip(x)
-              |> Map.new
-              acc ++ [frame_stats]
-            end)
+            dict_list =
+              for(<<field::little-float <- bytes>>, do: field)
+              |> Enum.chunk_every(26)
+              |> Enum.reduce([], fn x, acc ->
+                frame_stats =
+                  @fields
+                  |> Enum.zip(x)
+                  |> Map.new()
+
+                acc ++ [frame_stats]
+              end)
 
             fpf_frames = Enum.count(dict_list)
 
-            #intentionally skipping 0th frame and last 16 frames
-            {_, keyframes} = Enum.reduce(1..(fpf_frames-16), {1, [0]}, fn x, acc ->
-              {frame_count_so_far, keyframes} = acc
+            # intentionally skipping 0th frame and last 16 frames
+            {_, keyframes} =
+              Enum.reduce(1..(fpf_frames - 16), {1, [0]}, fn x, acc ->
+                {frame_count_so_far, keyframes} = acc
 
-              if test_candidate_kf(dict_list, x, frame_count_so_far) do
-                {1, keyframes ++ [x]}
-              else
-                {frame_count_so_far + 1, keyframes}
-              end
-            end)
+                if test_candidate_kf(dict_list, x, frame_count_so_far) do
+                  {1, keyframes ++ [x]}
+                else
+                  {frame_count_so_far + 1, keyframes}
+                end
+              end)
 
             keyframes
         end
@@ -316,10 +395,12 @@ defmodule Grav1.Split do
     adapt_upto = 32
     min_second_ref_usage_thresh = 0.085
     second_ref_usage_thresh_max_delta = 0.035
+
     if frame_count_so_far >= adapt_upto do
       min_second_ref_usage_thresh + second_ref_usage_thresh_max_delta
     else
-      min_second_ref_usage_thresh + (frame_count_so_far / (adapt_upto - 1)) * second_ref_usage_thresh_max_delta
+      min_second_ref_usage_thresh +
+        frame_count_so_far / (adapt_upto - 1) * second_ref_usage_thresh_max_delta
     end
   end
 
@@ -335,14 +416,15 @@ defmodule Grav1.Split do
     previous_frame_dict = dict_list |> Enum.at(current_frame_index - 1)
     current_frame_dict = dict_list |> Enum.at(current_frame_index)
     future_frame_dict = dict_list |> Enum.at(current_frame_index + 1)
-    
+
     p = previous_frame_dict
     c = current_frame_dict
     f = future_frame_dict
-    
+
     qmode = true
-    #todo: allow user to set whether we"re testing for constant-q mode keyframe placement or not. it"s not a big difference.
-    
+
+    # todo: allow user to set whether we"re testing for constant-q mode keyframe placement or not. it"s not a big difference.
+
     pcnt_intra = 1.0 - c["pcnt_inter"]
     modified_pcnt_inter = c["pcnt_inter"] - c["pcnt_neutral"]
     
@@ -397,7 +479,7 @@ defmodule Grav1.Split do
         end
       end)
 
-      #If there is tolerable prediction for at least the next 3 frames then break out else discard this potential key frame and move on
+      # If there is tolerable prediction for at least the next 3 frames then break out else discard this potential key frame and move on
       boost_score > 30 and i > 3
     else
       false
@@ -407,39 +489,56 @@ defmodule Grav1.Split do
   defp kf_min_dist(aom_keyframes, min_frames, total_frames) do
     if min_frames != -1 do
       aom_keyframes = aom_keyframes ++ [total_frames]
-      aom_scenes = aom_keyframes
-      |> Enum.zip(tl(aom_keyframes))
 
-      {_, scenes} = aom_scenes
-      |> Enum.zip(tl(aom_scenes) ++ [{nil, nil}])
-      |> Enum.with_index()
-      |> Enum.reduce({0, []}, fn {{{frame, next_frame}, {next_scene_frame, next_scene_next_frame}}, i}, {acc, scenes} ->
-        length = next_frame - frame
+      aom_scenes =
+        aom_keyframes
+        |> Enum.zip(tl(aom_keyframes))
 
-        scene_frame = frame - acc
-        scene_length = length + acc
+      {_, scenes} =
+        aom_scenes
+        |> Enum.zip(tl(aom_scenes) ++ [{nil, nil}])
+        |> Enum.with_index()
+        |> Enum.reduce({0, []}, fn {{{frame, next_frame},
+                                     {next_scene_frame, next_scene_next_frame}}, i},
+                                   {acc, scenes} ->
+          length = next_frame - frame
 
-        cond do
-          scene_length >= min_frames -> {0, scenes ++ [{scene_frame, scene_length}]}
-          length(scenes) == 0 -> {scene_length, scenes}
-          true ->
-            {prev_frame, prev_length} = List.last(scenes)
-            if i < length(aom_scenes) - 2 do
-              if prev_length < min_frames do
-                {acc, (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++ [{prev_frame, prev_length + scene_length}]}
-              else
-                next_scene_length = next_scene_next_frame - next_scene_frame
-                if next_scene_length + scene_length < prev_length + scene_length do
-                  {scene_length, scenes}
+          scene_frame = frame - acc
+          scene_length = length + acc
+
+          cond do
+            scene_length >= min_frames ->
+              {0, scenes ++ [{scene_frame, scene_length}]}
+
+            length(scenes) == 0 ->
+              {scene_length, scenes}
+
+            true ->
+              {prev_frame, prev_length} = List.last(scenes)
+
+              if i < length(aom_scenes) - 2 do
+                if prev_length < min_frames do
+                  {acc,
+                   (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++
+                     [{prev_frame, prev_length + scene_length}]}
                 else
-                  {acc, (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++ [{prev_frame, prev_length + scene_length}]}
+                  next_scene_length = next_scene_next_frame - next_scene_frame
+
+                  if next_scene_length + scene_length < prev_length + scene_length do
+                    {scene_length, scenes}
+                  else
+                    {acc,
+                     (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++
+                       [{prev_frame, prev_length + scene_length}]}
+                  end
                 end
+              else
+                {acc,
+                 (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++
+                   [{prev_frame, prev_length + scene_length}]}
               end
-            else
-              {acc, (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++ [{prev_frame, prev_length + scene_length}]}
-            end
-        end
-      end)
+          end
+        end)
     else
       aom_keyframes
     end
@@ -505,44 +604,50 @@ defmodule Grav1.Split do
   def partition_keyframes(original_keyframes, aom_keyframes, total_frames) do
     original_keyframes = original_keyframes ++ [total_frames]
 
-    {frames, segments, _} = aom_keyframes
-    |> Enum.zip(tl(aom_keyframes))
-    |> Enum.reduce({[], %{}, 0}, fn {frame, next_frame}, acc ->
-      {frames, splits, last_end} = acc
+    {frames, segments, _} =
+      aom_keyframes
+      |> Enum.zip(tl(aom_keyframes))
+      |> Enum.reduce({[], %{}, 0}, fn {frame, next_frame}, acc ->
+        {frames, splits, last_end} = acc
 
-      length = next_frame - frame
+        length = next_frame - frame
 
-      {new_frames, split_n, start} = if frame in original_keyframes do
-        {frames ++ [frame], length(frames), 0}
-      else
-        largest = original_keyframes
-        |> Enum.filter(fn x -> x < frame end)
-        |> Enum.max()
-        
-        if largest in frames or largest < last_end do
-          {frames, length(frames) - 1, frame - List.last(frames)}
-        else
-          {frames ++ [largest], length(frames), frame - largest}
-        end
-      end
+        {new_frames, split_n, start} =
+          if frame in original_keyframes do
+            {frames ++ [frame], length(frames), 0}
+          else
+            largest =
+              original_keyframes
+              |> Enum.filter(fn x -> x < frame end)
+              |> Enum.max()
 
-      split_name = split_n |> Integer.to_string() |> String.pad_leading(5, "0")
-      segment_n = length(Map.keys(splits)) |> Integer.to_string() |> String.pad_leading(5, "0")
+            if largest in frames or largest < last_end do
+              {frames, length(frames) - 1, frame - List.last(frames)}
+            else
+              {frames ++ [largest], length(frames), frame - largest}
+            end
+          end
 
-      new_split = %{segment: "#{split_name}.mkv", start: start, frames: length}
+        split_name = split_n |> Integer.to_string() |> String.pad_leading(5, "0")
+        segment_n = length(Map.keys(splits)) |> Integer.to_string() |> String.pad_leading(5, "0")
 
-      {new_frames, splits |> Map.put(segment_n, new_split), frame + length}
-    end)
+        new_split = %{segment: "#{split_name}.mkv", start: start, frames: length}
 
-    splits = frames
-    |> Enum.zip(tl(frames) ++ [total_frames])
-    |> Enum.with_index()
-    |> Enum.reduce([], fn {{frame, next_frame}, i}, acc ->
-      split_name = i
-      |> Integer.to_string()
-      |> String.pad_leading(5, "0")
-      acc ++ [%{file: "#{split_name}.mkv", start: frame, length: next_frame - frame}]
-    end)
+        {new_frames, splits |> Map.put(segment_n, new_split), frame + length}
+      end)
+
+    splits =
+      frames
+      |> Enum.zip(tl(frames) ++ [total_frames])
+      |> Enum.with_index()
+      |> Enum.reduce([], fn {{frame, next_frame}, i}, acc ->
+        split_name =
+          i
+          |> Integer.to_string()
+          |> String.pad_leading(5, "0")
+
+        acc ++ [%{file: "#{split_name}.mkv", start: frame, length: next_frame - frame}]
+      end)
 
     {frames, splits, segments}
   end
@@ -554,5 +659,4 @@ defmodule Grav1.Split do
       {^port, {:exit_status, status}} -> {:error, status, acc}
     end
   end
-  
 end

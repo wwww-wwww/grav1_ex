@@ -28,14 +28,18 @@ defmodule Grav1.Application do
   end
 
   def get_version(key, executable, args, re) do
-    version = case System.cmd(executable, args, stderr_to_stdout: true) do
-      {resp, 0} ->
-        case Regex.run(re, resp) do
-          nil -> :error
-          [_, version] -> version
-        end
-      _ -> :notfound
-    end
+    version =
+      case System.cmd(executable, args, stderr_to_stdout: true) do
+        {resp, 0} ->
+          case Regex.run(re, resp) do
+            nil -> :error
+            [_, version] -> version
+          end
+
+        _ ->
+          :notfound
+      end
+
     Application.put_env(:versions, key, version)
     version
   end

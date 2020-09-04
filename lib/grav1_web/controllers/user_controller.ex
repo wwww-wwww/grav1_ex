@@ -17,13 +17,15 @@ defmodule Grav1Web.UserController do
         conn
         |> Guardian.Plug.sign_in(user)
         |> redirect(to: Routes.page_path(conn, :index))
+
       {:error, changeset} ->
-        {field, error} = Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
-          Enum.reduce(opts, msg, fn {key, value}, acc ->
-            String.replace(acc, "%{#{key}}", to_string(value))
+        {field, error} =
+          Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+            Enum.reduce(opts, msg, fn {key, value}, acc ->
+              String.replace(acc, "%{#{key}}", to_string(value))
+            end)
           end)
-        end)
-        |> Enum.at(0)
+          |> Enum.at(0)
 
         conn
         |> put_flash(:error, "#{field} #{error}")
@@ -37,6 +39,7 @@ defmodule Grav1Web.UserController do
         conn
         |> put_flash(:error, "Incorrect username or password")
         |> redirect(to: Routes.user_path(conn, :sign_in))
+
       user ->
         if Bcrypt.verify_pass(password |> to_string(), user.password) do
           conn
@@ -62,8 +65,10 @@ defmodule Grav1Web.UserController do
         conn
         |> put_status(200)
         |> json(%{success: false, reason: "bad token"})
+
       user ->
-        token = conn
+        token =
+          conn
           |> Guardian.Plug.sign_in(user)
           |> Guardian.Plug.current_token()
 
@@ -79,9 +84,11 @@ defmodule Grav1Web.UserController do
         conn
         |> put_status(200)
         |> json(%{success: false, reason: "bad username or password"})
+
       user ->
         if Bcrypt.verify_pass(password |> to_string(), user.password) do
-          token = conn
+          token =
+            conn
             |> Guardian.Plug.sign_in(user)
             |> Guardian.Plug.current_token()
 

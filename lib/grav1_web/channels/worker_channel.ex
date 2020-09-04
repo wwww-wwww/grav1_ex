@@ -25,7 +25,7 @@ defmodule Grav1Web.WorkerChannel do
 
     {:noreply, socket}
   end
-  
+
   def handle_info(%Phoenix.Socket.Broadcast{topic: _, event: ev, payload: payload}, socket) do
     push(socket, ev, payload)
     {:noreply, socket}

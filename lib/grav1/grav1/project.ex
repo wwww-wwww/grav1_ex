@@ -4,7 +4,7 @@ defmodule Grav1.Project do
 
   import EctoEnum
 
-  defenum State, idle: 0, ready: 1, completed: 2
+  defenum(State, idle: 0, ready: 1, completed: 2)
 
   schema "projects" do
     field :input, :string
@@ -37,7 +37,17 @@ defmodule Grav1.Project do
   @doc false
   def changeset(user, attrs \\ %{}) do
     user
-    |> cast(attrs, [:input, :name, :encoder, :priority, :encoder_params, :ffmpeg_params, :split_min_frames, :split_max_frames, :grain_tables])
+    |> cast(attrs, [
+      :input,
+      :name,
+      :encoder,
+      :priority,
+      :encoder_params,
+      :ffmpeg_params,
+      :split_min_frames,
+      :split_max_frames,
+      :grain_tables
+    ])
     |> validate_required([:input, :encoder, :encoder_params, :ffmpeg_params])
   end
 end

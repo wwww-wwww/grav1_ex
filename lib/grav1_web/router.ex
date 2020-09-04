@@ -40,7 +40,7 @@ defmodule Grav1Web.Router do
       get "/sign_up", PageController, :sign_up
       post "/sign_up", UserController, :sign_up
     end
-    
+
     get "/sign_out", UserController, :sign_out
 
     scope "/" do

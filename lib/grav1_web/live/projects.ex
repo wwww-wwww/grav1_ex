@@ -6,7 +6,7 @@ defmodule Grav1Web.ProjectsLive do
   alias Grav1.{Projects, Project, Repo}
 
   def render(assigns) do
-    Grav1Web.LiveView.render("projects.html", assigns)
+    Grav1Web.PageView.render("projects.html", assigns)
   end
 
   def get_projects() do

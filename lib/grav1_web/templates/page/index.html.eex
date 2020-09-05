@@ -1,12 +1,17 @@
-<%= link("projects", to: Routes.live_path(@conn, Grav1Web.ProjectsLive)) %>
-<br>
-<%= link("workers", to: Routes.page_path(@conn, :workers)) %>
-
-<%= for {p, version} <- Application.get_all_env(:versions) do %>
+<div>
   <div>
-    <span><%= p %></span>
-    <span><%= version %></span>
+    <%= link("projects", to: Routes.live_path(@conn, Grav1Web.ProjectsLive)) %>
   </div>
-<% end %>
+  <div>
+  <%= link("workers", to: Routes.page_path(@conn, :workers)) %>
+  </div>
 
-<script defer type="text/javascript" src='<%= Routes.static_path(@conn, "/js/app.js") %>'></script>
+  <div>
+    <%= for {p, version} <- Application.get_all_env(:versions) do %>
+      <div>
+        <span><%= p %></span>
+        <span><%= version %></span>
+      </div>
+    <% end %>
+  </div>
+</div>

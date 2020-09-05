@@ -29,7 +29,7 @@
   <%= render_page(@socket, @page) %>
 </div>
 
-<div style="" phx-update="ignore">
+<div style="" phx-update="ignore" phx-hook="load_encoders">
   <% encoder_params = Grav1.Encoder.params() %>
   <% encoders = encoder_params |> Map.keys() %>
 
@@ -89,5 +89,4 @@
   }
 </style>
 
-<link rel="stylesheet" href='<%= Routes.static_path(@socket, "/css/index.css") %>'/>
-<script defer type="text/javascript" src='<%= Routes.static_path(@socket, "/js/index.js") %>'></script>
+<link rel="stylesheet" href='<%= Routes.static_path(@socket, "/css/projects.css") %>'/>

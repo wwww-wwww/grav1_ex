@@ -14,16 +14,14 @@ defmodule Grav1Web.PageController do
   end
 
   def sign_up(conn, _) do
-    changeset = User.changeset(%User{})
-
     conn
     |> put_view(Grav1Web.UserView)
-    |> render("sign_up.html", changeset: changeset)
+    |> live_render(Grav1Web.SignUpLive)
   end
 
   def sign_in(conn, _) do
     conn
     |> put_view(Grav1Web.UserView)
-    |> render("sign_in.html")
+    |> live_render(Grav1Web.SignInLive)
   end
 end

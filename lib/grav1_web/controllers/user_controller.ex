@@ -33,7 +33,7 @@ defmodule Grav1Web.UserController do
     end
   end
 
-  def sign_in(conn, %{"username" => username, "password" => password}) do
+  def sign_in(conn, %{"user" => %{"username" => username, "password" => password}}) do
     case Repo.get(User, username |> to_string() |> String.downcase()) do
       nil ->
         conn

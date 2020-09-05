@@ -1,42 +1,6 @@
-html {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-html, body {
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  animation: fadein2 0.5s;
-}
-body {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-#content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  animation: fadein2 0.25s;
-}
-
-main, main > div {
+main > div {
   display: flex;
   flex: 1;
-}
-
-#background {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
-  z-index: -1;
-  opacity: 0;
-  transition: 0.5s opacity;
-  filter: blur(4px);
 }
 
 #sidebar_left {
@@ -167,13 +131,6 @@ main, main > div {
 .form > .field > label {
   flex: 1;
   margin-right: 1em;
-}
-body > header {
-  display: flex;
-  border-bottom: 1px solid black;
-  align-items: stretch;
-  padding: 0.25em;
-  background-color: rgba(255, 255, 255, 0.7);
 }
 #text_refresh {
   flex: 1;
@@ -471,10 +428,3 @@ button {
 #connect_info {
   margin: auto;
 }
-
-/*
-@import url("modals.css");
-@import url("buttons.css");
-@import url("add_project.css");
-@import url("settings.css");
-*/

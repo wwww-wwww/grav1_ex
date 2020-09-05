@@ -73,8 +73,8 @@ defmodule Grav1Web.PageView do
 
   def render_page(socket, page) do
     case page do
-      {component, _} -> component
       nil -> ""
+      page -> page
     end
   end
 end

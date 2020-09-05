@@ -16,6 +16,13 @@ window.addEventListener("phx:page-loading-stop", _ => NProgress.done())
 const hooks = {}
 hooks.add_project = {
   mounted() {
+  }
+}
+
+hooks.load_encoders = {
+  mounted() {
+    const encoders = JSON.parse(document.getElementById("encoders").textContent)
+
     btn_add_project.addEventListener("click", () => {
       const selected_encoder = select_encoder.value
 
@@ -83,13 +90,7 @@ hooks.add_project = {
         })
       })
     })
-  }
-}
-
-hooks.load_encoders = {
-  mounted() {
-    const encoders = JSON.parse(document.getElementById("encoders").textContent)
-
+    
     for (const encoder_name of Object.keys(encoders)) {
       for (const param_name of Object.keys(encoders[encoder_name])) {
         const param = encoders[encoder_name][param_name]

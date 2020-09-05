@@ -10,7 +10,12 @@ defmodule Grav1.Projects do
   def start_link(_) do
     Agent.start_link(
       fn ->
-        projects = Repo.all(Project) |> Repo.preload(:segments)
+        projects =
+          Repo.all(Project)
+          |> Repo.preload(:segments)
+          |> Enum.reduce(%{}, fn x, acc ->
+            Map.put(acc, x.id, x)
+          end)
         %__MODULE__{projects: projects}
       end,
       name: __MODULE__
@@ -21,6 +26,18 @@ defmodule Grav1.Projects do
     Agent.get(__MODULE__, fn val -> val.projects end)
   end
 
+  def update_project(project, opts) do
+    Agent.update(__MODULE__, fn val ->
+      case Map.get(val.projects, project.id) do
+        nil ->
+          val
+        project_l ->
+          %{val | projects: Map.put(val.projects, project.id, Map.merge(project_l, opts))}
+      end
+    end)
+    Grav1Web.ProjectsLive.update()
+  end
+  
   defp ensure_not_empty(input) do
     case input do
       {:error, message} -> {:error, message}

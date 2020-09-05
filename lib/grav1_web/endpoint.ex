@@ -24,7 +24,8 @@ defmodule Grav1Web.Endpoint do
     at: "/",
     from: :grav1,
     gzip: false,
-    only: ~w(css fonts images js favicon.ico robots.txt)
+    only: ~w(css fonts images js favicon.ico robots.txt),
+    content_types: %{"subtitles-octopus-worker.wasm" => "application/wasm"}
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.

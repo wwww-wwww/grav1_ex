@@ -18,9 +18,14 @@
       </div>
     </div>
     <div id="list_projects">
-      <%= for %{id: id} <- @projects do %>
-        <div id="proj_<%= id %>" data-id="<%= id %>" phx-hook="view_project">
-          <div>filename</div>
+      <%= for {id, %{input: filename, progress: progress, id: id, state: state}} <- @projects do %>
+        <div id="proj_<%= id %>" class="project" data-id="<%= id %>" phx-hook="view_project">
+          <div class="top"><%= Path.basename(filename) %></div>
+          <div class="bottom">
+            <div class="progress_bar" style="width: <%= if progress != nil, do: progress * 100, else: 0 %>%"></div>
+            <div class="progress_left"></div>
+            <div class="progress_right"><%= state %></div>
+          </div>
         </div>
       <% end %>
     </div>
@@ -29,7 +34,7 @@
   <%= render_page(@socket, @page) %>
 </div>
 
-<div style="" phx-update="ignore" phx-hook="load_encoders">
+<div style="" phx-update="ignore" id="_add_project_e" phx-hook="load_encoders">
   <% encoder_params = Grav1.Encoder.params() %>
   <% encoders = encoder_params |> Map.keys() %>
 
@@ -80,7 +85,7 @@
       </div>
     <% end %>
   </div>
-  <%= submit("add", id: "btn_add_project", phx_hook: "add_project") %>
+  <%= submit("add", id: "btn_add_project") %>
 </div>
 
 <style>

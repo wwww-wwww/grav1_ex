@@ -49,10 +49,10 @@ defmodule Grav1Web.ProjectsLive do
           socket
           |> assign(
             page:
-              {live_component(socket, Grav1Web.ProjectComponent,
-                 id: "project:#{project.id}",
-                 project: project
-               ), :project}
+              live_component(socket, Grav1Web.ProjectComponent,
+                id: "project:#{project.id}",
+                project: project
+              )
           )
 
         {:noreply, new_socket}

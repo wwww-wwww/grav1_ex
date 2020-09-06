@@ -32,9 +32,9 @@
   </div>
 
   <%= render_page(@socket, @page) %>
-</div>
 
-<div style="" phx-update="ignore" id="_add_project_e" phx-hook="load_encoders">
+
+<div style="overflow-y: auto" phx-update="ignore" id="_add_project_e" phx-hook="load_encoders">
   <% encoder_params = Grav1.Encoder.params() %>
   <% encoders = encoder_params |> Map.keys() %>
 
@@ -56,7 +56,7 @@
   <div id="encoder_params">
     <%= for encoder <- encoders do %>
       <div id="params_<%= encoder %>" class="hidden">
-        <h1><%= encoder %> params</h1>
+        <h2><%= encoder %> params</h2>
 
         <% {simple, advanced} = encoder_params[encoder] %>
 
@@ -85,7 +85,32 @@
       </div>
     <% end %>
   </div>
+  <div>
+    <h2>Split Settings</h2>
+    <div>
+      <label for="opt_split_min_frames">Min Frames</label>
+      <input id="opt_split_min_frames" type="number" value="24" min="1">
+    </div>
+    <div>
+      <label for="opt_split_max_frames">Max Frames</label>
+      <input id="opt_split_max_frames" type="number" value="-1" min="-1">
+    </div>
+  </div>
+  <div>
+    <h2>Extra Settings</h2>
+    <div>
+      <label for="opt_extra_priority">Priority</label>
+      <input id="opt_extra_priority" type="number" value="0">
+    </div>
+    <div>
+      <label for="opt_extra_name">Name</label>
+      <input id="opt_extra_name">
+    </div>
+  </div>
   <%= submit("add", id: "btn_add_project") %>
+</div>
+
+
 </div>
 
 <style>

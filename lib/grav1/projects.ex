@@ -16,6 +16,7 @@ defmodule Grav1.Projects do
           |> Enum.reduce(%{}, fn x, acc ->
             Map.put(acc, x.id, x)
           end)
+
         %__MODULE__{projects: projects}
       end,
       name: __MODULE__
@@ -26,18 +27,34 @@ defmodule Grav1.Projects do
     Agent.get(__MODULE__, fn val -> val.projects end)
   end
 
+  def log(project, message) do
+    Agent.update(__MODULE__, fn val ->
+      case Map.get(val.projects, project.id) do
+        nil ->
+          val
+
+        project_l ->
+          %{val | log: val.log ++ [message]}
+      end
+    end)
+
+    Grav1Web.ProjectsLive.update_only(project)
+  end
+
   def update_project(project, opts) do
     Agent.update(__MODULE__, fn val ->
       case Map.get(val.projects, project.id) do
         nil ->
           val
+
         project_l ->
           %{val | projects: Map.put(val.projects, project.id, Map.merge(project_l, opts))}
       end
     end)
-    Grav1Web.ProjectsLive.update()
+
+    Grav1Web.ProjectsLive.update(project)
   end
-  
+
   defp ensure_not_empty(input) do
     case input do
       {:error, message} -> {:error, message}
@@ -63,7 +80,7 @@ defmodule Grav1.Projects do
     end
   end
 
-  def add_project(files, encoder, encoder_params) do
+  def add_project(files, opts) do
     case files
          |> ensure_not_empty
          |> ensure_exist do
@@ -75,11 +92,7 @@ defmodule Grav1.Projects do
           Enum.reduce(files, [], fn filename, acc ->
             acc ++
               [
-                Project.changeset(%Project{input: filename}, %{
-                  encoder: encoder,
-                  encoder_params: encoder_params,
-                  ffmpeg_params: []
-                })
+                Project.changeset(%Project{input: filename}, opts)
               ]
           end)
 
@@ -102,9 +115,14 @@ defmodule Grav1.Projects do
 
             case Repo.transaction(q) do
               {:ok, transactions} ->
+                new_projects =
+                  transactions
+                  |> Enum.reduce(%{}, fn {_, x}, acc ->
+                    Map.put(acc, x.id, x)
+                  end)
+
                 Agent.update(__MODULE__, fn val ->
-                  new_projects = val.projects ++ Map.values(transactions)
-                  %{val | projects: new_projects}
+                  %{val | projects: Map.merge(val.projects, new_projects)}
                 end)
 
                 Grav1Web.ProjectsLive.update()
@@ -135,13 +153,24 @@ defmodule Grav1.ProjectsExecutor do
     {:ok, state}
   end
 
-  def do_action(:split, %{
-        input: input,
-        path_split: path_split,
-        min_frames: min_frames,
-        max_frames: max_frames
-      }) do
-    Grav1.Split.split(input, path_split, min_frames, max_frames)
+  def do_action(:split, opts) do
+    %{
+      project: project,
+      input: input,
+      path_split: path_split,
+      min_frames: min_frames,
+      max_frames: max_frames
+    } = opts
+
+    Grav1.Split.split(input, path_split, min_frames, max_frames, fn type, message ->
+      case type do
+        :log ->
+          Grav1.Projects.log(project, message)
+
+        {:progress, action} ->
+          Grav1.Projects.update_project(project, %{status: action, progress: message})
+      end
+    end)
   end
 
   def handle_cast(:loop, state) do

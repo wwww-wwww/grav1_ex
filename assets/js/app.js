@@ -67,6 +67,14 @@ hooks.load_encoders = {
         }
       }
 
+      const extra_params = {}
+      extra_params.split = {
+        min_frames: opt_split_min_frames.value,
+        max_frames: opt_split_max_frames.value
+      }
+      extra_params.priority = opt_extra_priority.value
+      extra_params.name = opt_extra_name.value
+
       const confirm_modal = new Modal({title: "Create Project"})
       confirm_modal.show()
 
@@ -76,7 +84,7 @@ hooks.load_encoders = {
       confirm_modal.confirm.textContent = "Confirm"
       confirm_modal.confirm.focus()
       confirm_modal.confirm.addEventListener("click", () => {
-        this.pushEvent("add_project", {encoder: selected_encoder, files: files, encoder_params: params}, (reply, _ref) => {
+        this.pushEvent("add_project", {encoder: selected_encoder, files: files, encoder_params: params, extra_params: extra_params}, (reply, _ref) => {
           confirm_modal.close()
           if (reply.success) {
           } else {
@@ -90,7 +98,7 @@ hooks.load_encoders = {
         })
       })
     })
-    
+
     for (const encoder_name of Object.keys(encoders)) {
       for (const param_name of Object.keys(encoders[encoder_name])) {
         const param = encoders[encoder_name][param_name]

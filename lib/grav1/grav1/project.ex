@@ -16,14 +16,14 @@ defmodule Grav1.Project do
     field :encoder, Grav1.Encoder
 
     field :encoder_params, {:array, :string}
-    field :ffmpeg_params, {:array, :string}
+    field :ffmpeg_params, {:array, :string}, default: []
 
     field :split_min_frames, :integer, default: nil
     field :split_max_frames, :integer, default: nil
 
     field :grain_tables, :boolean, default: false
 
-    field :state, State
+    field :state, State, default: :idle
 
     field :status, :string, default: "", virtual: true
     field :progress, :float, default: nil, virtual: true

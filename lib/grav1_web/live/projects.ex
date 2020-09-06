@@ -27,10 +27,26 @@ defmodule Grav1Web.ProjectsLive do
 
   def handle_event(
         "add_project",
-        %{"files" => files, "encoder" => encoder, "encoder_params" => encoder_params},
+        %{
+          "files" => files,
+          "encoder" => encoder,
+          "encoder_params" => encoder_params,
+          "extra_params" => %{
+            "split" => %{"min_frames" => min_frames, "max_frames" => max_frames},
+            "name" => name,
+            "priority" => priority
+          }
+        },
         socket
       ) do
-    case Projects.add_project(files, encoder, encoder_params) do
+    case Projects.add_project(files, %{
+           encoder: encoder,
+           encoder_params: encoder_params,
+           split_min_frames: min_frames,
+           split_max_frames: max_frames,
+           name: name,
+           priority: priority
+         }) do
       {:error, reason} ->
         {:reply, %{success: false, reason: reason}, socket}
 
@@ -66,6 +82,15 @@ defmodule Grav1Web.ProjectsLive do
 
   def handle_info(%{topic: @topic, payload: %{projects: projects}}, socket) do
     {:noreply, socket |> assign(projects: projects)}
+  end
+
+  def handle_info(%{topic: @topic, payload: %{project: project}}, socket) do
+    send_update(Grav1Web.ProjectComponent, id: "project:#{project.id}")
+    {:noreply, socket}
+  end
+
+  def update_only(project) do
+    Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{project: project})
   end
 
   def update(project) do

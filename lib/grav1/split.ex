@@ -43,7 +43,7 @@ defmodule Grav1.Split do
   @kf_ii_max 128.0
 
   def split(input, path_split, min_frames, max_frames, callback) do
-    IO.inspect("started split")
+    callback.(:log, "started split")
 
     {source_keyframes, total_frames} =
       get_keyframes(input, fn x -> callback.({:progress, :source_keyframes}, x) end)
@@ -427,57 +427,70 @@ defmodule Grav1.Split do
 
     pcnt_intra = 1.0 - c["pcnt_inter"]
     modified_pcnt_inter = c["pcnt_inter"] - c["pcnt_neutral"]
-    
+
     second_ref_usage_thresh = get_second_ref_usage_thresh(frame_count_so_far)
-    
-    if not qmode or frame_count_so_far > 2 and
-      c["pcnt_second_ref"] < second_ref_usage_thresh and
-      f["pcnt_second_ref"] < second_ref_usage_thresh and
-      (
-        c["pcnt_inter"] < @very_low_inter_thresh or
-        (
-          pcnt_intra > @min_intra_level and
-          pcnt_intra > (@intra_vs_inter_thresh * modified_pcnt_inter) and
-          c["intra_error"] / double_divide_check(c["coded_error"]) < @kf_ii_err_threshold and
-          (
-            abs(p["coded_error"] - c["coded_error"]) / double_divide_check(c["coded_error"]) > @err_change_threshold or
-            abs(p["intra_error"] - c["intra_error"]) / double_divide_check(c["intra_error"]) > @err_change_threshold or
-            f["intra_error"] / double_divide_check(f["coded_error"]) > @ii_improvement_threshold
-          )
+
+    if not qmode or
+         (frame_count_so_far > 2 and
+            c["pcnt_second_ref"] < second_ref_usage_thresh and
+            f["pcnt_second_ref"] < second_ref_usage_thresh and
+            (c["pcnt_inter"] < @very_low_inter_thresh or
+               (pcnt_intra > @min_intra_level and
+                  pcnt_intra > @intra_vs_inter_thresh * modified_pcnt_inter and
+                  c["intra_error"] / double_divide_check(c["coded_error"]) < @kf_ii_err_threshold and
+                  (abs(p["coded_error"] - c["coded_error"]) /
+                     double_divide_check(c["coded_error"]) > @err_change_threshold or
+                     abs(p["intra_error"] - c["intra_error"]) /
+                       double_divide_check(c["intra_error"]) > @err_change_threshold or
+                     f["intra_error"] / double_divide_check(f["coded_error"]) >
+                       @ii_improvement_threshold)))) do
+      %{boost_score: boost_score, final_i: i} =
+        Enum.reduce_while(
+          0..15,
+          %{boost_score: 0, old_boost_score: 0, decay_accumulator: 1, final_i: 0},
+          fn i,
+             %{
+               boost_score: boost_score,
+               old_boost_score: old_boost_score,
+               decay_accumulator: decay_accumulator
+             } ->
+            lnf = dict_list |> Enum.at(current_frame_index + 1 + i)
+            pcnt_inter = lnf["pcnt_inter"]
+
+            next_iiratio =
+              @boost_factor * lnf["intra_error"] / double_divide_check(lnf["coded_error"])
+
+            next_iiratio = min(next_iiratio, @kf_ii_max)
+
+            # Cumulative effect of decay in prediction quality.
+            new_decay_accumulator =
+              if pcnt_inter > 0.85 do
+                decay_accumulator * pcnt_inter
+              else
+                decay_accumulator * ((0.85 + pcnt_inter) / 2.0)
+              end
+
+            # Keep a running total.
+            new_boost_score = boost_score + new_decay_accumulator * next_iiratio
+
+            # Test various breakout clauses.
+            if pcnt_inter < 0.05 or
+                 next_iiratio < 1.5 or
+                 (pcnt_inter - lnf["pcnt_neutral"] < 0.20 and next_iiratio < 3.0) or
+                 new_boost_score - old_boost_score < 3.0 or
+                 lnf["intra_error"] < 200 do
+              {:halt, %{boost_score: new_boost_score, final_i: i}}
+            else
+              {:cont,
+               %{
+                 boost_score: new_boost_score,
+                 old_boost_score: new_boost_score,
+                 decay_accumulator: new_decay_accumulator,
+                 final_i: i
+               }}
+            end
+          end
         )
-      ) do
-
-      %{boost_score: boost_score, final_i: i} = Enum.reduce_while(0..15,
-        %{boost_score: 0, old_boost_score: 0, decay_accumulator: 1, final_i: 0},
-        fn i, %{boost_score: boost_score, old_boost_score: old_boost_score, decay_accumulator: decay_accumulator} ->
-
-        lnf = dict_list |> Enum.at(current_frame_index + 1 + i)
-        pcnt_inter = lnf["pcnt_inter"]
-
-        next_iiratio = @boost_factor * lnf["intra_error"] / double_divide_check(lnf["coded_error"])
-        next_iiratio = min(next_iiratio, @kf_ii_max)
-
-        #Cumulative effect of decay in prediction quality.
-        new_decay_accumulator = if pcnt_inter > 0.85 do
-          decay_accumulator * pcnt_inter
-        else
-          decay_accumulator * ((0.85 + pcnt_inter) / 2.0)
-        end
-
-        #Keep a running total.
-        new_boost_score = boost_score + new_decay_accumulator * next_iiratio
-        
-        #Test various breakout clauses.
-        if pcnt_inter < 0.05 or
-          next_iiratio < 1.5 or
-          (pcnt_inter - lnf["pcnt_neutral"] < 0.20 and next_iiratio < 3.0) or
-          new_boost_score - old_boost_score < 3.0 or
-          lnf["intra_error"] < 200 do
-          {:halt, %{boost_score: new_boost_score, final_i: i}}
-        else
-          {:cont, %{boost_score: new_boost_score, old_boost_score: new_boost_score, decay_accumulator: new_decay_accumulator, final_i: i}}
-        end
-      end)
 
       # If there is tolerable prediction for at least the next 3 frames then break out else discard this potential key frame and move on
       boost_score > 30 and i > 3
@@ -487,7 +500,7 @@ defmodule Grav1.Split do
   end
 
   defp kf_min_dist(aom_keyframes, min_frames, total_frames) do
-    if min_frames != -1 do
+    if length(aom_keyframes) > 1 and min_frames > 1 do
       aom_keyframes = aom_keyframes ++ [total_frames]
 
       aom_scenes =
@@ -498,9 +511,9 @@ defmodule Grav1.Split do
         aom_scenes
         |> Enum.zip(tl(aom_scenes) ++ [{nil, nil}])
         |> Enum.with_index()
-        |> Enum.reduce({0, []}, fn {{{frame, next_frame},
-                                     {next_scene_frame, next_scene_next_frame}}, i},
-                                   {acc, scenes} ->
+        |> Enum.reduce({0, []}, fn x, {acc, scenes} ->
+          {{{frame, next_frame}, {next_scene_frame, next_scene_next_frame}}, i} = x
+
           length = next_frame - frame
 
           scene_frame = frame - acc
@@ -516,7 +529,7 @@ defmodule Grav1.Split do
             true ->
               {prev_frame, prev_length} = List.last(scenes)
 
-              if i < length(aom_scenes) - 2 do
+              if i < length(aom_scenes) - 1 do
                 if prev_length < min_frames do
                   {acc,
                    (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++
@@ -539,52 +552,66 @@ defmodule Grav1.Split do
               end
           end
         end)
+
+      scenes
+      |> Enum.map(fn {frame, _} -> frame end)
     else
       aom_keyframes
     end
   end
 
   defp kf_max_dist(aom_keyframes, min_dist, max_dist, original_keyframes \\ [], tolerance \\ 5) do
-    if max_dist != -1 do
+    if length(aom_keyframes) > 1 and max_dist > 0 do
       aom_keyframes
       |> Enum.zip(tl(aom_keyframes))
       |> Enum.reduce([Enum.at(aom_keyframes, 0)], fn {frame, next_frame}, acc ->
+        {_, _, keyframes} =
+          frame..next_frame
+          |> Enum.reduce_while({frame, next_frame - frame, []}, fn _, frame_acc ->
+            {frame_inner, length, keyframes} = frame_acc
 
-        {_, _, keyframes} = Enum.reduce_while(frame..next_frame, {frame, next_frame - frame, []}, fn _, {frame_inner, length, keyframes} ->
-          cond do
-            length <= max_dist -> {:halt, {frame_inner, length, keyframes}}
-            length - max_dist >= max_dist ->
-              candidate_kfs = original_keyframes
-              |> Enum.reduce([], fn candidate_kf, acc ->
-                dist = abs(frame_inner + max_dist - candidate_kf)
-                if dist < tolerance, do: acc ++ [{candidate_kf, dist}], else: acc
-              end)
-              |> Enum.sort(fn {_, dist1}, {_, dist2} -> dist2 > dist1 end)
+            cond do
+              length <= max_dist ->
+                {:halt, {frame_inner, length, keyframes}}
 
-              new_frame = case candidate_kfs do
-                [{kf, _} | _] -> kf
-                _ -> frame_inner + max_dist
-              end
+              length - max_dist >= max_dist ->
+                candidate_kfs =
+                  original_keyframes
+                  |> Enum.reduce([], fn candidate_kf, acc ->
+                    dist = abs(frame_inner + max_dist - candidate_kf)
+                    if dist < tolerance, do: acc ++ [{candidate_kf, dist}], else: acc
+                  end)
+                  |> Enum.sort(fn {_, dist1}, {_, dist2} -> dist2 > dist1 end)
 
-              {:cont, {new_frame, next_frame - new_frame, keyframes ++ [new_frame]}}
+                new_frame =
+                  case candidate_kfs do
+                    [{kf, _} | _] -> kf
+                    _ -> frame_inner + max_dist
+                  end
 
-            floor(length / 2) > min_dist ->
-              candidate_kfs = original_keyframes
-              |> Enum.reduce([], fn candidate_kf, acc ->
-                dist = abs(frame_inner + floor(length / 2) - candidate_kf)
-                if dist < tolerance, do: acc ++ [{candidate_kf, dist}], else: acc
-              end)
-              |> Enum.sort(fn {_, dist1}, {_, dist2} -> dist2 > dist1 end)
+                {:cont, {new_frame, next_frame - new_frame, keyframes ++ [new_frame]}}
 
-              new_frame = case candidate_kfs do
-                [{kf, _} | _] -> kf
-                _ -> floor(frame_inner + length / 2)
-              end
-              
-              {:cont, {new_frame, next_frame - new_frame, keyframes ++ [new_frame]}}
-            true -> {:halt, {frame_inner, length, keyframes}}
-          end
-        end)
+              floor(length / 2) > min_dist ->
+                candidate_kfs =
+                  original_keyframes
+                  |> Enum.reduce([], fn candidate_kf, acc ->
+                    dist = abs(frame_inner + floor(length / 2) - candidate_kf)
+                    if dist < tolerance, do: acc ++ [{candidate_kf, dist}], else: acc
+                  end)
+                  |> Enum.sort(fn {_, dist1}, {_, dist2} -> dist2 > dist1 end)
+
+                new_frame =
+                  case candidate_kfs do
+                    [{kf, _} | _] -> kf
+                    _ -> floor(frame_inner + length / 2)
+                  end
+
+                {:cont, {new_frame, next_frame - new_frame, keyframes ++ [new_frame]}}
+
+              true ->
+                {:halt, {frame_inner, length, keyframes}}
+            end
+          end)
 
         acc ++ keyframes ++ [next_frame]
       end)

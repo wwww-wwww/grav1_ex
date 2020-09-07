@@ -107,15 +107,27 @@ defmodule Grav1.Split do
         {@split_args, {frames, splits, segments}}
       end
 
-    split_video(input, split_args, frames, path_split, callback)
+    case split_video(input, split_args, frames, path_split, total_frames, callback) do
+      ^total_frames ->
+        callback.(:log, "verifying splits")
 
-    IO.inspect(splits)
-    IO.inspect(segments)
+        verify_split(input, path_split, splits, callback)
 
-    {source_keyframes, aom_keyframes}
+        callback.(:log, "finished loading")
+
+        {:ok, segments, total_frames}
+
+      fr ->
+        callback.(:log, "expected #{total_frames}, got #{fr}")
+        :error
+
+      :error ->
+        IO.inspect("failed splitting")
+        :error
+    end
   end
 
-  defp split_video(input, split_args, frames, path_split, callback) do
+  defp split_video(input, split_args, frames, path_split, total_frames, callback) do
     args =
       [
         "-y",
@@ -142,10 +154,34 @@ defmodule Grav1.Split do
 
     case File.mkdir_p(path_split) do
       :ok ->
-        IO.inspect("SPLIT!")
+        port =
+          Port.open(
+            {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+            [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
+          )
+
+        stream_port(port, 0, fn line, acc ->
+          case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
+            nil ->
+              acc
+
+            [_, frame_str] ->
+              case Integer.parse(frame_str) do
+                :error ->
+                  acc
+
+                {new_frame, _} ->
+                  if callback != nil and acc != new_frame,
+                    do: callback.({:progress, :splitting}, {new_frame, total_frames})
+
+                  new_frame
+              end
+          end
+        end)
 
       {:error, reason} ->
         callback.(:log, "unable to create split directory. reason: #{reason}")
+        :error
     end
   end
 
@@ -154,6 +190,8 @@ defmodule Grav1.Split do
     |> Enum.with_index(1)
     |> Enum.reduce(0, fn {segment, i}, total_frames ->
       %{file: file, start: start, length: length} = segment
+
+      callback.({:progress, :verify_split}, {i, length(splits)})
 
       path_segment = Path.join(path_split, file)
 
@@ -191,11 +229,11 @@ defmodule Grav1.Split do
         File.rename(path_segment, Path.join(path_old, file))
 
         correct_split(input, path_segment, start, length, fn x ->
-          callback.({:progress, :correct}, {x, length})
+          callback.({:progress, :correcting}, {x, length})
         end)
       end
 
-      if callback != nil, do: callback.({:progress, :verify}, {i, length(splits)})
+      callback.({:progress, :verify}, {i, length(splits)})
       total_frames + num_frames
     end)
   end

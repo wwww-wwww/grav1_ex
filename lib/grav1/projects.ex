@@ -1,101 +1,136 @@
 defmodule Grav1.Projects do
-  use Agent
+  use GenServer
 
-  alias Grav1Web.Endpoint
-  alias Grav1.{Repo, Project, Segment}
+  alias Grav1.{Repo, Project, Projects}
   alias Ecto.Multi
 
-  defstruct projects: %{}
+  defstruct projects: %{},
+            segments: %{}
 
   def start_link(_) do
-    Agent.start_link(
-      fn ->
-        projects =
-          Repo.all(Project)
-          |> Repo.preload(:segments)
-          |> Enum.reduce(%{}, fn x, acc ->
-            Map.put(acc, x.id, x)
+    {projects, segments} =
+      Repo.all(Project)
+      |> Repo.preload(:segments)
+      |> Enum.reduce({%{}, %{}}, fn project, {acc, acc2} ->
+        segments =
+          project.segments
+          |> Enum.reduce(%{}, fn segment, segments ->
+            Map.put(segments, segment.id, %{segment | project: project})
           end)
 
-        Enum.each(projects, fn {_, project} ->
-          load_project(project)
-        end)
+        new_project = %{project | segments: segments}
+        {Map.put(acc, project.id, new_project), Map.merge(acc2, segments)}
+      end)
 
-        %__MODULE__{projects: projects}
-      end,
+    GenServer.start_link(__MODULE__, %__MODULE__{projects: projects, segments: segments},
       name: __MODULE__
     )
   end
 
+  def init(state) do
+    send(self(), :startup)
+    {:ok, state}
+  end
+
+  def handle_call({:add_projects, projects}, _, state) do
+    {:reply, :ok, %{state | projects: Map.merge(state.projects, projects)}}
+  end
+
+  def handle_call(:get_projects, _, state) do
+    {:reply, state.projects, state}
+  end
+
+  def handle_call({:get_project, id}, _, state) do
+    {:reply, Map.get(state.projects, id), state}
+  end
+
+  def handle_cast({:log, id, message}, state) do
+    case Map.get(state.projects, id) do
+      nil ->
+        {:noreply, state}
+
+      project ->
+        Grav1Web.ProjectsLive.update_log(project)
+        new_project = %{project | log: project.log ++ [{DateTime.utc_now(), message}]}
+        {:noreply, %{state | projects: Map.put(state.projects, project.id, new_project)}}
+    end
+  end
+
+  def handle_cast({:update_progress, id, status, message}, state) do
+    case Map.get(state.projects, id) do
+      nil ->
+        {:noreply, state}
+
+      project ->
+        opts =
+          case message do
+            {nom, den} ->
+              %{status: status, progress_nom: nom, progress_den: den}
+
+            nom ->
+              %{status: status, progress_nom: nom, progress_den: 1}
+          end
+
+        new_project = Map.merge(project, opts)
+
+        Grav1Web.ProjectsLive.update(new_project, true)
+        {:noreply, %{state | projects: Map.put(state.projects, project.id, new_project)}}
+    end
+  end
+
+  def handle_cast({:update, id, opts, save}, state) do
+    case Map.get(state.projects, id) do
+      nil ->
+        {:noreply, state}
+
+      project ->
+        new_project = Map.merge(project, opts)
+
+        if save do
+          Repo.update(Project.changeset(project, opts))
+        end
+
+        Grav1Web.ProjectsLive.update(new_project)
+        {:noreply, %{state | projects: Map.put(state.projects, project.id, new_project)}}
+    end
+  end
+
+  def handle_info(:startup, state) do
+    Enum.each(state.projects, fn {_, project} ->
+      load_project(project)
+    end)
+
+    {:noreply, state}
+  end
+
   def get_projects() do
-    Agent.get(__MODULE__, fn val -> val.projects end)
+    GenServer.call(__MODULE__, :get_projects)
   end
 
   def get_project(id) do
-    {id, _} = Integer.parse(id)
+    {id, _} = Integer.parse(to_string(id))
 
-    Agent.get(__MODULE__, fn val ->
-      Map.get(val.projects, id)
-    end)
+    GenServer.call(__MODULE__, {:get_project, id})
   end
 
   def log(project, message) do
-    Agent.get_and_update(__MODULE__, fn val ->
-      case Map.get(val.projects, project.id) do
-        nil ->
-          {project, val}
-
-        project_l ->
-          new_project = %{project_l | log: project_l.log ++ [{DateTime.utc_now(), message}]}
-          {new_project, %{val | projects: Map.put(val.projects, project.id, new_project)}}
-      end
-    end)
-    |> Grav1Web.ProjectsLive.update_log()
+    GenServer.cast(__MODULE__, {:log, project.id, message})
   end
 
   def update_progress(project, status, message) do
-    new_project =
-      Agent.get_and_update(__MODULE__, fn val ->
-        case Map.get(val.projects, project.id) do
-          nil ->
-            {project, val}
-
-          project_l ->
-            opts =
-              case message do
-                {nom, den} ->
-                  %{status: status, progress_nom: nom, progress_den: den}
-
-                nom ->
-                  %{status: status, progress_nom: nom, progress_den: 1}
-              end
-
-            new_project = Map.merge(project_l, opts)
-            {new_project, %{val | projects: Map.put(val.projects, project.id, new_project)}}
-        end
-      end)
-
-    Grav1Web.ProjectsLive.update(new_project, true)
+    GenServer.cast(__MODULE__, {:update_progress, project.id, status, message})
   end
 
   def update_project(project, opts, save \\ false) do
-    new_project =
-      Agent.get_and_update(__MODULE__, fn val ->
-        case Map.get(val.projects, project.id) do
-          nil ->
-            {project, val}
+    GenServer.cast(__MODULE__, {:update, project.id, opts, save})
+  end
 
-          project_l ->
-            new_project = Map.merge(project_l, opts)
-            {new_project, %{val | projects: Map.put(val.projects, project.id, new_project)}}
-        end
-      end)
+  def add_projects(projects) do
+    :ok = GenServer.call(__MODULE__, {:add_projects, projects})
 
-    if save do
-      Repo.update(Ecto.Changeset.change(project, opts))
-    end
-
-    Grav1Web.ProjectsLive.update(new_project)
+    Enum.each(projects, fn {_, project} ->
+      load_project(project)
+    end)
   end
 
   defp ensure_not_empty(input) do
@@ -121,16 +156,6 @@ defmodule Grav1.Projects do
             {:error, [message]}
         end
     end
-  end
-
-  def add_projects(projects) do
-    Agent.update(__MODULE__, fn val ->
-      %{val | projects: Map.merge(val.projects, projects)}
-    end)
-
-    Enum.each(projects, fn {_, project} ->
-      load_project(project)
-    end)
   end
 
   def add_project(files, opts) do
@@ -192,7 +217,20 @@ defmodule Grav1.Projects do
         Grav1.ProjectsExecutor.add_action(:split, project)
 
       %{state: :ready} ->
-        IO.inspect(project)
+        completed_frames =
+          project.segments
+          |> Enum.reduce(0, fn {_, segment}, acc ->
+            if segment.filesize != 0 do
+              acc + segment.frames
+            else
+              acc
+            end
+          end)
+
+        update_project(project, %{
+          progress_nom: completed_frames,
+          progress_denom: project.input_frames
+        })
 
       _ ->
         IO.inspect(project)
@@ -229,7 +267,8 @@ end
 defmodule Grav1.ProjectsExecutor do
   use GenServer
 
-  alias Grav1.{Projects, Project, Segment}
+  alias Grav1.{Projects, Project, Segment, Repo}
+  alias Ecto.Multi
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
@@ -247,21 +286,67 @@ defmodule Grav1.ProjectsExecutor do
       |> Path.join(to_string(project.id))
       |> Path.join("split")
 
-    Grav1.Split.split(
-      project.input,
-      path_split,
-      project.split_min_frames,
-      project.split_max_frames,
-      fn type, message ->
-        case type do
-          :log ->
-            Projects.log(project, message)
+    case Grav1.Split.split(
+           project.input,
+           path_split,
+           project.split_min_frames,
+           project.split_max_frames,
+           fn type, message ->
+             case type do
+               :log ->
+                 Projects.log(project, message)
 
-          {:progress, action} ->
-            Projects.update_progress(project, action, message)
+               {:progress, action} ->
+                 Projects.update_progress(project, action, message)
+             end
+           end
+         ) do
+      {:ok, segments, input_frames} ->
+        q =
+          segments
+          |> Enum.reduce([], fn segment, acc ->
+            acc ++
+              [
+                Segment.changeset(%Segment{}, segment)
+                |> Ecto.Changeset.put_assoc(:project, project)
+              ]
+          end)
+          |> Enum.with_index()
+          |> Enum.reduce(Multi.new(), fn {segment, i}, acc ->
+            acc |> Multi.insert(to_string(i), segment)
+          end)
+
+        case Repo.transaction(q) do
+          {:ok, transactions} ->
+            new_segments =
+              transactions
+              |> Enum.reduce(%{}, fn {_, x}, acc ->
+                Map.put(acc, x.id, x)
+              end)
+
+            Projects.update_project(
+              project,
+              %{
+                input_frames: input_frames,
+                state: :ready,
+                segments: new_segments,
+                progress_nom: 0,
+                progress_den: input_frames
+              },
+              true
+            )
+
+            :ok
+
+          {:error, failed_operation, failed_value, _successes} ->
+            IO.inspect(failed_operation)
+            IO.inspect(failed_value)
+            {:error, [failed_operation, failed_value]}
         end
-      end
-    )
+
+      _ ->
+        IO.inspect("split failed")
+    end
   end
 
   def add_action(action, opts) do
@@ -270,8 +355,6 @@ defmodule Grav1.ProjectsExecutor do
   end
 
   def handle_cast(:loop, state) do
-    IO.inspect("loop")
-
     case GenServer.call(Grav1.ProjectsExecutorQueue, :pop) do
       :empty ->
         IO.inspect("finished queue")

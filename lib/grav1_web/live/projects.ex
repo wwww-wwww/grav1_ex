@@ -128,9 +128,9 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   # update project list and project
-  def handle_info(%{topic: @topic, payload: %{project: project, projects: projects}}, socket) do
+  def handle_info(%{topic: @topic, payload: %{project: project, projects: true}}, socket) do
     send_update(Grav1Web.ProjectComponent, id: "project:#{project.id}", project: project)
-    {:noreply, socket |> assign(projects: projects)}
+    {:noreply, socket |> assign(projects: Projects.get_projects())}
   end
 
   # update only project list

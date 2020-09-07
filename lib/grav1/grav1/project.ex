@@ -47,7 +47,9 @@ defmodule Grav1.Project do
       :ffmpeg_params,
       :split_min_frames,
       :split_max_frames,
-      :grain_tables
+      :grain_tables,
+      :state,
+      :input_frames
     ])
     |> validate_required([:input, :encoder, :encoder_params, :ffmpeg_params])
   end

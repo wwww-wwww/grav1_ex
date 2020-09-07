@@ -17,6 +17,10 @@ defmodule Grav1.Projects do
             Map.put(acc, x.id, x)
           end)
 
+        Enum.each(projects, fn {_, project} ->
+          load_project(project)
+        end)
+
         %__MODULE__{projects: projects}
       end,
       name: __MODULE__
@@ -28,31 +32,62 @@ defmodule Grav1.Projects do
   end
 
   def log(project, message) do
-    Agent.update(__MODULE__, fn val ->
+    Agent.get_and_update(__MODULE__, fn val ->
       case Map.get(val.projects, project.id) do
         nil ->
-          val
+          {project, val}
 
         project_l ->
-          %{val | log: val.log ++ [message]}
+          new_project = %{project_l | log: project_l.log ++ [message]}
+          {new_project, %{val | projects: Map.put(val.projects, project.id, new_project)}}
       end
     end)
-
-    Grav1Web.ProjectsLive.update_only(project)
+    |> Grav1Web.ProjectsLive.update_only()
   end
 
-  def update_project(project, opts) do
-    Agent.update(__MODULE__, fn val ->
-      case Map.get(val.projects, project.id) do
-        nil ->
-          val
+  def update_progress(project, status, message) do
+    new_project =
+      Agent.get_and_update(__MODULE__, fn val ->
+        case Map.get(val.projects, project.id) do
+          nil ->
+            {project, val}
 
-        project_l ->
-          %{val | projects: Map.put(val.projects, project.id, Map.merge(project_l, opts))}
-      end
-    end)
+          project_l ->
+            opts =
+              case message do
+                {nom, den} ->
+                  %{status: status, progress_nom: nom, progress_den: den}
 
-    Grav1Web.ProjectsLive.update(project)
+                nom ->
+                  %{status: status, progress_nom: nom, progress_den: 1}
+              end
+
+            new_project = Map.merge(project_l, opts)
+            {new_project, %{val | projects: Map.put(val.projects, project.id, new_project)}}
+        end
+      end)
+
+    Grav1Web.ProjectsLive.update(new_project, true)
+  end
+
+  def update_project(project, opts, save \\ false) do
+    new_project =
+      Agent.get_and_update(__MODULE__, fn val ->
+        case Map.get(val.projects, project.id) do
+          nil ->
+            {project, val}
+
+          project_l ->
+            new_project = Map.merge(project_l, opts)
+            {new_project, %{val | projects: Map.put(val.projects, project.id, new_project)}}
+        end
+      end)
+
+    if save do
+      Repo.update(Ecto.Changeset.change(project, opts))
+    end
+
+    Grav1Web.ProjectsLive.update(new_project)
   end
 
   defp ensure_not_empty(input) do
@@ -78,6 +113,16 @@ defmodule Grav1.Projects do
             {:error, [message]}
         end
     end
+  end
+
+  def add_projects(projects) do
+    Agent.update(__MODULE__, fn val ->
+      %{val | projects: Map.merge(val.projects, projects)}
+    end)
+
+    Enum.each(projects, fn {_, project} ->
+      load_project(project)
+    end)
   end
 
   def add_project(files, opts) do
@@ -115,15 +160,11 @@ defmodule Grav1.Projects do
 
             case Repo.transaction(q) do
               {:ok, transactions} ->
-                new_projects =
-                  transactions
-                  |> Enum.reduce(%{}, fn {_, x}, acc ->
-                    Map.put(acc, x.id, x)
-                  end)
-
-                Agent.update(__MODULE__, fn val ->
-                  %{val | projects: Map.merge(val.projects, new_projects)}
+                transactions
+                |> Enum.reduce(%{}, fn {_, x}, acc ->
+                  Map.put(acc, x.id, x)
                 end)
+                |> add_projects()
 
                 Grav1Web.ProjectsLive.update()
                 :ok
@@ -136,6 +177,45 @@ defmodule Grav1.Projects do
         end
     end
   end
+
+  def load_project(project) do
+    case project do
+      %{state: :idle} ->
+        Grav1.ProjectsExecutor.add_action(:split, project)
+
+      %{state: :ready} ->
+        IO.inspect(project)
+
+      _ ->
+        IO.inspect(project)
+    end
+  end
+end
+
+defmodule Grav1.ProjectsExecutorQueue do
+  use GenServer
+
+  def start_link(_) do
+    GenServer.start_link(__MODULE__, :queue.new(), name: __MODULE__)
+  end
+
+  def init(state) do
+    {:ok, state}
+  end
+
+  def handle_call({:push, action}, _, state) do
+    {:reply, :ok, :queue.in(action, state)}
+  end
+
+  def handle_call(:pop, _, state) do
+    case :queue.out(state) do
+      {{:value, action}, tail} ->
+        {:reply, action, tail}
+
+      {:empty, tail} ->
+        {:reply, :empty, tail}
+    end
+  end
 end
 
 defmodule Grav1.ProjectsExecutor do
@@ -143,59 +223,54 @@ defmodule Grav1.ProjectsExecutor do
 
   alias Grav1.{Projects, Project, Segment}
 
-  defstruct action_queue: :queue.new()
-
   def start_link(_) do
-    GenServer.start_link(__MODULE__, %__MODULE__{}, name: __MODULE__)
+    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
   def init(state) do
     {:ok, state}
   end
 
-  def do_action(:split, opts) do
-    %{
-      project: project,
-      input: input,
-      path_split: path_split,
-      min_frames: min_frames,
-      max_frames: max_frames
-    } = opts
+  def do_action(:split, project) do
+    Grav1.Projects.update_project(project, %{state: :preparing})
 
-    Grav1.Split.split(input, path_split, min_frames, max_frames, fn type, message ->
-      case type do
-        :log ->
-          Grav1.Projects.log(project, message)
+    path_split = "#{project.id}"
 
-        {:progress, action} ->
-          Grav1.Projects.update_project(project, %{status: action, progress: message})
+    Grav1.Split.split(
+      project.input,
+      path_split,
+      project.split_min_frames,
+      project.split_max_frames,
+      fn type, message ->
+        case type do
+          :log ->
+            Projects.log(project, message)
+
+          {:progress, action} ->
+            Projects.update_progress(project, action, message)
+        end
       end
-    end)
+    )
+  end
+
+  def add_action(action, opts) do
+    GenServer.call(Grav1.ProjectsExecutorQueue, {:push, {action, opts}})
+    GenServer.cast(__MODULE__, :loop)
   end
 
   def handle_cast(:loop, state) do
-    new_actions =
-      case :queue.out(state.action_queue) do
-        {{:value, {action, opts}}, tail} ->
-          GenServer.cast(__MODULE__, :loop)
+    IO.inspect("loop")
 
-          do_action(action, opts)
+    case GenServer.call(Grav1.ProjectsExecutorQueue, :pop) do
+      :empty ->
+        IO.inspect("finished queue")
 
-          tail
+      {action, opts} ->
+        GenServer.cast(__MODULE__, :loop)
 
-        {:empty, tail} ->
-          tail
-      end
+        do_action(action, opts)
+    end
 
-    {:noreply, %{state | action_queue: new_actions}}
-  end
-
-  def handle_cast(:notify, state) do
-    GenServer.cast(__MODULE__, :loop)
     {:noreply, state}
-  end
-
-  def notify() do
-    GenServer.cast(__MODULE__, :notify)
   end
 end

@@ -27,44 +27,20 @@ defmodule Grav1Web.PageView do
   def render_encoder_param(encoder, param_name, param) do
     case param do
       %{type: :integer, default: default, min: min, max: max} ->
-        case param do
-          %{requires: {req_param_name, req_param_value}} ->
-            Tag.tag(:input,
-              id: "opt_#{encoder}_#{param_name}",
-              type: :number,
-              value: default,
-              min: min,
-              max: max,
-              class: "param",
-              requires_value: Jason.encode!(req_param_value)
-            )
-
-          _ ->
-            Tag.tag(:input,
-              id: "opt_#{encoder}_#{param_name}",
-              type: :number,
-              value: default,
-              min: min,
-              max: max,
-              class: "param"
-            )
-        end
+        Tag.tag(:input,
+          id: "opt_#{encoder}_#{param_name}",
+          type: :number,
+          value: default,
+          min: min,
+          max: max,
+          class: "param"
+        )
 
       %{type: :option, options: options} ->
-        case param do
-          %{requires: {req_param_name, req_param_value}} ->
-            Form.select(nil, "#{param_name}", options,
-              id: "opt_#{encoder}_#{param_name}",
-              class: "param",
-              requires_value: Jason.encode!(req_param_value)
-            )
-
-          _ ->
-            Form.select(nil, "#{param_name}", options,
-              id: "opt_#{encoder}_#{param_name}",
-              class: "param"
-            )
-        end
+        Form.select(nil, "#{param_name}", options,
+          id: "opt_#{encoder}_#{param_name}",
+          class: "param"
+        )
 
       _ ->
         "?"

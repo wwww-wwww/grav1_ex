@@ -45,10 +45,12 @@ defmodule Grav1.Split do
   def split(input, path_split, min_frames, max_frames, callback) do
     callback.(:log, "started split")
 
+    callback.(:log, "getting keyframes")
+
     {source_keyframes, total_frames} =
       get_keyframes(input, fn x -> callback.({:progress, :source_keyframes}, x) end)
 
-    callback.(:log, "")
+    callback.(:log, "getting aom keyframes")
 
     aom_keyframes =
       input
@@ -59,6 +61,8 @@ defmodule Grav1.Split do
 
     {frames, splits, segments} =
       partition_keyframes(source_keyframes, aom_keyframes, total_frames)
+
+    callback.(:log, "segmenting")
 
     IO.inspect(source_keyframes)
     IO.inspect(aom_keyframes)
@@ -223,12 +227,19 @@ defmodule Grav1.Split do
   def get_keyframes_ffmpeg(input, callback \\ nil) do
     args = [
       "-hide_banner",
-      "-i", input,
-      "-map", "0:v:0",
-      "-vf", "select=eq(pict_type\\,PICT_TYPE_I)",
-      "-f", "null",
-      "-vsync", "0",
-      "-loglevel", "debug", "-"
+      "-i",
+      input,
+      "-map",
+      "0:v:0",
+      "-vf",
+      "select=eq(pict_type\\,PICT_TYPE_I)",
+      "-f",
+      "null",
+      "-vsync",
+      "0",
+      "-loglevel",
+      "debug",
+      "-"
     ]
 
     port =
@@ -500,7 +511,7 @@ defmodule Grav1.Split do
   end
 
   defp kf_min_dist(aom_keyframes, min_frames, total_frames) do
-    if length(aom_keyframes) > 1 and min_frames > 1 do
+    if length(aom_keyframes) > 1 and min_frames != nil and min_frames > 1 do
       aom_keyframes = aom_keyframes ++ [total_frames]
 
       aom_scenes =
@@ -561,7 +572,7 @@ defmodule Grav1.Split do
   end
 
   defp kf_max_dist(aom_keyframes, min_dist, max_dist, original_keyframes \\ [], tolerance \\ 5) do
-    if length(aom_keyframes) > 1 and max_dist > 0 do
+    if length(aom_keyframes) > 1 and max_dist != nil and max_dist > 0 do
       aom_keyframes
       |> Enum.zip(tl(aom_keyframes))
       |> Enum.reduce([Enum.at(aom_keyframes, 0)], fn {frame, next_frame}, acc ->

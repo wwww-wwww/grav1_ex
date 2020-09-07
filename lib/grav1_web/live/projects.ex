@@ -89,15 +89,19 @@ defmodule Grav1Web.ProjectsLive do
     {:noreply, socket}
   end
 
-  def update_only(project) do
-    Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{project: project})
+  def update_only(project, ratelimit \\ false) do
+    if not ratelimit or Grav1.RateLimit.can_execute?("project:#{project.id}", 1 / 20) do
+      Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{project: project})
+    end
   end
 
-  def update(project) do
-    Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{
-      project: project,
-      projects: get_projects()
-    })
+  def update(project, ratelimit \\ false) do
+    if not ratelimit or Grav1.RateLimit.can_execute?("projects:#{project.id}", 1 / 20) do
+      Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{
+        project: project,
+        projects: get_projects()
+      })
+    end
   end
 
   def update() do

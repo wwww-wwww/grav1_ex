@@ -4,7 +4,7 @@ defmodule Grav1.Project do
 
   import EctoEnum
 
-  defenum(State, idle: 0, ready: 1, completed: 2)
+  defenum(State, idle: 0, ready: 1, completed: 2, preparing: 3)
 
   schema "projects" do
     field :input, :string
@@ -26,7 +26,8 @@ defmodule Grav1.Project do
     field :state, State, default: :idle
 
     field :status, :string, default: "", virtual: true
-    field :progress, :float, default: nil, virtual: true
+    field :progress_nom, :float, default: nil, virtual: true
+    field :progress_den, :float, default: nil, virtual: true
     field :log, {:array, :string}, default: [], virtual: true
 
     has_many :segments, Grav1.Segment

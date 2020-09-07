@@ -18,11 +18,11 @@
       </div>
     </div>
     <div id="list_projects">
-      <%= for {id, %{input: filename, progress: progress, id: id, state: state}} <- @projects do %>
+      <%= for {id, %{name: name, input: filename, progress_nom: progress_nom, progress_den: progress_den, id: id, state: state}} <- @projects do %>
         <div id="proj_<%= id %>" class="project" data-id="<%= id %>" phx-hook="view_project">
-          <div class="top"><%= Path.basename(filename) %></div>
+          <div class="top"><%= if name != nil and String.length(name) > 0, do: name, else: Path.basename(filename) %></div>
           <div class="bottom">
-            <div class="progress_bar" style="width: <%= if progress != nil, do: progress * 100, else: 0 %>%"></div>
+            <div class="progress_bar" style="width: <%= if progress_nom != nil and progress_den != nil, do: 100 * progress_nom / progress_den, else: 0 %>%"></div>
             <div class="progress_left"></div>
             <div class="progress_right"><%= state %></div>
           </div>
@@ -33,84 +33,81 @@
 
   <%= render_page(@socket, @page) %>
 
+  <div style="overflow-y: auto" phx-update="ignore" id="_add_project_e" phx-hook="load_encoders">
+    <% encoder_params = Grav1.Encoder.params() %>
+    <% encoders = encoder_params |> Map.keys() %>
 
-<div style="overflow-y: auto" phx-update="ignore" id="_add_project_e" phx-hook="load_encoders">
-  <% encoder_params = Grav1.Encoder.params() %>
-  <% encoders = encoder_params |> Map.keys() %>
+    <div id="encoders" style="display: none"><%= encoders_json() %></div>
 
-  <div id="encoders" style="display: none"><%= encoders_json() %></div>
+    <label for="select_encoder">encoder</label>
+    <select id="select_encoder">
+      <%= for encoder <- encoders do %>
+      <option><%= encoder %></option>
+      <% end %>
+    </select>
 
-  <label for="select_encoder">encoder</label>
-  <select id="select_encoder">
-    <%= for encoder <- encoders do %>
-    <option><%= encoder %></option>
-    <% end %>
-  </select>
-
-  <div>
-    <div>Files</div>
-    <div id="files_list">
-      <button id="files_list_add" class="material-icons">add</button>
-    </div>
-  </div>
-  <div id="encoder_params">
-    <%= for encoder <- encoders do %>
-      <div id="params_<%= encoder %>" class="hidden">
-        <h2><%= encoder %> params</h2>
-
-        <% {simple, advanced} = encoder_params[encoder] %>
-
-        <div id="<%= encoder %>_params_simple">
-          <div>
-            <%= for {param_name, param} <- simple do %>
-              <div>
-                <label for="opt_<%= encoder %>_<%= param_name %>"><%= param_name %></label>
-                <%= render_encoder_param(encoder, param_name, param) %>
-              </div>
-            <% end %>
-          </div>
-        </div>
-
-        <div id="<%= encoder %>_params_advanced">
-          <div>advanced</div>
-          <div>
-            <%= for {param_name, param} <- advanced do %>
-              <div>
-                <label for="opt_<%= encoder %>_<%= param_name %>"><%= param_name %></label>
-                <%= render_encoder_param(encoder, param_name, param) %>
-              </div>
-            <% end %>
-          </div>
-        </div>
+    <div>
+      <div>Files</div>
+      <div id="files_list">
+        <button id="files_list_add" class="material-icons">add</button>
       </div>
-    <% end %>
-  </div>
-  <div>
-    <h2>Split Settings</h2>
-    <div>
-      <label for="opt_split_min_frames">Min Frames</label>
-      <input id="opt_split_min_frames" type="number" value="24" min="1">
     </div>
-    <div>
-      <label for="opt_split_max_frames">Max Frames</label>
-      <input id="opt_split_max_frames" type="number" value="-1" min="-1">
-    </div>
-  </div>
-  <div>
-    <h2>Extra Settings</h2>
-    <div>
-      <label for="opt_extra_priority">Priority</label>
-      <input id="opt_extra_priority" type="number" value="0">
-    </div>
-    <div>
-      <label for="opt_extra_name">Name</label>
-      <input id="opt_extra_name">
-    </div>
-  </div>
-  <%= submit("add", id: "btn_add_project") %>
-</div>
+    <div id="encoder_params">
+      <%= for encoder <- encoders do %>
+        <div id="params_<%= encoder %>" class="hidden">
+          <h2><%= encoder %> params</h2>
 
+          <% {simple, advanced} = encoder_params[encoder] %>
 
+          <div id="<%= encoder %>_params_simple">
+            <div>
+              <%= for {param_name, param} <- simple do %>
+                <div>
+                  <label for="opt_<%= encoder %>_<%= param_name %>"><%= param_name %></label>
+                  <%= render_encoder_param(encoder, param_name, param) %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+
+          <div id="<%= encoder %>_params_advanced">
+            <div>advanced</div>
+            <div>
+              <%= for {param_name, param} <- advanced do %>
+                <div>
+                  <label for="opt_<%= encoder %>_<%= param_name %>"><%= param_name %></label>
+                  <%= render_encoder_param(encoder, param_name, param) %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    <div>
+      <h2>Split Settings</h2>
+      <div>
+        <label for="opt_split_min_frames">Min Frames</label>
+        <input id="opt_split_min_frames" type="number" value="24" min="1">
+      </div>
+      <div>
+        <label for="opt_split_max_frames">Max Frames</label>
+        <input id="opt_split_max_frames" type="number" value="-1" min="-1">
+      </div>
+    </div>
+    <div>
+      <h2>Extra Settings</h2>
+      <div>
+        <label for="opt_extra_priority">Priority</label>
+        <input id="opt_extra_priority" type="number" value="0">
+      </div>
+      <div>
+        <label for="opt_extra_name">Name</label>
+        <input id="opt_extra_name">
+      </div>
+    </div>
+    <%= submit("add", id: "btn_add_project") %>
+  </div>
 </div>
 
 <style>

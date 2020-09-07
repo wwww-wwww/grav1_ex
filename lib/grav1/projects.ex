@@ -50,8 +50,8 @@ defmodule Grav1.Projects do
         {:noreply, state}
 
       project ->
-        Grav1Web.ProjectsLive.update_log(project)
         new_project = %{project | log: project.log ++ [{DateTime.utc_now(), message}]}
+        Grav1Web.ProjectsLive.update_log(new_project)
         {:noreply, %{state | projects: Map.put(state.projects, project.id, new_project)}}
     end
   end

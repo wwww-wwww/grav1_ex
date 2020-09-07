@@ -81,8 +81,8 @@ defmodule Grav1.Split do
 
     callback.(:log, "segmenting")
 
-    split_args =
-      if true or length(frames) < length(aom_keyframes) / 2 do
+    {split_args, {frames, splits, segments}} =
+      if length(frames) < length(aom_keyframes) / 2 do
         callback.(:log, "keyframes are unreliable, re-encoding")
 
         {frames, splits, segments} =
@@ -90,7 +90,6 @@ defmodule Grav1.Split do
           |> Enum.zip(tl(aom_keyframes))
           |> Enum.with_index()
           |> Enum.reduce({[], [], []}, fn {{frame, next_frame}, i}, {frames, splits, segments} ->
-            segment_n = length(frames)
             length = next_frame - frame
 
             split_name =
@@ -103,12 +102,15 @@ defmodule Grav1.Split do
             {frames ++ [frame], splits ++ [new_split], segments ++ [new_segment]}
           end)
 
-        @split_args_reencode
+        {@split_args_reencode, {frames, splits, segments}}
       else
-        @split_args
+        {@split_args, {frames, splits, segments}}
       end
 
     split_video(input, split_args, frames, path_split, callback)
+
+    IO.inspect(splits)
+    IO.inspect(segments)
 
     {source_keyframes, aom_keyframes}
   end
@@ -270,7 +272,7 @@ defmodule Grav1.Split do
     end
   end
 
-  defp get_keyframes(input, callback \\ nil) do
+  defp get_keyframes(input, callback) do
     {frames, total_frames} =
       case Path.extname(String.downcase(input)) do
         # get_keyframes_ebml(input)
@@ -380,7 +382,7 @@ defmodule Grav1.Split do
     end
   end
 
-  defp get_aom_keyframes(input, callback \\ nil) do
+  defp get_aom_keyframes(input, callback) do
     _ = """
     ffmpeg_args = ["-i", input, "-pix_fmt", "yuv420p", "-map", "0:v:0", "-vsync", "0", "-strict", "-1", "-f", "yuv4mpegpipe", "-"]
 
@@ -645,7 +647,7 @@ defmodule Grav1.Split do
     end
   end
 
-  defp kf_max_dist(aom_keyframes, min_dist, max_dist, original_keyframes \\ [], tolerance \\ 5) do
+  defp kf_max_dist(aom_keyframes, min_dist, max_dist, original_keyframes, tolerance \\ 5) do
     if length(aom_keyframes) > 1 and max_dist != nil and max_dist > 0 do
       aom_keyframes
       |> Enum.zip(tl(aom_keyframes))
@@ -741,11 +743,6 @@ defmodule Grav1.Split do
 
         split_name =
           split_n
-          |> to_string()
-          |> String.pad_leading(5, "0")
-
-        segment_n =
-          length(splits)
           |> to_string()
           |> String.pad_leading(5, "0")
 

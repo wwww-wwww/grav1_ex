@@ -31,6 +31,14 @@ defmodule Grav1.Projects do
     Agent.get(__MODULE__, fn val -> val.projects end)
   end
 
+  def get_project(id) do
+    {id, _} = Integer.parse(id)
+
+    Agent.get(__MODULE__, fn val ->
+      Map.get(val.projects, id)
+    end)
+  end
+
   def log(project, message) do
     Agent.get_and_update(__MODULE__, fn val ->
       case Map.get(val.projects, project.id) do
@@ -38,11 +46,11 @@ defmodule Grav1.Projects do
           {project, val}
 
         project_l ->
-          new_project = %{project_l | log: project_l.log ++ [message]}
+          new_project = %{project_l | log: project_l.log ++ [{DateTime.utc_now(), message}]}
           {new_project, %{val | projects: Map.put(val.projects, project.id, new_project)}}
       end
     end)
-    |> Grav1Web.ProjectsLive.update_only()
+    |> Grav1Web.ProjectsLive.update_log()
   end
 
   def update_progress(project, status, message) do

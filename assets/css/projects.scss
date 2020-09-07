@@ -53,12 +53,13 @@ main > div {
 }
 
 .project > .bottom > .progress_bar {
+  max-width: 100%;
   height: 100%;
   width: 0%;
   background-color: rgba(80, 210, 240, 0.4);
   position: absolute;
   left: 0;
-  transition: 1s width;
+  transition: width 0.5s;
 }
 
 .project > .bottom > div:not(:first-child) {

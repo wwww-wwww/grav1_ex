@@ -5,7 +5,7 @@
     <th>user</th>
     <th>workers</th>
   </tr>
-  <%= for {k, client} <- @workers.clients do %>
+  <%= for {_k, client} <- @workers.clients do %>
     <tr>
       <td><%= client.socket_id %></td>
       <td><%= client.name %></td>

@@ -1,0 +1,5 @@
+<div>
+  <%= for {timestamp, message} <- @log do %>
+  <div>[<%= timestamp %>] <%= message %></div>
+  <% end %>
+</div>

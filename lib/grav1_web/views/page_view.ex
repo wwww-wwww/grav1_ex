@@ -46,11 +46,4 @@ defmodule Grav1Web.PageView do
         "?"
     end
   end
-
-  def render_page(socket, page) do
-    case page do
-      nil -> ""
-      page -> page
-    end
-  end
 end

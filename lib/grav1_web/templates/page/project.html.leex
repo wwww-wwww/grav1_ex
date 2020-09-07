@@ -2,4 +2,7 @@
   <div><%= @project.id %></div>
   <div><%= @project.input %></div>
   <div><%= @project.encoder %></div>
+  <%= submit("log", phx_click: "view_log", phx_value_id: @project.id) %>
+
+  <%= @page %>
 </div>

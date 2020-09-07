@@ -34,10 +34,11 @@ defmodule Grav1Web.Router do
 
     scope "/" do
       pipe_through :logged_out
-      get "/sign_in", PageController, :sign_in
-      post "/sign_in", UserController, :sign_in
 
-      get "/sign_up", PageController, :sign_up
+      live "/sign_in", SignInLive, layout: {Grav1Web.LayoutView, "app.html"}
+      live "/sign_up", SignUpLive, layout: {Grav1Web.LayoutView, "app.html"}
+
+      post "/sign_in", UserController, :sign_in
       post "/sign_up", UserController, :sign_up
     end
 

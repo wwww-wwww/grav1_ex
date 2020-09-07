@@ -18,7 +18,7 @@
       </div>
     </div>
     <div id="list_projects">
-      <%= for {id, %{name: name, input: filename, progress_nom: progress_nom, progress_den: progress_den, id: id, state: state}} <- @projects do %>
+      <%= for {id, %{name: name, input: filename, progress_nom: progress_nom, progress_den: progress_den, state: state}} <- @projects do %>
         <div id="proj_<%= id %>" class="project" data-id="<%= id %>" phx-hook="view_project">
           <div class="top"><%= if name != nil and String.length(name) > 0, do: name, else: Path.basename(filename) %></div>
           <div class="bottom">
@@ -31,7 +31,7 @@
     </div>
   </div>
 
-  <%= render_page(@socket, @page) %>
+  <%= @page %>
 
   <div style="overflow-y: auto" phx-update="ignore" id="_add_project_e" phx-hook="load_encoders">
     <% encoder_params = Grav1.Encoder.params() %>

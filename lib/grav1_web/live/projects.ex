@@ -9,20 +9,20 @@ defmodule Grav1Web.ProjectsLive do
     Grav1Web.PageView.render("projects.html", assigns)
   end
 
-  def get_projects() do
-    Projects.get_projects()
-  end
-
   def mount(_, _, socket) do
     if connected?(socket), do: Grav1Web.Endpoint.subscribe(@topic)
 
     new_socket =
       socket
-      |> assign(projects: get_projects())
+      |> assign(projects: Projects.get_projects())
       |> assign(project_changeset: Project.changeset(%Project{}))
       |> assign(page: nil)
 
     {:ok, new_socket}
+  end
+
+  def handle_params(_, _, socket) do
+    {:noreply, socket}
   end
 
   def handle_event(
@@ -55,56 +55,121 @@ defmodule Grav1Web.ProjectsLive do
     end
   end
 
-  def handle_event("view_project", %{"id" => id}, socket) do
-    case Repo.get(Project, id) do
+  def handle_event("view_log", %{"id" => id}, socket) do
+    case Projects.get_project(id) do
       nil ->
         {:noreply, socket |> assign(page: nil)}
 
       project ->
-        new_socket =
-          socket
-          |> assign(
-            page:
-              live_component(socket, Grav1Web.ProjectComponent,
-                id: "project:#{project.id}",
-                project: project
-              )
-          )
-
-        {:noreply, new_socket}
+        {:noreply,
+         socket
+         |> assign(
+           page:
+             live_component(socket, Grav1Web.ProjectComponent,
+               id: "project:#{project.id}",
+               project: project,
+               page:
+                 live_component(socket, Grav1Web.ProjectLogComponent,
+                   id: "project_log:#{project.id}",
+                   log: project.log
+                 )
+             )
+         )}
     end
   end
 
+  def handle_event("view_project", %{"id" => id}, socket) do
+    case Projects.get_project(id) do
+      nil ->
+        {:noreply, socket |> assign(page: nil)}
+
+      project ->
+        {:noreply,
+         socket
+         |> assign(
+           page:
+             live_component(socket, Grav1Web.ProjectComponent,
+               id: "project:#{project.id}",
+               project: project,
+               a: 5,
+               page:
+                 live_component(socket, Grav1Web.ProjectSegmentsComponent,
+                   id: "project_segments:#{project.id}",
+                   segments: project.segments
+                 )
+             )
+         )}
+    end
+  end
+
+  # update project list and project
   def handle_info(%{topic: @topic, payload: %{project: project, projects: projects}}, socket) do
-    send_update(Grav1Web.ProjectComponent, id: "project:#{project.id}")
+    send_update(Grav1Web.ProjectComponent, id: "project:#{project.id}", project: project)
     {:noreply, socket |> assign(projects: projects)}
   end
 
+  # update only project list
   def handle_info(%{topic: @topic, payload: %{projects: projects}}, socket) do
     {:noreply, socket |> assign(projects: projects)}
   end
 
+  # update only project
   def handle_info(%{topic: @topic, payload: %{project: project}}, socket) do
-    send_update(Grav1Web.ProjectComponent, id: "project:#{project.id}")
+    send_update(Grav1Web.ProjectComponent, id: "project:#{project.id}", project: project)
     {:noreply, socket}
   end
 
-  def update_only(project, ratelimit \\ false) do
-    if not ratelimit or Grav1.RateLimit.can_execute?("project:#{project.id}", 1 / 20) do
-      Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{project: project})
-    end
+  # update only project logs
+  def handle_info(%{topic: @topic, payload: %{projectid: projectid, log: log}}, socket) do
+    send_update(Grav1Web.ProjectLogComponent, id: "project_log:#{projectid}", log: log)
+    {:noreply, socket}
   end
 
+  # update only project segments
+  def handle_info(%{topic: @topic, payload: %{projectid: projectid, segments: segments}}, socket) do
+    send_update(Grav1Web.ProjectSegmentComponent,
+      id: "project_segments:#{projectid}",
+      segments: segments
+    )
+
+    {:noreply, socket}
+  end
+
+  # update project list and project
   def update(project, ratelimit \\ false) do
-    if not ratelimit or Grav1.RateLimit.can_execute?("projects:#{project.id}", 1 / 20) do
+    if not ratelimit or Grav1.RateLimit.can_execute?("projects", 1 / 10) do
       Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{
         project: project,
-        projects: get_projects()
+        projects: Projects.get_projects()
       })
     end
   end
 
+  # update only project
+  def update_project(project, ratelimit \\ false) do
+    if not ratelimit or Grav1.RateLimit.can_execute?("project:#{project.id}", 1 / 10) do
+      Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{project: project})
+    end
+  end
+
+  # update only log of project
+  def update_log(project) do
+    Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{
+      projectid: project.id,
+      log: project.log
+    })
+  end
+
+  # update only segments of project
+  def update_segments(project) do
+    Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{
+      projectid: project.id,
+      segments: project.segments
+    })
+  end
+
+  # update only project list
   def update() do
-    Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{projects: get_projects()})
+    Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{projects: Projects.get_projects()})
   end
 end

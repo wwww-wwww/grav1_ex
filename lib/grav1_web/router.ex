@@ -30,6 +30,8 @@ defmodule Grav1Web.Router do
 
     get "/", PageController, :index
     live "/projects", ProjectsLive, layout: {Grav1Web.LayoutView, "app.html"}
+    live "/projects/:id", ProjectsLive, layout: {Grav1Web.LayoutView, "app.html"}
+
     get "/workers", PageController, :workers
 
     scope "/" do

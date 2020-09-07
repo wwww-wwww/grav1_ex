@@ -242,7 +242,10 @@ defmodule Grav1.ProjectsExecutor do
   def do_action(:split, project) do
     Grav1.Projects.update_project(project, %{state: :preparing})
 
-    path_split = "#{project.id}"
+    path_split =
+      Application.fetch_env!(:grav1, :path_projects)
+      |> Path.join(to_string(project.id))
+      |> Path.join("split")
 
     Grav1.Split.split(
       project.input,

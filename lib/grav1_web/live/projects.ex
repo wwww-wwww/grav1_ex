@@ -9,16 +9,41 @@ defmodule Grav1Web.ProjectsLive do
     Grav1Web.PageView.render("projects.html", assigns)
   end
 
-  def mount(_, _, socket) do
+  def mount(socket, page \\ nil) do
     if connected?(socket), do: Grav1Web.Endpoint.subscribe(@topic)
 
     new_socket =
       socket
       |> assign(projects: Projects.get_projects())
       |> assign(project_changeset: Project.changeset(%Project{}))
-      |> assign(page: nil)
+      |> assign(page: page)
 
     {:ok, new_socket}
+  end
+
+  def mount(%{"id" => id}, _, socket) do
+    case Projects.get_project(id) do
+      nil ->
+        mount(socket)
+
+      project ->
+        page =
+          live_component(socket, Grav1Web.ProjectComponent,
+            id: "project:#{project.id}",
+            project: project,
+            page:
+              live_component(socket, Grav1Web.ProjectSegmentsComponent,
+                id: "project_log:#{project.id}",
+                segments: project.segments
+              )
+          )
+
+        mount(socket, page)
+    end
+  end
+
+  def mount(_, _, socket) do
+    mount(socket)
   end
 
   def handle_params(_, _, socket) do

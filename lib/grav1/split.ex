@@ -1,8 +1,25 @@
 defmodule Grav1.Split do
+  alias Grav1.Segment
+
   @re_ffmpeg_frames ~r/frame= *([^ ]+?) /
   @re_ffmpeg_frames2 ~r/([0-9]+?) frames successfully decoded/
   @re_ffmpeg_keyframe ~r/n:([0-9]+)\.[0-9]+ pts:.+key:(.).+pict_type:(.)/
   @re_python_aom ~r/frame *([^ ]+)/
+
+  @split_args ["-c:v", "copy"]
+
+  @split_args_reencode [
+    "-c:v",
+    "ffv1",
+    "-g",
+    "1",
+    "-level",
+    "3",
+    "-threads",
+    "16",
+    "-slices",
+    "30"
+  ]
 
   @fields [
     "frame",
@@ -64,16 +81,73 @@ defmodule Grav1.Split do
 
     callback.(:log, "segmenting")
 
-    IO.inspect(source_keyframes)
-    IO.inspect(aom_keyframes)
-    IO.inspect(frames)
-    IO.inspect(splits)
-    IO.inspect(segments)
+    split_args =
+      if true or length(frames) < length(aom_keyframes) / 2 do
+        callback.(:log, "keyframes are unreliable, re-encoding")
+
+        {frames, splits, segments} =
+          aom_keyframes
+          |> Enum.zip(tl(aom_keyframes))
+          |> Enum.with_index()
+          |> Enum.reduce({[], [], []}, fn {{frame, next_frame}, i}, {frames, splits, segments} ->
+            segment_n = length(frames)
+            length = next_frame - frame
+
+            split_name =
+              Integer.to_string(i)
+              |> String.pad_leading(5, "0")
+
+            new_split = %{file: "#{split_name}.mkv", start: frame, length: length}
+            new_segment = %{n: i, file: "#{split_name}.mkv", start: frame, frames: length}
+
+            {frames ++ [frame], splits ++ [new_split], segments ++ [new_segment]}
+          end)
+
+        @split_args_reencode
+      else
+        @split_args
+      end
+
+    split_video(input, split_args, frames, path_split, callback)
 
     {source_keyframes, aom_keyframes}
   end
 
-  def verify_split(input, path_split, splits, callback) do
+  defp split_video(input, split_args, frames, path_split, callback) do
+    args =
+      [
+        "-y",
+        "-hide_banner",
+        "-i",
+        input,
+        "-map",
+        "0:v:0",
+        "-avoid_negative_ts",
+        "1",
+        "-vsync",
+        "0"
+      ] ++
+        split_args ++
+        [
+          "-f",
+          "segment",
+          "-segment_frames",
+          Enum.join(tl(frames), ","),
+          Path.join(path_split, "%05d.mkv")
+        ]
+
+    callback.(:log, "splitting with ffmpeg " <> Enum.join(args, " "))
+
+    case File.mkdir_p(path_split) do
+      :ok ->
+        IO.inspect("SPLIT!")
+
+      {:error, reason} ->
+        callback.(:log, "unable to create split directory. reason: #{reason}")
+    end
+  end
+
+  defp verify_split(input, path_split, splits, callback) do
     splits
     |> Enum.with_index(1)
     |> Enum.reduce(0, fn {segment, i}, total_frames ->
@@ -124,7 +198,7 @@ defmodule Grav1.Split do
     end)
   end
 
-  def correct_split(input, output, start, length, callback) do
+  defp correct_split(input, output, start, length, callback) do
     port =
       Port.open(
         {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
@@ -163,7 +237,7 @@ defmodule Grav1.Split do
     end)
   end
 
-  def get_frames(input, fast \\ true, callback \\ nil) do
+  defp get_frames(input, fast \\ true, callback \\ nil) do
     # vapoursynth
     if fast and false do
     else
@@ -224,7 +298,7 @@ defmodule Grav1.Split do
   defp get_keyframes_vs_ffms2(input) do
   end
 
-  def get_keyframes_ffmpeg(input, callback \\ nil) do
+  defp get_keyframes_ffmpeg(input, callback \\ nil) do
     args = [
       "-hide_banner",
       "-i",
@@ -306,7 +380,7 @@ defmodule Grav1.Split do
     end
   end
 
-  def get_aom_keyframes(input, callback \\ nil) do
+  defp get_aom_keyframes(input, callback \\ nil) do
     _ = """
     ffmpeg_args = ["-i", input, "-pix_fmt", "yuv420p", "-map", "0:v:0", "-vsync", "0", "-strict", "-1", "-f", "yuv4mpegpipe", "-"]
 
@@ -645,9 +719,8 @@ defmodule Grav1.Split do
     {frames, segments, _} =
       aom_keyframes
       |> Enum.zip(tl(aom_keyframes))
-      |> Enum.reduce({[], %{}, 0}, fn {frame, next_frame}, acc ->
-        {frames, splits, last_end} = acc
-
+      |> Enum.with_index()
+      |> Enum.reduce({[], [], 0}, fn {{frame, next_frame}, i}, {frames, splits, last_end} ->
         length = next_frame - frame
 
         {new_frames, split_n, start} =
@@ -666,12 +739,19 @@ defmodule Grav1.Split do
             end
           end
 
-        split_name = split_n |> Integer.to_string() |> String.pad_leading(5, "0")
-        segment_n = length(Map.keys(splits)) |> Integer.to_string() |> String.pad_leading(5, "0")
+        split_name =
+          split_n
+          |> to_string()
+          |> String.pad_leading(5, "0")
 
-        new_split = %{segment: "#{split_name}.mkv", start: start, frames: length}
+        segment_n =
+          length(splits)
+          |> to_string()
+          |> String.pad_leading(5, "0")
 
-        {new_frames, splits |> Map.put(segment_n, new_split), frame + length}
+        new_split = %{n: i, file: "#{split_name}.mkv", start: start, frames: length}
+
+        {new_frames, splits ++ [new_split], frame + length}
       end)
 
     splits =
@@ -680,8 +760,7 @@ defmodule Grav1.Split do
       |> Enum.with_index()
       |> Enum.reduce([], fn {{frame, next_frame}, i}, acc ->
         split_name =
-          i
-          |> Integer.to_string()
+          Integer.to_string(i)
           |> String.pad_leading(5, "0")
 
         acc ++ [%{file: "#{split_name}.mkv", start: frame, length: next_frame - frame}]

@@ -1,8 +1,11 @@
-<div>
-  <div><%= @project.id %></div>
-  <div><%= @project.input %></div>
-  <div><%= @project.encoder %></div>
-  <%= submit("log", phx_click: "view_log", phx_value_id: @project.id) %>
-
+<div class="page_project">
+  <div class="header">
+    <div><%= @project.id %></div>
+    <div><%= @project.input %></div>
+    <div><%= @project.encoder %></div>
+    <%= submit("log", phx_click: "view_log", phx_value_id: @project.id) %>
+  </div>
   <%= @page %>
 </div>
+
+<link rel="stylesheet" href='<%= Routes.static_path(@socket, "/css/project.css") %>'/>

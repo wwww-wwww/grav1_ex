@@ -7,7 +7,8 @@ config :grav1,
   path_vpxenc: System.find_executable("vpxenc"),
   path_dav1d: System.find_executable("dav1d"),
   path_vspipe: System.find_executable("vspipe"),
-  path_python: System.find_executable("python")
+  path_python: System.find_executable("python"),
+  path_projects: "projects"
 
 # Configures the endpoint
 config :grav1, Grav1Web.Endpoint,

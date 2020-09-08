@@ -7,6 +7,7 @@ defmodule Grav1Web.Router do
     plug :fetch_flash
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :put_root_layout, {Grav1Web.LayoutView, "app.html"}
   end
 
   pipeline :api do
@@ -29,16 +30,16 @@ defmodule Grav1Web.Router do
     pipe_through [:browser, :auth]
 
     get "/", PageController, :index
-    live "/projects", ProjectsLive, layout: {Grav1Web.LayoutView, "app.html"}
-    live "/projects/:id", ProjectsLive, layout: {Grav1Web.LayoutView, "app.html"}
+    live "/projects", ProjectsLive
+    live "/projects/:id", ProjectsLive
 
-    get "/workers", PageController, :workers
+    live "/workers", WorkersLive
 
     scope "/" do
       pipe_through :logged_out
 
-      live "/sign_in", SignInLive, layout: {Grav1Web.LayoutView, "app.html"}
-      live "/sign_up", SignUpLive, layout: {Grav1Web.LayoutView, "app.html"}
+      live "/sign_in", SignInLive
+      live "/sign_up", SignUpLive
 
       post "/sign_in", UserController, :sign_in
       post "/sign_up", UserController, :sign_up
@@ -50,7 +51,7 @@ defmodule Grav1Web.Router do
       pipe_through :logged_in
 
       scope "/user" do
-        get "/", UserController, :show_user
+        live "/", UserLive
         post "/generate_apikey", UserController, :generate_apikey
       end
     end

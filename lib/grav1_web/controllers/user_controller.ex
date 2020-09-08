@@ -3,12 +3,6 @@ defmodule Grav1Web.UserController do
 
   alias Grav1.{Guardian, Repo, User}
 
-  def show_user(conn, _) do
-    user = Guardian.Plug.current_resource(conn)
-
-    render(conn, "user.html", user: user)
-  end
-
   def sign_up(conn, %{"user" => user}) do
     changeset = User.changeset(%User{}, user)
 
@@ -64,7 +58,7 @@ defmodule Grav1Web.UserController do
       nil ->
         conn
         |> put_status(200)
-        |> json(%{success: false, reason: "bad token"})
+        |> json(%{success: false, reason: "bad key"})
 
       user ->
         token =

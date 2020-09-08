@@ -14,8 +14,9 @@
       <nav role="navigation">
         <%= link("Home", to: Routes.page_path(@conn, :index), class: if(title(@conn, assigns) == :index, do: "header-active")) %>
         <%= live_redirect("Projects", to: Routes.live_path(@conn, Grav1Web.ProjectsLive), class: if(title(@conn, assigns) == :projects, do: "header-active")) %>
+        <%= live_redirect("Workers", to: Routes.live_path(@conn, Grav1Web.WorkersLive), class: if(title(@conn, assigns) == :workers, do: "header-active")) %>
         <%= if logged_in?(@conn) do %>
-          <%= link("Profile", to: Routes.user_path(@conn, :show_user), class: if(title(@conn, assigns) == :show_user, do: "header-active")) %>
+          <%= live_redirect("Profile", to: Routes.live_path(@conn, Grav1Web.UserLive), class: if(title(@conn, assigns) == :show_user, do: "header-active")) %>
           <%= link("Sign Out", to: Routes.user_path(@conn, :sign_out)) %>
         <% else %>
           <%= live_redirect("Sign Up", to: Routes.live_path(@conn, Grav1Web.SignUpLive), class: if(title(@conn, assigns) == :sign_up, do: "header-active")) %>

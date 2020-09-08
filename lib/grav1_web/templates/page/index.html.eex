@@ -1,12 +1,5 @@
 <div>
   <div>
-    <%= link("projects", to: Routes.live_path(@conn, Grav1Web.ProjectsLive)) %>
-  </div>
-  <div>
-  <%= link("workers", to: Routes.page_path(@conn, :workers)) %>
-  </div>
-
-  <div>
     <%= for {p, version} <- Application.get_all_env(:versions) do %>
       <div>
         <span><%= p %></span>

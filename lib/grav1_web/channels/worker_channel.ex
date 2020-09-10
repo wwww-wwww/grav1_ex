@@ -3,16 +3,24 @@ defmodule Grav1Web.WorkerChannel do
 
   alias Grav1.WorkerAgent
 
-  def join("worker", %{"name" => name}, socket) do
-    send(self(), {:after_join, nil})
+  def join("worker", %{"name" => name, "state" => state, "id" => id}, socket) do
+    send(self(), {:reconnect, id, state})
     :ok = Grav1Web.Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
-    {:ok, socket |> assign(:name, name)}
+    {:ok, socket.assigns.socket_id, socket |> assign(:name, name)}
   end
 
-  def join("worker", _, socket) do
-    send(self(), {:after_join, nil})
+  def join("worker", %{"name" => name, "state" => state}, socket) do
+    send(self(), {:after_join, state})
     :ok = Grav1Web.Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
-    {:ok, socket |> assign(:name, socket.assigns.socket_id)}
+    {:ok, socket.assigns.socket_id, socket |> assign(:name, name)}
+  end
+
+  def join("worker", %{"state" => state, "id" => id}, socket) do
+    join("worker", %{"name" => "", "state" => state, "id" => id}, socket)
+  end
+
+  def join("worker", %{"state" => state}, socket) do
+    join("worker", %{"name" => "", "state" => state}, socket)
   end
 
   def terminate(_, socket) do
@@ -20,8 +28,14 @@ defmodule Grav1Web.WorkerChannel do
     IO.inspect("client is gone :(")
   end
 
-  def handle_info({:after_join, _}, socket) do
-    WorkerAgent.connect(socket)
+  def handle_info({:reconnect, id, state}, socket) do
+    WorkerAgent.connect(socket, state, id)
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:after_join, state}, socket) do
+    WorkerAgent.connect(socket, state)
 
     {:noreply, socket}
   end

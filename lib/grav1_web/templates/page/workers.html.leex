@@ -1,16 +1,26 @@
 <table>
   <tr>
-    <th>socket id</th>
-    <th>name</th>
+    <th>connected</th>
     <th>user</th>
+    <th>socket_id</th>
+    <th>name</th>
     <th>workers</th>
+    <th>download_queue</th>
+    <th>upload_queue</th>
+    <th>dowloading</th>
+    <th>uploading</th>
   </tr>
   <%= for {_k, client} <- @workers.clients do %>
     <tr>
+      <td><%= client.connected %></td>
+      <td><%= client.user %></td>
       <td><%= client.socket_id %></td>
       <td><%= client.name %></td>
-      <td><%= client.user %></td>
       <td><%= client.workers %></td>
+      <td><%= client.download_queue %></td>
+      <td><%= client.upload_queue %></td>
+      <td><%= client.dowloading %></td>
+      <td><%= client.uploading %></td>
     </tr>
   <% end %>
 </table>

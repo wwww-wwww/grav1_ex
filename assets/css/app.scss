@@ -67,5 +67,31 @@ nav > a:not(:last-child) {
   margin-right: 0.5em;
 }
 
+
+table{
+  border-collapse: collapse;
+}
+
+table th:not(:last-child), table td:not(:last-child) {
+  border-right: 1px solid rgba(0, 0, 0, 0.4);
+}
+
+table th {
+  font-weight: 400;
+  padding: 0.1em 0.4em;
+}
+
+table tr:not(:last-child) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+}
+
+table td {
+  padding: 0.1em 0.4em;
+}
+
+table tr:nth-child(2n) {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
 @import "./buttons.css";
 @import "./modals.css";

@@ -60,6 +60,7 @@ defmodule Grav1Web.Router do
   scope "/api", Grav1Web do
     pipe_through :api
     post "/auth", UserController, :auth
+    get "/segment/:id", ApiController, :get_segment
   end
 
   if Mix.env() in [:dev, :test] do

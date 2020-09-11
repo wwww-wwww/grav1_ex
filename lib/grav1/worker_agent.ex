@@ -11,6 +11,7 @@ defmodule Grav1.Client do
             name: "",
             user: "",
             connected: true,
+            sending_job: false,
             workers: [],
             max_workers: 0,
             job_queue: [],
@@ -49,23 +50,29 @@ defmodule Grav1.WorkerAgent do
     state = map_client(state)
 
     Agent.update(__MODULE__, fn val ->
-      new_clients = case Map.get(val.clients, socket_id) do
-        nil ->
-          Map.put(val.clients, socket.assigns.socket_id, new_client(socket, state))
-
-        client ->
-          if client.user == socket.assigns.user_id do
-            new_client =
-              %{client | socket_id: socket.assigns.socket_id, connected: true}
-              |> Map.merge(state)
-
-            val.clients
-            |> Map.delete(socket_id)
-            |> Map.put(socket.assigns.socket_id, new_client)
-          else
+      new_clients =
+        case Map.get(val.clients, socket_id) do
+          nil ->
             Map.put(val.clients, socket.assigns.socket_id, new_client(socket, state))
-          end
-      end
+
+          client ->
+            if client.user == socket.assigns.user_id do
+              new_client =
+                %{
+                  client
+                  | socket_id: socket.assigns.socket_id,
+                    connected: true,
+                    sending_job: false
+                }
+                |> Map.merge(state)
+
+              val.clients
+              |> Map.delete(socket_id)
+              |> Map.put(socket.assigns.socket_id, new_client)
+            else
+              Map.put(val.clients, socket.assigns.socket_id, new_client(socket, state))
+            end
+        end
 
       %{val | clients: new_clients}
     end)
@@ -75,13 +82,8 @@ defmodule Grav1.WorkerAgent do
 
   def disconnect(socket) do
     Agent.update(__MODULE__, fn val ->
-      new_clients = case Map.get(val.clients, socket.assigns.socket_id) do
-        nil ->
-          val.clients
+      new_clients = update_client(val.clients, socket.assigns.socket_id, %{connected: false})
 
-        client ->
-          Map.put(val.clients, socket.assigns.socket_id, %{client | connected: false})
-      end
       %{val | clients: new_clients}
     end)
 
@@ -97,15 +99,6 @@ defmodule Grav1.WorkerAgent do
     Grav1Web.WorkersLive.update()
   end
 
-  defp new_client(socket, state) do
-    %Client{
-      user: socket.assigns.user_id,
-      socket_id: socket.assigns.socket_id,
-      name: socket.assigns.name
-    }
-    |> Map.merge(state)
-  end
-
   def get_workers() do
     Agent.get(__MODULE__, fn val ->
       Enum.reduce(val.clients, [], fn {_, client}, acc ->
@@ -114,8 +107,35 @@ defmodule Grav1.WorkerAgent do
     end)
   end
 
+  def update_client(socket_id, opts) do
+    Agent.update(__MODULE__, fn val ->
+      new_clients = update_client(val.clients, to_string(socket_id), opts)
+
+      %{val | clients: new_clients}
+    end)
+  end
+
   def get() do
     Agent.get(__MODULE__, fn val -> val end)
+  end
+
+  defp update_client(clients, id, opts) do
+    case Map.get(clients, id) do
+      nil ->
+        clients
+
+      client ->
+        Map.put(clients, id, Map.merge(client, opts))
+    end
+  end
+
+  defp new_client(socket, state) do
+    %Client{
+      user: socket.assigns.user_id,
+      socket_id: socket.assigns.socket_id,
+      name: socket.assigns.name
+    }
+    |> Map.merge(state)
   end
 
   defp map_client(state) do
@@ -129,7 +149,7 @@ defmodule Grav1.WorkerAgent do
       "queue_size" => queue_size
     } = state
 
-    new_workers = 
+    new_workers =
       workers
       |> Enum.reduce([], fn worker, acc ->
         acc ++ [struct(Worker, worker)]

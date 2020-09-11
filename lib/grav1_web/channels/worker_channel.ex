@@ -52,17 +52,29 @@ defmodule Grav1Web.WorkerChannel do
     {:noreply, socket}
   end
 
-  def handle_in("blah", %{}, socket) do
+  def handle_in("recv_job", %{"downloading" => downloading}, socket) do
+    WorkerAgent.update_client(socket.assigns.socket_id, %{
+      downloading: downloading,
+      sending_job: false
+    })
+
     {:noreply, socket}
   end
 
   def push_job(socketid, job) do
     params = %{
       segment_id: job.id,
-      url: "some url",
-      frames: job.frames
+      start: job.start,
+      frames: job.frames,
+      encoder: job.project.encoder,
+      passes: 2,
+      encoder_params: job.project.encoder_params,
+      ffmpeg_params: job.project.ffmpeg_params,
+      grain_table: "",
+      url: Grav1Web.Router.Helpers.api_url(%URI{}, :get_segment, job.id)
     }
 
+    WorkerAgent.update_client(socketid, %{sending_job: true})
     Endpoint.broadcast("worker:#{socketid}", "push_job", params)
   end
 end

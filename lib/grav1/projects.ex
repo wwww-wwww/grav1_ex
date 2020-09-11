@@ -40,20 +40,27 @@ defmodule Grav1.Projects do
     {:reply, :ok, %{state | projects: Map.merge(state.projects, projects)}}
   end
 
+  def handle_call({:get_segment, id}, _, state) do
+    {:reply, Map.get(state.segments, id), state}
+  end
+
   def handle_call(:get_segment, _, state) do
     workers = WorkerAgent.get_workers()
 
     sorted =
       state.segments
       |> Map.values()
-      |> Enum.sort_by(&(&1.frames), :desc)
-      |> Enum.sort_by(&(&1.project.priority), :asc)
-      |> Enum.sort_by(&(length(Enum.filter(workers, fn worker -> worker.segment == &1.id end))), :asc)
+      |> Enum.sort_by(& &1.frames, :desc)
+      |> Enum.sort_by(& &1.project.priority, :asc)
+      |> Enum.sort_by(
+        &length(Enum.filter(workers, fn worker -> worker.segment == &1.id end)),
+        :asc
+      )
 
     case sorted do
       [head | _] ->
         {:reply, head, state}
-      
+
       [] ->
         {:reply, nil, state}
     end
@@ -124,6 +131,10 @@ defmodule Grav1.Projects do
     end)
 
     {:noreply, state}
+  end
+
+  def get_segment(id) do
+    GenServer.call(__MODULE__, {:get_segment, id})
   end
 
   def get_segment() do

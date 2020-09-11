@@ -1,17 +1,19 @@
 defmodule Grav1Web.WorkerChannel do
   use Phoenix.Channel
 
+  alias Phoenix.Socket.Broadcast
+  alias Grav1Web.Endpoint
   alias Grav1.WorkerAgent
 
   def join("worker", %{"name" => name, "state" => state, "id" => id}, socket) do
     send(self(), {:reconnect, id, state})
-    :ok = Grav1Web.Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
+    :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
     {:ok, socket.assigns.socket_id, socket |> assign(:name, name)}
   end
 
   def join("worker", %{"name" => name, "state" => state}, socket) do
     send(self(), {:after_join, state})
-    :ok = Grav1Web.Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
+    :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
     {:ok, socket.assigns.socket_id, socket |> assign(:name, name)}
   end
 
@@ -40,12 +42,27 @@ defmodule Grav1Web.WorkerChannel do
     {:noreply, socket}
   end
 
-  def handle_info(%Phoenix.Socket.Broadcast{topic: _, event: ev, payload: payload}, socket) do
+  def handle_info(%Broadcast{topic: _, event: "push_job", payload: payload}, socket) do
+    push(socket, "push_job", payload)
+    {:noreply, socket}
+  end
+
+  def handle_info(%Broadcast{topic: _, event: ev, payload: payload}, socket) do
     push(socket, ev, payload)
     {:noreply, socket}
   end
 
   def handle_in("blah", %{}, socket) do
     {:noreply, socket}
+  end
+
+  def push_job(socketid, job) do
+    params = %{
+      segment_id: job.id,
+      url: "some url",
+      frames: job.frames
+    }
+
+    Endpoint.broadcast("worker:#{socketid}", "push_job", params)
   end
 end

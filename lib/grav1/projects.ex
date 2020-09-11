@@ -1,7 +1,7 @@
 defmodule Grav1.Projects do
   use GenServer
 
-  alias Grav1.{Repo, Project, Projects}
+  alias Grav1.{Repo, Project, Projects, WorkerAgent}
   alias Ecto.Multi
 
   defstruct projects: %{},
@@ -15,7 +15,11 @@ defmodule Grav1.Projects do
         segments =
           project.segments
           |> Enum.reduce(%{}, fn segment, segments ->
-            Map.put(segments, segment.id, %{segment | project: project})
+            if segment.filesize == 0 do
+              Map.put(segments, segment.id, %{segment | project: project})
+            else
+              segments
+            end
           end)
 
         new_project = %{project | segments: segments}
@@ -34,6 +38,25 @@ defmodule Grav1.Projects do
 
   def handle_call({:add_projects, projects}, _, state) do
     {:reply, :ok, %{state | projects: Map.merge(state.projects, projects)}}
+  end
+
+  def handle_call(:get_segment, _, state) do
+    workers = WorkerAgent.get_workers()
+
+    sorted =
+      state.segments
+      |> Map.values()
+      |> Enum.sort_by(&(&1.frames), :desc)
+      |> Enum.sort_by(&(&1.project.priority), :asc)
+      |> Enum.sort_by(&(length(Enum.filter(workers, fn worker -> worker.segment == &1.id end))), :asc)
+
+    case sorted do
+      [head | _] ->
+        {:reply, head, state}
+      
+      [] ->
+        {:reply, nil, state}
+    end
   end
 
   def handle_call(:get_projects, _, state) do
@@ -101,6 +124,10 @@ defmodule Grav1.Projects do
     end)
 
     {:noreply, state}
+  end
+
+  def get_segment() do
+    GenServer.call(__MODULE__, :get_segment)
   end
 
   def get_projects() do

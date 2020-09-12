@@ -42,9 +42,9 @@ defmodule Grav1.WorkerAgent do
       %{val | clients: new_clients}
     end)
 
-    distribute_segments()
-
-    Grav1Web.WorkersLive.update()
+    if not distribute_segments() do
+      Grav1Web.WorkersLive.update()
+    end
   end
 
   # reconnect
@@ -79,9 +79,9 @@ defmodule Grav1.WorkerAgent do
       %{val | clients: new_clients}
     end)
 
-    distribute_segments()
-
-    Grav1Web.WorkersLive.update()
+    if not distribute_segments() do
+      Grav1Web.WorkersLive.update()
+    end
   end
 
   def disconnect(socket) do
@@ -124,22 +124,38 @@ defmodule Grav1.WorkerAgent do
       Agent.get_and_update(__MODULE__, fn val ->
         available_clients =
           val.clients
-          |> Enum.filter(fn {key, client} ->
+          |> Enum.filter(fn {_, client} ->
             client.downloading == nil and not client.sending_job
           end)
 
         segments =
           val.clients
-          |> Enum.reduce([], fn {_, client}, acc ->
-            acc ++ client.workers
-          end)
           |> Projects.get_segments(length(available_clients))
 
-        client_segment = Enum.zip(available_clients, segments)
+        {client_segment, _} =
+          Enum.reduce(available_clients, {[], segments}, fn {key, client}, {acc, segments} ->
+            filtered_segments =
+              segments
+              |> Enum.filter(fn segment ->
+                segment.id != client.downloading and segment.id not in client.job_queue
+              end)
+
+            case List.first(filtered_segments) do
+              nil ->
+                {acc, segments}
+
+              new_segment ->
+                new_segments =
+                  segments
+                  |> Enum.filter(fn segment -> segment.id != new_segment.id end)
+
+                {acc ++ [{{key, client}, new_segment}], new_segments}
+            end
+          end)
 
         new_clients =
           client_segment
-          |> Enum.reduce(%{}, fn {{key, client}, segment}, acc ->
+          |> Enum.reduce(%{}, fn {{key, client}, _}, acc ->
             Map.put(acc, key, %{client | sending_job: true})
           end)
 
@@ -150,6 +166,13 @@ defmodule Grav1.WorkerAgent do
     |> Enum.each(fn {{_, client}, job} ->
       Grav1Web.WorkerChannel.push_segment(client.socket_id, job)
     end)
+
+    if length(clients) > 0 do
+      Grav1Web.WorkersLive.update()
+      true
+    else
+      false
+    end
   end
 
   def get() do

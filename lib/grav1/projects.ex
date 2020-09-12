@@ -44,12 +44,26 @@ defmodule Grav1.Projects do
     {:reply, Map.get(state.segments, id), state}
   end
 
-  def handle_call({:get_segments, workers, n}, _, state) do
+  def handle_call({:get_segments, clients, n}, _, state) do
+    workers =
+      clients
+      |> Enum.reduce([], fn {_, client}, acc ->
+        acc ++ client.workers
+      end)
+
     sorted =
       state.segments
       |> Map.values()
       |> Enum.sort_by(& &1.frames, :desc)
       |> Enum.sort_by(& &1.project.priority, :asc)
+      |> Enum.sort_by(
+        &length(
+          Enum.filter(clients, fn {_, client} ->
+            client.downloading == &1.id or &1.id in client.job_queue
+          end)
+        ),
+        :asc
+      )
       |> Enum.sort_by(
         &length(Enum.filter(workers, fn worker -> worker.segment == &1.id end)),
         :asc
@@ -207,7 +221,8 @@ defmodule Grav1.Projects do
         case projects |> Enum.at(0) do
           %{valid?: false, errors: errors} ->
             new_errors =
-              Enum.reduce([], fn {x, {error, _}}, acc ->
+              errors
+              |> Enum.reduce([], fn {x, {error, _}}, acc ->
                 acc ++ ["#{x} #{error}"]
               end)
 

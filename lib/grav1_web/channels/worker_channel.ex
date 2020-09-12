@@ -60,6 +60,8 @@ defmodule Grav1Web.WorkerChannel do
 
     WorkerAgent.distribute_segments()
 
+    Grav1Web.WorkersLive.update()
+
     {:noreply, socket}
   end
 

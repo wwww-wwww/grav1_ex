@@ -50,9 +50,9 @@ body {
 }
 
 main {
-  overflow: hidden;
   display: flex;
   flex: 1;
+  overflow-y: auto;
 }
 
 body > header {

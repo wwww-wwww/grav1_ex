@@ -17,8 +17,8 @@
       <td><%= client.socket_id %></td>
       <td><%= client.name %></td>
       <td><%= client.workers %></td>
-      <td><%= client.job_queue %></td>
-      <td><%= client.upload_queue %></td>
+      <td><%= Enum.join(client.job_queue, ", ") %></td>
+      <td><%= Enum.join(client.upload_queue, ", ") %></td>
       <td><%= client.downloading %></td>
       <td><%= client.uploading %></td>
     </tr>

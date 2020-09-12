@@ -58,9 +58,34 @@ defmodule Grav1Web.WorkerChannel do
       sending_segment: false
     })
 
-    WorkerAgent.distribute_segments()
+    if not WorkerAgent.distribute_segments() do
+      Grav1Web.WorkersLive.update()
+    end
 
-    Grav1Web.WorkersLive.update()
+    {:noreply, socket}
+  end
+
+  def handle_in(
+        "update",
+        %{
+          "workers" => workers,
+          "job_queue" => job_queue,
+          "upload_queue" => upload_queue,
+          "downloading" => downloading,
+          "uploading" => uploading
+        },
+        socket
+      ) do
+    WorkerAgent.update_client(socket.assigns.socket_id, %{
+      job_queue: job_queue,
+      upload_queue: upload_queue,
+      downloading: downloading,
+      uploading: uploading
+    })
+
+    if not WorkerAgent.distribute_segments() do
+      Grav1Web.WorkersLive.update()
+    end
 
     {:noreply, socket}
   end

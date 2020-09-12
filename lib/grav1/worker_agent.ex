@@ -137,7 +137,10 @@ defmodule Grav1.WorkerAgent do
             filtered_segments =
               segments
               |> Enum.filter(fn segment ->
-                segment.id != client.downloading and segment.id not in client.job_queue
+                segment.id != client.downloading and
+                  segment.id != client.uploading and
+                  segment.id not in client.job_queue and
+                  segment.id not in client.upload_queue
               end)
 
             case List.first(filtered_segments) do

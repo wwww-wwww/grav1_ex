@@ -17,7 +17,7 @@ defmodule Grav1Web.ApiController do
           |> Path.join(segment.file)
 
         conn
-        |> send_download({:file, Application.app_dir(:grav1, path)})
+        |> send_download({:file, path})
     end
   end
 end

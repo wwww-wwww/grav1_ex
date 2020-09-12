@@ -140,6 +140,8 @@ defmodule Grav1.Projects do
   end
 
   def get_segment(id) do
+    {id, _} = Integer.parse(to_string(id))
+    
     GenServer.call(__MODULE__, {:get_segment, id})
   end
 

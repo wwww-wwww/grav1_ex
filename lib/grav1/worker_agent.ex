@@ -42,6 +42,8 @@ defmodule Grav1.WorkerAgent do
       %{val | clients: new_clients}
     end)
 
+    distribute_segments()
+
     Grav1Web.WorkersLive.update()
   end
 
@@ -76,6 +78,8 @@ defmodule Grav1.WorkerAgent do
 
       %{val | clients: new_clients}
     end)
+
+    distribute_segments()
 
     Grav1Web.WorkersLive.update()
   end
@@ -112,6 +116,39 @@ defmodule Grav1.WorkerAgent do
       new_clients = update_client(val.clients, to_string(socket_id), opts)
 
       %{val | clients: new_clients}
+    end)
+  end
+
+  def distribute_segments() do
+    clients =
+      Agent.get_and_update(__MODULE__, fn val ->
+        available_clients =
+          val.clients
+          |> Enum.filter(fn {key, client} ->
+            client.downloading == nil and not client.sending_job
+          end)
+
+        segments =
+          val.clients
+          |> Enum.reduce([], fn {_, client}, acc ->
+            acc ++ client.workers
+          end)
+          |> Projects.get_segments(length(available_clients))
+
+        client_segment = Enum.zip(available_clients, segments)
+
+        new_clients =
+          client_segment
+          |> Enum.reduce(%{}, fn {{key, client}, segment}, acc ->
+            Map.put(acc, key, %{client | sending_job: true})
+          end)
+
+        {client_segment, %{val | clients: Map.merge(val.clients, new_clients)}}
+      end)
+
+    clients
+    |> Enum.each(fn {{_, client}, job} ->
+      Grav1Web.WorkerChannel.push_job(client.socket_id, job)
     end)
   end
 

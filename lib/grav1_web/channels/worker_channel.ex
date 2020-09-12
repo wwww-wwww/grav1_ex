@@ -74,7 +74,6 @@ defmodule Grav1Web.WorkerChannel do
       url: Grav1Web.Router.Helpers.api_url(%URI{}, :get_segment, job.id)
     }
 
-    WorkerAgent.update_client(socketid, %{sending_job: true})
     Endpoint.broadcast("worker:#{socketid}", "push_job", params)
   end
 end

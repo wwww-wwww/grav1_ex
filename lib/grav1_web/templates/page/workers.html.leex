@@ -5,9 +5,9 @@
     <th>socket_id</th>
     <th>name</th>
     <th>workers</th>
-    <th>download_queue</th>
+    <th>job_queue</th>
     <th>upload_queue</th>
-    <th>dowloading</th>
+    <th>downloading</th>
     <th>uploading</th>
   </tr>
   <%= for {_k, client} <- @workers.clients do %>
@@ -17,9 +17,9 @@
       <td><%= client.socket_id %></td>
       <td><%= client.name %></td>
       <td><%= client.workers %></td>
-      <td><%= client.download_queue %></td>
+      <td><%= client.job_queue %></td>
       <td><%= client.upload_queue %></td>
-      <td><%= client.dowloading %></td>
+      <td><%= client.downloading %></td>
       <td><%= client.uploading %></td>
     </tr>
   <% end %>

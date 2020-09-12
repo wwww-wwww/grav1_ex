@@ -55,7 +55,7 @@ defmodule Grav1Web.WorkerChannel do
   def handle_in("recv_segment", %{"downloading" => downloading}, socket) do
     WorkerAgent.update_client(socket.assigns.socket_id, %{
       downloading: downloading,
-      sending_segment: false
+      sending_job: false
     })
 
     if not WorkerAgent.distribute_segments() do

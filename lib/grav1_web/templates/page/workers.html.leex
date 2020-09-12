@@ -6,6 +6,7 @@
     <th>name</th>
     <th>workers</th>
     <th>job_queue</th>
+    <th>queue_size</th>
     <th>upload_queue</th>
     <th>downloading</th>
     <th>uploading</th>
@@ -18,6 +19,7 @@
       <td><%= client.name %></td>
       <td><%= client.workers %></td>
       <td><%= Enum.join(client.job_queue, ", ") %></td>
+      <td><%= client.queue_size %></td>
       <td><%= Enum.join(client.upload_queue, ", ") %></td>
       <td><%= client.downloading %></td>
       <td><%= client.uploading %></td>

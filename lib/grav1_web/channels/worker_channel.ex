@@ -42,8 +42,8 @@ defmodule Grav1Web.WorkerChannel do
     {:noreply, socket}
   end
 
-  def handle_info(%Broadcast{topic: _, event: "push_job", payload: payload}, socket) do
-    push(socket, "push_job", payload)
+  def handle_info(%Broadcast{topic: _, event: "push_segment", payload: payload}, socket) do
+    push(socket, "push_segment", payload)
     {:noreply, socket}
   end
 
@@ -52,28 +52,31 @@ defmodule Grav1Web.WorkerChannel do
     {:noreply, socket}
   end
 
-  def handle_in("recv_job", %{"downloading" => downloading}, socket) do
+  def handle_in("recv_segment", %{"downloading" => downloading}, socket) do
     WorkerAgent.update_client(socket.assigns.socket_id, %{
       downloading: downloading,
-      sending_job: false
+      sending_segment: false
     })
+
+    WorkerAgent.distribute_segments()
 
     {:noreply, socket}
   end
 
-  def push_job(socketid, job) do
+  def push_segment(socketid, segment) do
     params = %{
-      segment_id: job.id,
-      start: job.start,
-      frames: job.frames,
-      encoder: job.project.encoder,
+      segment_id: segment.id,
+      start: segment.start,
+      frames: segment.frames,
+      encoder: segment.project.encoder,
       passes: 2,
-      encoder_params: job.project.encoder_params,
-      ffmpeg_params: job.project.ffmpeg_params,
+      encoder_params: segment.project.encoder_params,
+      ffmpeg_params: segment.project.ffmpeg_params,
       grain_table: "",
-      url: Grav1Web.Router.Helpers.api_url(%URI{}, :get_segment, job.id)
+      split_name: "p#{segment.project.id}s#{segment.file}",
+      url: Grav1Web.Router.Helpers.api_url(%URI{}, :get_segment, segment.id)
     }
 
-    Endpoint.broadcast("worker:#{socketid}", "push_job", params)
+    Endpoint.broadcast("worker:#{socketid}", "push_segment", params)
   end
 end

@@ -148,7 +148,7 @@ defmodule Grav1.WorkerAgent do
 
     clients
     |> Enum.each(fn {{_, client}, job} ->
-      Grav1Web.WorkerChannel.push_job(client.socket_id, job)
+      Grav1Web.WorkerChannel.push_segment(client.socket_id, job)
     end)
   end
 

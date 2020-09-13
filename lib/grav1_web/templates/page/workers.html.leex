@@ -4,7 +4,7 @@
     <th>user</th>
     <th>socket_id</th>
     <th>name</th>
-    <th>workers</th>
+    <th>platform</th>
     <th>job_queue</th>
     <th>queue_size</th>
     <th>upload_queue</th>
@@ -17,12 +17,32 @@
       <td><%= client.user %></td>
       <td><%= client.socket_id %></td>
       <td><%= client.name %></td>
-      <td><%= client.workers %></td>
+      <td><%= client.platform %></td>
       <td><%= Enum.join(client.job_queue, ", ") %></td>
       <td><%= client.queue_size %></td>
       <td><%= Enum.join(client.upload_queue, ", ") %></td>
       <td><%= client.downloading %></td>
       <td><%= client.uploading %></td>
+    </tr>
+    <tr>
+      <td>
+        <table>
+          <%= for worker <- client.workers do %>
+            <tr>
+              <td>
+                <%= if worker.segment != nil do %>
+                  <%= worker.segment %>
+                <% else %>
+                  idle
+                <% end %>
+              </td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          <% end %>
+        </table>
+      </td>
     </tr>
   <% end %>
 </table>

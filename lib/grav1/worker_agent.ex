@@ -18,7 +18,8 @@ defmodule Grav1.Client do
             queue_size: 0,
             upload_queue: [],
             downloading: nil,
-            uploading: nil
+            uploading: nil,
+            platform: nil
 end
 
 defmodule Grav1.WorkerAgent do
@@ -66,7 +67,7 @@ defmodule Grav1.WorkerAgent do
                     connected: true,
                     sending_job: false
                 }
-                |> Map.merge(state)
+                |> struct(state)
 
               val.clients
               |> Map.delete(socket_id)
@@ -94,9 +95,9 @@ defmodule Grav1.WorkerAgent do
     Grav1Web.WorkersLive.update()
   end
 
-  def remove(socket) do
+  def remove(socket_id) do
     Agent.update(__MODULE__, fn val ->
-      new_clients = Map.delete(val.clients, socket.assigns.socket_id)
+      new_clients = Map.delete(val.clients, socket_id)
       %{val | clients: new_clients}
     end)
 
@@ -128,8 +129,8 @@ defmodule Grav1.WorkerAgent do
             not client.sending_job and
               client.downloading == nil and
               (length(client.job_queue) < client.queue_size or
-                 (length(client.job_queue) == 0 and
-                    length(Enum.filter(client.workers, &(&1.segment != nil))) > 0))
+                 (length(Enum.filter(client.workers, &(&1.segment == nil))) > 0 and
+                    length(client.job_queue) == 0))
           end)
 
         segments =
@@ -192,44 +193,27 @@ defmodule Grav1.WorkerAgent do
         clients
 
       client ->
-        Map.put(clients, id, Map.merge(client, opts))
+        Map.put(clients, id, struct(client, opts))
     end
   end
 
   defp new_client(socket, state) do
     %Client{
       user: socket.assigns.user_id,
-      socket_id: socket.assigns.socket_id,
-      name: socket.assigns.name
+      socket_id: socket.assigns.socket_id
     }
-    |> Map.merge(state)
+    |> struct(state)
   end
 
   defp map_client(state) do
-    %{
-      "workers" => workers,
-      "max_workers" => max_workers,
-      "job_queue" => job_queue,
-      "upload_queue" => upload_queue,
-      "downloading" => downloading,
-      "uploading" => uploading,
-      "queue_size" => queue_size
-    } = state
+    new_state = for {k, v} <- state, into: %{}, do: {String.to_atom(k), v}
 
     new_workers =
-      workers
+      new_state.workers
       |> Enum.reduce([], fn worker, acc ->
         acc ++ [struct(Worker, worker)]
       end)
 
-    %{
-      workers: new_workers,
-      max_workers: max_workers,
-      job_queue: job_queue,
-      upload_queue: upload_queue,
-      queue_size: queue_size,
-      downloading: downloading,
-      uploading: uploading
-    }
+    %{new_state | workers: new_workers}
   end
 end

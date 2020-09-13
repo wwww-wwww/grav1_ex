@@ -3,26 +3,18 @@ defmodule Grav1Web.WorkerChannel do
 
   alias Phoenix.Socket.Broadcast
   alias Grav1Web.Endpoint
-  alias Grav1.WorkerAgent
-
-  def join("worker", %{"name" => name, "state" => state, "id" => id}, socket) do
-    send(self(), {:reconnect, id, state})
-    :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
-    {:ok, socket.assigns.socket_id, socket |> assign(:name, name)}
-  end
-
-  def join("worker", %{"name" => name, "state" => state}, socket) do
-    send(self(), {:after_join, state})
-    :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
-    {:ok, socket.assigns.socket_id, socket |> assign(:name, name)}
-  end
+  alias Grav1.{WorkerAgent, Worker}
 
   def join("worker", %{"state" => state, "id" => id}, socket) do
-    join("worker", %{"name" => "", "state" => state, "id" => id}, socket)
+    send(self(), {:reconnect, id, state})
+    :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
+    {:ok, socket.assigns.socket_id, socket}
   end
 
   def join("worker", %{"state" => state}, socket) do
-    join("worker", %{"name" => "", "state" => state}, socket)
+    send(self(), {:after_join, state})
+    :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
+    {:ok, socket.assigns.socket_id, socket}
   end
 
   def terminate(_, socket) do
@@ -32,13 +24,11 @@ defmodule Grav1Web.WorkerChannel do
 
   def handle_info({:reconnect, id, state}, socket) do
     WorkerAgent.connect(socket, state, id)
-
     {:noreply, socket}
   end
 
   def handle_info({:after_join, state}, socket) do
     WorkerAgent.connect(socket, state)
-
     {:noreply, socket}
   end
 
@@ -48,6 +38,7 @@ defmodule Grav1Web.WorkerChannel do
   end
 
   def handle_info(%Broadcast{topic: _, event: ev, payload: payload}, socket) do
+    IO.inspect(ev)
     push(socket, ev, payload)
     {:noreply, socket}
   end
@@ -76,11 +67,24 @@ defmodule Grav1Web.WorkerChannel do
         },
         socket
       ) do
+    new_workers =
+      workers
+      |> Enum.map(fn worker ->
+        %{
+          "segment" => segment
+        } = worker
+
+        %Worker{
+          segment: segment
+        }
+      end)
+
     WorkerAgent.update_client(socket.assigns.socket_id, %{
       job_queue: job_queue,
       upload_queue: upload_queue,
       downloading: downloading,
-      uploading: uploading
+      uploading: uploading,
+      workers: new_workers
     })
 
     if not WorkerAgent.distribute_segments() do
@@ -105,5 +109,9 @@ defmodule Grav1Web.WorkerChannel do
     }
 
     Endpoint.broadcast("worker:#{socketid}", "push_segment", params)
+  end
+
+  def push_test(socketid, params) do
+    Endpoint.broadcast("worker:#{socketid}", "test", params)
   end
 end

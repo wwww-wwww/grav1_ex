@@ -125,9 +125,11 @@ defmodule Grav1.WorkerAgent do
         available_clients =
           val.clients
           |> Enum.filter(fn {_, client} ->
-            client.downloading == nil and
-              not client.sending_job and
-              length(client.job_queue) < client.queue_size
+            not client.sending_job and
+              client.downloading == nil and
+              (length(client.job_queue) < client.queue_size or
+                 (length(client.job_queue) == 0 and
+                    length(Enum.filter(client.workers, &(&1.segment != nil))) > 0))
           end)
 
         segments =

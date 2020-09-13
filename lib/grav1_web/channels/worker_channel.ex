@@ -56,6 +56,23 @@ defmodule Grav1Web.WorkerChannel do
     {:noreply, socket}
   end
 
+  def handle_in("update_workers", %{"workers" => workers}, socket) do
+    new_workers =
+      workers
+      |> Enum.map(fn worker ->
+        worker = for {k, v} <- worker, into: %{}, do: {String.to_atom(k), v}
+        struct(Worker, worker)
+      end)
+
+    WorkerAgent.update_client(socket.assigns.socket_id, %{
+      workers: new_workers
+    })
+
+    Grav1Web.WorkersLive.update()
+
+    {:noreply, socket}
+  end
+
   def handle_in(
         "update",
         %{

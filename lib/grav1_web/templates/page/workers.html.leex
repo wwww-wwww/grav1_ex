@@ -36,8 +36,8 @@
                   idle
                 <% end %>
               </td>
-              <td></td>
-              <td></td>
+              <td>pass <%= worker.pass %></td>
+              <td><%= worker.progress_num %> / <%= worker.progress_den %></td>
               <td></td>
             </tr>
           <% end %>

@@ -44,7 +44,7 @@ def correct_split(path_vspipe, path_ffmpeg, path_in, path_out, start, length):
     if matches:
       new_frame = matches[-1]
       if new_frame != frame:
-        sys.stdout.write(f"frame {new_frame}\r\n")
+        print(f"frame {new_frame}")
         frame = new_frame
 
   pipe2.kill()

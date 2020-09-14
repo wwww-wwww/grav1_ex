@@ -98,8 +98,8 @@ defmodule Grav1.Projects do
                   Map.get_and_update(state.projects, project.id, fn state_project ->
                     new_project_segments =
                       state_project.segments
-                      |> Map.update!(segment.id, fn old_segment ->
-                        %{old_segment | filesize: filesize}
+                      |> Map.update!(segment.id, fn _ ->
+                        %{new_segment | filesize: filesize}
                       end)
 
                     completed_frames =
@@ -115,7 +115,7 @@ defmodule Grav1.Projects do
                     new_project = %{
                       state_project
                       | segments: new_project_segments,
-                        progress_nom: completed_frames
+                        progress_num: completed_frames
                     }
 
                     {new_project, new_project}
@@ -158,10 +158,10 @@ defmodule Grav1.Projects do
         opts =
           case message do
             {nom, den} ->
-              %{status: status, progress_nom: nom, progress_den: den}
+              %{status: status, progress_num: nom, progress_den: den}
 
             nom ->
-              %{status: status, progress_nom: nom, progress_den: 1}
+              %{status: status, progress_num: nom, progress_den: 1}
           end
 
         new_project = Map.merge(project, opts)
@@ -340,9 +340,11 @@ defmodule Grav1.Projects do
           end)
 
         update_project(project, %{
-          progress_nom: completed_frames,
+          progress_num: completed_frames,
           progress_den: project.input_frames
         })
+
+        Projects.log(project, "loaded")
 
       _ ->
         IO.inspect(project)
@@ -448,7 +450,7 @@ defmodule Grav1.ProjectsExecutor do
                 input_frames: input_frames,
                 state: :ready,
                 segments: new_segments,
-                progress_nom: 0,
+                progress_num: 0,
                 progress_den: input_frames
               },
               true

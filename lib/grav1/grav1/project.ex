@@ -26,7 +26,7 @@ defmodule Grav1.Project do
     field :state, State, default: :idle
 
     field :status, :string, default: "", virtual: true
-    field :progress_nom, :float, default: nil, virtual: true
+    field :progress_num, :float, default: nil, virtual: true
     field :progress_den, :float, default: nil, virtual: true
     field :log, {:array, :string}, default: [], virtual: true
 

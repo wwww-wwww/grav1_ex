@@ -18,13 +18,17 @@
       </div>
     </div>
     <div id="list_projects">
-      <%= for {id, %{name: name, input: filename, progress_nom: progress_nom, progress_den: progress_den, state: state}} <- @projects do %>
+      <%= for {id, project} <- @projects do %>
         <div id="proj_<%= id %>" class="project" data-id="<%= id %>" phx-hook="view_project">
-          <div class="top"><%= if name != nil and String.length(name) > 0, do: name, else: Path.basename(filename) %></div>
+          <div class="top"><%= render_project_name(project) %></div>
           <div class="bottom">
-            <div class="progress_bar" style="width: <%= if progress_nom != nil and progress_den != nil, do: 100 * progress_nom / progress_den, else: 0 %>%"></div>
-            <div class="progress_left"></div>
-            <div class="progress_right"><%= state %></div>
+            <%= render_project_progressbar(project) %>
+            <div class="progress_left">
+              <%= render_project_left(project) %>
+            </div>
+            <div class="progress_right">
+              <%= render_project_right(project) %>
+            </div>
           </div>
         </div>
       <% end %>

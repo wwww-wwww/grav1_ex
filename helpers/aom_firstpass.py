@@ -1,6 +1,6 @@
 import os, sys, subprocess, re
 
-def get_aom_keyframes(src):
+def get_aom_keyframes(src, width, height):
   ffmpeg = ["ffmpeg", "-y",
     "-hide_banner",
     "-loglevel", "error",
@@ -18,7 +18,7 @@ def get_aom_keyframes(src):
     "--lag-in-frames=25",
     "-o", os.devnull]
 
-  aom.extend(["-w", "1280", "-h", "720"])
+  aom.extend(["-w", str(width), "-h", str(height)])
 
   if True:
     ffmpeg_pipe = subprocess.Popen(ffmpeg,
@@ -47,5 +47,5 @@ def get_aom_keyframes(src):
           frame = new_frame
           print("frame", frame)
 
-if len(sys.argv) > 1:
-  get_aom_keyframes(sys.argv[1])
+if len(sys.argv) >= 2:
+  get_aom_keyframes(sys.argv[1], 1280, 720)

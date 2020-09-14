@@ -46,4 +46,66 @@ defmodule Grav1Web.PageView do
         "?"
     end
   end
+
+  def render_project_name(project) do
+    if project.name != nil and String.length(project.name) > 0 do
+      project.name
+    else
+      Path.basename(project.input)
+    end
+  end
+
+  def render_project_progressbar(project) do
+    width =
+      if project.progress_num != nil and
+           project.progress_den != nil and
+           (project.state != :preparing or
+              project.status != :source_keyframes) do
+        100 * project.progress_num / project.progress_den
+      else
+        0
+      end
+
+    Tag.content_tag(:div, "", class: "progress_bar", style: "width: #{width}%")
+  end
+
+  def render_project_left(project) do
+    case project.state do
+      :preparing ->
+        case project.status do
+          :source_keyframes ->
+            project.progress_num
+
+          :aom_keyframes ->
+            "#{project.progress_num}/#{project.progress_den}"
+        end
+
+      state ->
+        total_projects = map_size(project.segments)
+
+        incomplete_projects =
+          project.segments
+          |> Enum.filter(&(elem(&1, 1).filesize == 0))
+          |> length()
+
+        pct =
+          (100 * project.progress_num / project.progress_den)
+          |> Float.round(2)
+          |> Float.to_string()
+
+        "#{pct}% | #{project.progress_num}/#{project.progress_den} | #{incomplete_projects}/#{
+          total_projects
+        }"
+    end
+  end
+
+  def render_project_right(project) do
+    case project.state do
+      :preparing ->
+        project.status
+
+      state ->
+        state
+    end
+  end
 end

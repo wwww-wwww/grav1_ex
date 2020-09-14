@@ -116,12 +116,10 @@ defmodule Grav1.Split do
         {:ok, segments, total_frames}
 
       :error ->
-        IO.inspect("failed splitting")
-        :error
+        {:error, "failed splitting"}
 
       fr ->
-        callback.(:log, "expected #{total_frames}, got #{fr}")
-        :error
+        {:error, "expected #{total_frames}, got #{fr}"}
     end
   end
 
@@ -155,7 +153,7 @@ defmodule Grav1.Split do
         port =
           Port.open(
             {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
-            [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
+            [:stderr_to_stdout, :exit_status, :line, args: args]
           )
 
         stream_port(port, 0, fn line, acc ->
@@ -237,23 +235,79 @@ defmodule Grav1.Split do
   end
 
   defp correct_split(input, output, start, length, callback) do
+    if Application.fetch_env!(:grav1, :path_vspipe) do
+      correct_split_vspipe(input, output, start, length, callback)
+    else
+      correct_split_ffmpeg(input, output, start, length, callback)
+    end
+  end
+
+  defp correct_split_ffmpeg(input, output, start, length, callback) do
+    args = [
+      "-hide_banner",
+      "-i",
+      input,
+      "-map",
+      "0:v:0",
+      "-c:v",
+      "libx264",
+      "-crf",
+      "0",
+      "-vsync",
+      "0",
+      "-force_key_frames",
+      "expr:eq(n,#{start})",
+      "-x264-params",
+      "scenecut=0",
+      "-vf",
+      "select=gte(n\\,#{start})",
+      "-frames:v",
+      length,
+      "-y",
+      output
+    ]
+
+    port =
+      Port.open(
+        {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+        [:stderr_to_stdout, :exit_status, :line, args: args]
+      )
+
+    stream_port(port, 0, fn line, acc ->
+      case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
+        nil ->
+          acc
+
+        [_, frame_str] ->
+          case Integer.parse(frame_str) do
+            :error ->
+              acc
+
+            {new_frame, _} ->
+              if callback != nil and acc != new_frame, do: callback.(new_frame)
+
+              new_frame
+          end
+      end
+    end)
+  end
+
+  defp correct_split_vspipe(input, output, start, length, callback) do
+    args = [
+      "-u",
+      "helpers/vspipe_correct_split.py",
+      Application.fetch_env!(:grav1, :path_vspipe),
+      Application.fetch_env!(:grav1, :path_ffmpeg),
+      input,
+      output,
+      start,
+      length
+    ]
+
     port =
       Port.open(
         {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
-        [
-          :binary,
-          :exit_status,
-          args: [
-            "-u",
-            "vspipe_correct_split.py",
-            Application.fetch_env!(:grav1, :path_vspipe),
-            Application.fetch_env!(:grav1, :path_ffmpeg),
-            input,
-            output,
-            start,
-            length
-          ]
-        ]
+        [:exit_status, :line, args: args]
       )
 
     stream_port(port, 0, fn line, acc ->
@@ -285,7 +339,7 @@ defmodule Grav1.Split do
       port =
         Port.open(
           {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
-          [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
+          [:stderr_to_stdout, :exit_status, :line, args: args]
         )
 
       stream_port(port, 0, fn line, acc ->
@@ -357,7 +411,7 @@ defmodule Grav1.Split do
     port =
       Port.open(
         {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
-        [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
+        [:stderr_to_stdout, :exit_status, :line, args: args]
       )
 
     stream_port(port, {[], 0}, fn line, acc ->
@@ -419,34 +473,11 @@ defmodule Grav1.Split do
   end
 
   defp get_aom_keyframes(input, callback) do
-    _ = """
-    ffmpeg_args = ["-i", input, "-pix_fmt", "yuv420p", "-map", "0:v:0", "-vsync", "0", "-strict", "-1", "-f", "yuv4mpegpipe", "-"]
-
-    null = case :os.type do
-      {:win32, _} -> "NUL"
-      _ -> "/dev/null"
-    end
-
-    aomenc_args = ["-", "-o", null, "--ivf", "--passes=2", "--fpf=fpf.log", "--pass=1", "--auto-alt-ref=1", "-w", "1280", "-h", "720"]
-
-    port_ffmpeg = Port.open(
-      {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
-      [:binary, :exit_status, args: ffmpeg_args]
-    )
-
-    port_aomenc = Port.open(
-      {:spawn_executable, Application.fetch_env!(:grav1, :path_aomenc)},
-      [:stderr_to_stdout, :binary, :exit_status, args: aomenc_args]
-    )
-
-    pipe(port_ffmpeg, port_aomenc)
-    """
-
     # until i can get piping to work
     port =
       Port.open(
         {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
-        [:binary, :exit_status, :line, args: ["-u", "aom_firstpass.py", input]]
+        [:exit_status, :line, args: ["-u", "helpers/aom_firstpass.py", input]]
       )
 
     result =

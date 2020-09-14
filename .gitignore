@@ -34,3 +34,8 @@ npm-debug.log
 /priv/static/
 mix.lock
 assets/package-lock.json
+
+*.ivf
+*.mkv
+
+fpf.log

@@ -3,7 +3,8 @@ defmodule Grav1Web.ProjectsLive do
 
   @topic "projects_live"
 
-  alias Grav1.{Projects, Project, Repo}
+  alias Grav1.{Projects, Project, Repo, RateLimit}
+  alias Grav1Web.Endpoint
 
   def render(assigns) do
     Grav1Web.PageView.render("projects.html", assigns)
@@ -31,11 +32,10 @@ defmodule Grav1Web.ProjectsLive do
           live_component(socket, Grav1Web.ProjectComponent,
             id: "project:#{project.id}",
             project: project,
-            page:
-              live_component(socket, Grav1Web.ProjectSegmentsComponent,
-                id: "project_log:#{project.id}",
-                segments: project.segments
-              )
+            page: live_component(socket, Grav1Web.ProjectSegmentsComponent,
+              id: "project_segments:#{project.id}",
+              segments: get_segments(project)
+            )
           )
 
         mount(socket, page)
@@ -120,7 +120,7 @@ defmodule Grav1Web.ProjectsLive do
                page:
                  live_component(socket, Grav1Web.ProjectSegmentsComponent,
                    id: "project_segments:#{project.id}",
-                   segments: project.segments
+                   segments: get_segments(project)
                  )
              )
          )}
@@ -128,42 +128,64 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   # update project list and project
-  def handle_info(%{topic: @topic, payload: %{project: project, projects: true}}, socket) do
+  def handle_info(%{topic: @topic, event: "update", payload: %{project: project, projects: true}}, socket) do
     send_update(Grav1Web.ProjectComponent, id: "project:#{project.id}", project: project)
     {:noreply, socket |> assign(projects: Projects.get_projects())}
   end
 
   # update only project list
-  def handle_info(%{topic: @topic, payload: %{projects: projects}}, socket) do
+  def handle_info(%{topic: @topic, event: "update_projects", payload: %{projects: projects}}, socket) do
     {:noreply, socket |> assign(projects: projects)}
   end
 
   # update only project
-  def handle_info(%{topic: @topic, payload: %{project: project}}, socket) do
+  def handle_info(%{topic: @topic, event: "update_project", payload: %{project: project}}, socket) do
     send_update(Grav1Web.ProjectComponent, id: "project:#{project.id}", project: project)
     {:noreply, socket}
   end
 
   # update only project logs
-  def handle_info(%{topic: @topic, payload: %{projectid: projectid, log: log}}, socket) do
-    send_update(Grav1Web.ProjectLogComponent, id: "project_log:#{projectid}", log: log)
+  def handle_info(%{topic: @topic, event: "log", payload: %{project: project}}, socket) do
+    send_update(Grav1Web.ProjectLogComponent, id: "project_log:#{project.id}", log: project.log)
     {:noreply, socket}
   end
 
   # update only project segments
-  def handle_info(%{topic: @topic, payload: %{projectid: projectid, segments: segments}}, socket) do
-    send_update(Grav1Web.ProjectSegmentComponent,
-      id: "project_segments:#{projectid}",
-      segments: segments
+  def handle_info(%{topic: @topic, event: "update_segments", payload: %{project: project, workers: workers}}, socket) do
+    send_update(Grav1Web.ProjectSegmentsComponent,
+      id: "project_segments:#{project.id}",
+      segments: get_segments(project)
     )
 
     {:noreply, socket}
   end
 
+  def get_segments(project, workers) do
+    workers =
+      workers
+      |> Enum.filter(fn worker -> worker.segment in Map.keys(project.segments) end)
+      |> Enum.map(fn worker -> {worker.segment, {worker.progress_num, worker.pass}} end)
+      |> Map.new()
+
+    project.segments
+    |> Enum.map(fn {k, segment} ->
+      {progress, pass} = if segment.filesize == 0 do
+        Map.get(workers, k, {0, 0})
+      else
+        {nil, nil}
+      end
+      %{n: segment.n, pass: pass, progress: progress, frames: segment.frames, filesize: segment.filesize}
+    end)
+  end
+
+  def get_segments(projects) do
+    get_segments(projects, Grav1.WorkerAgent.get_workers())
+  end
+
   # update project list and project
   def update(project, ratelimit \\ false) do
-    if not ratelimit or Grav1.RateLimit.can_execute?("projects", 1 / 10) do
-      Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{
+    if not ratelimit or RateLimit.can_execute?("projects", 1 / 10) do
+      Endpoint.broadcast(@topic, "update", %{
         project: project,
         projects: true
       })
@@ -172,29 +194,30 @@ defmodule Grav1Web.ProjectsLive do
 
   # update only project
   def update_project(project, ratelimit \\ false) do
-    if not ratelimit or Grav1.RateLimit.can_execute?("project:#{project.id}", 1 / 10) do
-      Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{project: project})
+    if not ratelimit or RateLimit.can_execute?("project:#{project.id}", 1 / 10) do
+      Endpoint.broadcast(@topic, "update_project", %{project: project})
     end
   end
 
   # update only log of project
   def update_log(project) do
-    Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{
-      projectid: project.id,
-      log: project.log
+    Endpoint.broadcast(@topic, "log", %{
+      project: project
     })
   end
 
   # update only segments of project
-  def update_segments(project) do
-    Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{
-      projectid: project.id,
-      segments: project.segments
-    })
+  def update_segments(project, workers, ratelimit \\ false) do
+    if not ratelimit or RateLimit.can_execute?("project_segments:#{project.id}", 1 / 10) do
+      Grav1Web.Endpoint.broadcast(@topic, "update_segments", %{
+        project: project,
+        workers: workers
+      })
+    end
   end
 
   # update only project list
   def update() do
-    Grav1Web.Endpoint.broadcast(@topic, "projects:update", %{projects: Projects.get_projects()})
+    Grav1Web.Endpoint.broadcast(@topic, "update_projects", %{projects: Projects.get_projects()})
   end
 end

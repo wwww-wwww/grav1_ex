@@ -72,6 +72,18 @@ defmodule Grav1Web.WorkerChannel do
       Grav1Web.WorkersLive.update()
     end
 
+    segments =
+      new_workers
+      |> Enum.map(fn worker -> worker.segment end)
+
+    Grav1.Projects.get_projects()
+    |> Enum.filter(fn {_, project} ->
+      Enum.any?(Map.keys(project.segments), fn x -> x in segments end)
+    end)
+    |> Enum.each(fn {_, project} ->
+      Grav1Web.ProjectsLive.update_segments(project, new_workers, true)
+    end)
+
     {:noreply, socket}
   end
 

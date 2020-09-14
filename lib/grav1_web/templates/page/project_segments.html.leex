@@ -1,1 +1,75 @@
-<div>segments</div>
+<div class="segments_outer">
+  <div class="segments">
+    <%= for segment <- @segments do %>
+      <div class="segment">
+        <%= if segment.filesize == 0 do %>
+          <%= if segment.pass == 1 do %>
+            <div class="progress pass1" style="width: <%= segment.progress / segment.frames * 100 %>%"></div>
+          <% else %>
+            <div class="progress" style="width: <%= segment.progress / segment.frames * 100 %>%"></div>
+          <% end %>
+        <% else %>
+          <div class="progress complete" style="width: 100%"></div>
+        <% end %>
+        <div class="body">
+          <div class="title">
+            <%= segment.n %>
+          </div>
+          <div class="desc">
+            <%= if segment.filesize == 0 do %>
+              <%= segment.progress %>/<%= segment.frames %>
+            <% else %>
+              <%= segment.filesize %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .segments_outer {
+    flex: 1;
+    overflow-y: scroll;
+  }
+
+  .segments {
+    padding: 0.1em;
+    margin: 0;
+  }
+
+  .segment {
+    font-family: "Consolas", "Courier New", Courier, monospace;
+    display: inline-block;
+    min-width: 5.2em;
+    margin: 0.1em;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    position: relative;
+  }
+
+  .segment > .progress {
+    z-index: -1;
+    position: absolute;
+    height: 100%;
+    margin: 0;
+    background-color: rgba(190, 230, 255, 0.6);
+    transition: width 0.5s;
+  }
+
+  .segment > .body {
+    padding: 0.25em;
+  }
+
+  .segment > .body > .desc {
+    font-size: 0.7em;
+  }
+
+  .segment > .progress.pass1 {
+    background-color: rgba(240, 240, 160, 0.6);
+  }
+
+  .segment > .progress.complete {
+    background-color: rgba(190, 250, 210, 0.6);
+  }
+</style>

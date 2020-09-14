@@ -420,8 +420,6 @@ defmodule Grav1.ProjectsExecutor do
            end
          ) do
       {:ok, segments, input_frames} ->
-        IO.inspect(segments)
-
         q =
           segments
           |> Enum.reduce([], fn segment, acc ->
@@ -466,8 +464,8 @@ defmodule Grav1.ProjectsExecutor do
             {:error, [failed_operation, failed_value]}
         end
 
-      _ ->
-        IO.inspect("split failed")
+      {:error, message} ->
+        Projects.log(project, message)
     end
   end
 
@@ -477,14 +475,12 @@ defmodule Grav1.ProjectsExecutor do
   end
 
   def handle_cast(:loop, state) do
-    case GenServer.call(Grav1.ProjectsExecutorQueue, :pop) do
-      :empty ->
-        IO.inspect("finished queue")
+    if (item = GenServer.call(Grav1.ProjectsExecutorQueue, :pop)) != :empty do
+      {action, opts} = item
 
-      {action, opts} ->
-        GenServer.cast(__MODULE__, :loop)
+      GenServer.cast(__MODULE__, :loop)
 
-        do_action(action, opts)
+      do_action(action, opts)
     end
 
     {:noreply, state}

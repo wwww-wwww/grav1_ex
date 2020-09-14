@@ -1,6 +1,4 @@
 defmodule Grav1.Split do
-  alias Grav1.Segment
-
   @re_ffmpeg_frames ~r/frame= *([^ ]+?) /
   @re_ffmpeg_frames2 ~r/([0-9]+?) frames successfully decoded/
   @re_ffmpeg_keyframe ~r/n:([0-9]+)\.[0-9]+ pts:.+key:(.).+pict_type:(.)/
@@ -117,12 +115,12 @@ defmodule Grav1.Split do
 
         {:ok, segments, total_frames}
 
-      fr ->
-        callback.(:log, "expected #{total_frames}, got #{fr}")
-        :error
-
       :error ->
         IO.inspect("failed splitting")
+        :error
+
+      fr ->
+        callback.(:log, "expected #{total_frames}, got #{fr}")
         :error
     end
   end
@@ -760,7 +758,7 @@ defmodule Grav1.Split do
       aom_keyframes
       |> Enum.zip(tl(aom_keyframes))
       |> Enum.with_index()
-      |> Enum.reduce({[], [], 0}, fn {{frame, next_frame}, i}, {frames, splits, last_end} ->
+      |> Enum.reduce({[], [], 0}, fn {{frame, next_frame}, i}, {frames, segments, last_end} ->
         length = next_frame - frame
 
         {new_frames, split_n, start} =
@@ -784,9 +782,9 @@ defmodule Grav1.Split do
           |> to_string()
           |> String.pad_leading(5, "0")
 
-        new_split = %{n: i, file: "#{split_name}.mkv", start: start, frames: length}
+        new_segment = %{n: i, file: "#{split_name}.mkv", start: start, frames: length}
 
-        {new_frames, splits ++ [new_split], frame + length}
+        {new_frames, segments ++ [new_segment], frame + length}
       end)
 
     splits =
@@ -804,11 +802,16 @@ defmodule Grav1.Split do
     {frames, splits, segments}
   end
 
-  defp stream_port(port, acc, transform) do
+  def stream_port(port, acc, transform) do
     receive do
-      {^port, {:data, {_, data}}} -> stream_port(port, transform.(data, acc), transform)
-      {^port, {:exit_status, 0}} -> acc
-      {^port, {:exit_status, status}} -> {:error, status, acc}
+      {^port, {:data, {_, data}}} ->
+        stream_port(port, transform.(to_string(data), acc), transform)
+
+      {^port, {:exit_status, 0}} ->
+        acc
+
+      {^port, {:exit_status, status}} ->
+        {:error, status, acc}
     end
   end
 end

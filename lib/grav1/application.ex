@@ -16,7 +16,9 @@ defmodule Grav1.Application do
       Grav1Web.Endpoint,
       Grav1.ProjectsExecutorQueue,
       Grav1.ProjectsExecutor,
-      Grav1.Projects
+      Grav1.Projects,
+      Grav1.VerificationQueue,
+      Grav1.VerificationExecutor
     ]
 
     get_version(

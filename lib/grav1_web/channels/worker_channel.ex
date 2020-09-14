@@ -68,7 +68,9 @@ defmodule Grav1Web.WorkerChannel do
       workers: new_workers
     })
 
-    Grav1Web.WorkersLive.update()
+    if Grav1.RateLimit.can_execute?("worker_update", 1 / 10) do
+      Grav1Web.WorkersLive.update()
+    end
 
     {:noreply, socket}
   end

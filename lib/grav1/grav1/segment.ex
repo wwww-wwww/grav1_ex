@@ -17,7 +17,7 @@ defmodule Grav1.Segment do
   @doc false
   def changeset(user, attrs \\ %{}) do
     user
-    |> cast(attrs, [:file, :start, :frames])
-    |> validate_required([:file, :start, :frames])
+    |> cast(attrs, [:file, :start, :frames, :n, :filesize])
+    |> validate_required([:file, :start, :frames, :n])
   end
 end

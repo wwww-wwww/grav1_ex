@@ -133,9 +133,15 @@ defmodule Grav1.WorkerAgent do
                     length(client.job_queue) == 0))
           end)
 
+        verifying_segments =
+          Grav1.VerificationExecutor.get_queue()
+          |> Enum.map(fn job ->
+            job.segment.id
+          end)
+
         segments =
           val.clients
-          |> Projects.get_segments(length(available_clients))
+          |> Projects.get_segments(length(available_clients), verifying_segments)
 
         {client_segment, _} =
           Enum.reduce(available_clients, {[], segments}, fn {key, client}, {acc, segments} ->

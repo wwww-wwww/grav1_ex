@@ -1,7 +1,7 @@
 defmodule Grav1.Projects do
   use GenServer
 
-  alias Grav1.{Repo, Project, Projects, WorkerAgent}
+  alias Grav1.{Repo, Project, Projects}
   alias Ecto.Multi
 
   defstruct projects: %{},
@@ -15,15 +15,13 @@ defmodule Grav1.Projects do
         segments =
           project.segments
           |> Enum.reduce(%{}, fn segment, segments ->
-            if segment.filesize == 0 do
-              Map.put(segments, segment.id, %{segment | project: project})
-            else
-              segments
-            end
+            Map.put(segments, segment.id, %{segment | project: project})
           end)
 
+        incomplete_segments = for {k, v} <- segments, v.filesize == 0, into: %{}, do: {k, v}
+
         new_project = %{project | segments: segments}
-        {Map.put(acc, project.id, new_project), Map.merge(acc2, segments)}
+        {Map.put(acc, project.id, new_project), Map.merge(acc2, incomplete_segments)}
       end)
 
     GenServer.start_link(__MODULE__, %__MODULE__{projects: projects, segments: segments},
@@ -44,7 +42,7 @@ defmodule Grav1.Projects do
     {:reply, Map.get(state.segments, id), state}
   end
 
-  def handle_call({:get_segments, clients, n}, _, state) do
+  def handle_call({:get_segments, clients, n, filter}, _, state) do
     workers =
       clients
       |> Enum.reduce([], fn {_, client}, acc ->
@@ -54,6 +52,9 @@ defmodule Grav1.Projects do
     sorted =
       state.segments
       |> Map.values()
+      |> Enum.filter(fn segment ->
+        segment.id not in filter
+      end)
       |> Enum.sort_by(& &1.frames, :desc)
       |> Enum.sort_by(& &1.project.priority, :asc)
       |> Enum.sort_by(
@@ -78,6 +79,44 @@ defmodule Grav1.Projects do
 
   def handle_call({:get_project, id}, _, state) do
     {:reply, Map.get(state.projects, id), state}
+  end
+
+  def handle_call({:finish_segment, segment, filesize}, _, state) do
+    case Map.get(state.projects, segment.project.id) do
+      nil ->
+        {:reply, :error, state}
+
+      project ->
+        case Map.get(state.segments, segment.id) do
+          nil ->
+            {:reply, :error, state}
+
+          segment ->
+            case Repo.update(Ecto.Changeset.change(segment, filesize: filesize)) do
+              {:ok, new_segment} ->
+                new_projects =
+                  Map.update!(state.projects, project.id, fn state_project ->
+                    new_project_segments =
+                      state_project.segments
+                      |> Map.update!(segment.id, fn old_segment ->
+                        %{old_segment | filesize: filesize}
+                      end)
+
+                    %{state_project | segments: new_project_segments}
+                  end)
+
+                new_segments = Map.delete(state.segments, segment.id)
+                {:reply, :ok, %{state | projects: new_projects, segments: new_segments}}
+
+              _ ->
+                {:reply, :error, state}
+            end
+        end
+    end
+  end
+
+  def handle_call({:add_segments, segments}, _, state) do
+    {:reply, :ok, %{state | segments: Map.merge(state.segments, segments)}}
   end
 
   def handle_cast({:log, id, message}, state) do
@@ -145,8 +184,8 @@ defmodule Grav1.Projects do
     GenServer.call(__MODULE__, {:get_segment, id})
   end
 
-  def get_segments(workers, n) do
-    GenServer.call(__MODULE__, {:get_segments, workers, n})
+  def get_segments(workers, n, filter) do
+    GenServer.call(__MODULE__, {:get_segments, workers, n, filter})
   end
 
   def get_projects() do
@@ -171,12 +210,12 @@ defmodule Grav1.Projects do
     GenServer.cast(__MODULE__, {:update, project.id, opts, save})
   end
 
-  def add_projects(projects) do
-    :ok = GenServer.call(__MODULE__, {:add_projects, projects})
+  def finish_segment(segment, filesize) do
+    GenServer.call(__MODULE__, {:finish_segment, segment, filesize})
+  end
 
-    Enum.each(projects, fn {_, project} ->
-      load_project(project)
-    end)
+  def add_segments(segments) do
+    GenServer.call(__MODULE__, {:add_segments, segments})
   end
 
   defp ensure_not_empty(input) do
@@ -202,6 +241,14 @@ defmodule Grav1.Projects do
             {:error, [message]}
         end
     end
+  end
+
+  def add_projects(projects) do
+    :ok = GenServer.call(__MODULE__, {:add_projects, projects})
+
+    Enum.each(projects, fn {_, project} ->
+      load_project(project)
+    end)
   end
 
   def add_project(files, opts) do
@@ -276,7 +323,7 @@ defmodule Grav1.Projects do
 
         update_project(project, %{
           progress_nom: completed_frames,
-          progress_denom: project.input_frames
+          progress_den: project.input_frames
         })
 
       _ ->
@@ -314,7 +361,7 @@ end
 defmodule Grav1.ProjectsExecutor do
   use GenServer
 
-  alias Grav1.{Projects, Project, Segment, Repo}
+  alias Grav1.{Projects, Segment, Repo}
   alias Ecto.Multi
 
   def start_link(_) do
@@ -322,11 +369,17 @@ defmodule Grav1.ProjectsExecutor do
   end
 
   def init(state) do
-    {:ok, state}
+    case File.mkdir_p(Application.fetch_env!(:grav1, :path_projects)) do
+      :ok ->
+        {:ok, state}
+
+      {:error, reason} ->
+        {:stop, reason}
+    end
   end
 
   def do_action(:split, project) do
-    Grav1.Projects.update_project(project, %{state: :preparing})
+    Projects.update_project(project, %{state: :preparing})
 
     path_split =
       Application.fetch_env!(:grav1, :path_projects)
@@ -349,6 +402,8 @@ defmodule Grav1.ProjectsExecutor do
            end
          ) do
       {:ok, segments, input_frames} ->
+        IO.inspect(segments)
+
         q =
           segments
           |> Enum.reduce([], fn segment, acc ->
@@ -382,6 +437,8 @@ defmodule Grav1.ProjectsExecutor do
               },
               true
             )
+
+            Projects.add_segments(new_segments)
 
             :ok
 

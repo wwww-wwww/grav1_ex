@@ -20,4 +20,9 @@ defmodule Grav1Web.ApiController do
         |> send_download({:file, path})
     end
   end
+
+  def finish_segment(conn, %{"key" => key, "socket_id" => socket_id, "segment" => segment, "file" => file}) do
+    
+    conn |> json(%{success: true})
+  end
 end

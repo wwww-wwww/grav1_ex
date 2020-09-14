@@ -59,7 +59,9 @@ defmodule Grav1Web.Router do
 
   scope "/api", Grav1Web do
     pipe_through :api
+
     post "/auth", UserController, :auth
+    post "/finish_segment", ApiController, :finish_segment
     get "/segment/:id", ApiController, :get_segment
   end
 

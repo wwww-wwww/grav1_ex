@@ -84,32 +84,43 @@ defmodule Grav1.Projects do
   def handle_call({:finish_segment, segment, filesize}, _, state) do
     case Map.get(state.projects, segment.project.id) do
       nil ->
-        {:reply, :error, state}
+        {:reply, {:error, "cant find project"}, state}
 
       project ->
         case Map.get(state.segments, segment.id) do
           nil ->
-            {:reply, :error, state}
+            {:reply, {:error, "can't find segment"}, state}
 
           segment ->
             case Repo.update(Ecto.Changeset.change(segment, filesize: filesize)) do
               {:ok, new_segment} ->
-                new_projects =
-                  Map.update!(state.projects, project.id, fn state_project ->
+                {new_project, new_projects} =
+                  Map.get_and_update(state.projects, project.id, fn state_project ->
                     new_project_segments =
                       state_project.segments
                       |> Map.update!(segment.id, fn old_segment ->
                         %{old_segment | filesize: filesize}
                       end)
+                      
+                    completed_frames =
+                      new_project_segments
+                      |> Enum.reduce(0, fn {_, segment}, acc ->
+                        if segment.filesize != 0 do
+                          acc + segment.frames
+                        else
+                          acc
+                        end
+                      end)
 
-                    %{state_project | segments: new_project_segments}
+                    new_project = %{state_project | segments: new_project_segments, progress_nom: completed_frames}
+                    {new_project, new_project}
                   end)
 
                 new_segments = Map.delete(state.segments, segment.id)
-                {:reply, :ok, %{state | projects: new_projects, segments: new_segments}}
+                {:reply, {:ok, new_project}, %{state | projects: new_projects, segments: new_segments}}
 
-              _ ->
-                {:reply, :error, state}
+              {:error, cs} ->
+                {:reply, {:error, cs}, state}
             end
         end
     end

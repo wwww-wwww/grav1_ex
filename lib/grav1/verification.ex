@@ -102,20 +102,24 @@ defmodule Grav1.VerificationExecutor do
       ^frames ->
         case File.stat(path) do
           {:ok, %{size: size}} ->
-            if Projects.finish_segment(segment, size) == :ok do
-              new_path =
-                Application.fetch_env!(:grav1, :path_projects)
-                |> Path.join(to_string(segment.project.id))
-                |> Path.join("encode")
+            case Projects.finish_segment(segment, size) do
+              {:ok, project} ->
+                new_path =
+                  Application.fetch_env!(:grav1, :path_projects)
+                  |> Path.join(to_string(segment.project.id))
+                  |> Path.join("encode")
 
-              case File.mkdir_p(new_path) do
-                :ok ->
-                  File.rename(path, Path.join(new_path, "#{segment.n}.ivf"))
+                case File.mkdir_p(new_path) do
+                  :ok ->
+                    File.rename(path, Path.join(new_path, "#{segment.n}.ivf"))
+                    Grav1Web.ProjectsLive.update(project)
 
-                {:error, reason} ->
-                  IO.inspect(reason)
-                  File.rm(path)
-              end
+                  {:error, reason} ->
+                    IO.inspect(reason)
+                    File.rm(path)
+                end
+              {:error, reason} ->
+                IO.inspect(reason)
             end
 
           {:error, reason} ->

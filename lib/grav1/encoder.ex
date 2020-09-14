@@ -19,6 +19,7 @@ defmodule Grav1.Encoder do
         {"--enable-keyframe-filtering", %{type: :integer, default: 0, min: 0, max: 2}},
         {"--auto-alt-ref", %{type: :integer, default: 1, min: 0, max: 1}},
         {"--lag-in-frames", %{type: :integer, default: 25, min: 0, max: 35}},
+        {"-b", %{type: :option, options: ["8", "10", "12"]}}
       ]
     },
     :vpxenc => {
@@ -26,7 +27,7 @@ defmodule Grav1.Encoder do
       []
     }
   }
-  
+
   def params() do
     @params
   end

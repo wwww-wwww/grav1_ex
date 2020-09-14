@@ -118,6 +118,7 @@ defmodule Grav1.VerificationExecutor do
                     IO.inspect(reason)
                     File.rm(path)
                 end
+
               {:error, reason} ->
                 IO.inspect(reason)
             end

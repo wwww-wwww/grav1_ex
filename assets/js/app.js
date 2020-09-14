@@ -14,10 +14,6 @@ window.addEventListener("phx:page-loading-start", _ => NProgress.start())
 window.addEventListener("phx:page-loading-stop", _ => NProgress.done())
 
 const hooks = {}
-hooks.add_project = {
-  mounted() {
-  }
-}
 
 hooks.load_encoders = {
   mounted() {
@@ -32,17 +28,19 @@ hooks.load_encoders = {
         const e = document.getElementById(`opt_${selected_encoder}_${param_name}`)
         if (param.requires) {
           const req_e = document.getElementById(`opt_${selected_encoder}_${param.requires}`)
-          if (param.requires_values.includes(req_e)) continue
+          if (!param.requires_values.includes(req_e.value)) continue
         }
         if (param_name == "resolution") {
-          const res_dims = e.value.split("x")
-          options["--width"] = res_dims[0]
-          options["--height"] = res_dims[1]
+          if (e.value != "custom") {
+            const res_dims = e.value.split("x")
+            options["--width"] = res_dims[0]
+            options["--height"] = res_dims[1]
+          }
         } else {
           options[param_name] = e.value
         }
       }
-      
+
       const params = []
       for (const param_name of Object.keys(options)) {
         if (options[param_name].length > 0) {
@@ -75,7 +73,9 @@ hooks.load_encoders = {
       extra_params.priority = opt_extra_priority.value
       extra_params.name = opt_extra_name.value
 
-      const confirm_modal = new Modal({title: "Create Project"})
+      const confirm_modal = new Modal({
+        title: "Create Project"
+      })
       confirm_modal.show()
 
       confirm_modal.get_body().style.textAlign = "center"
@@ -84,11 +84,17 @@ hooks.load_encoders = {
       confirm_modal.confirm.textContent = "Confirm"
       confirm_modal.confirm.focus()
       confirm_modal.confirm.addEventListener("click", () => {
-        this.pushEvent("add_project", {encoder: selected_encoder, files: files, encoder_params: params, extra_params: extra_params}, (reply, _ref) => {
+        this.pushEvent("add_project", {
+          encoder: selected_encoder,
+          files: files,
+          encoder_params: params,
+          extra_params: extra_params
+        }, (reply, _ref) => {
           confirm_modal.close()
-          if (reply.success) {
-          } else {
-            const err_modal = new Modal({title: "Error"})
+          if (!reply.success) {
+            const err_modal = new Modal({
+              title: "Error"
+            })
             const reason_t = create_element(err_modal, "div")
             reason_t.textContent = "Reason:"
             const reason = create_element(err_modal, "div")
@@ -111,30 +117,30 @@ hooks.load_encoders = {
         }
       }
     }
-    
+
     function show_params() {
       for (const encoder_param of encoder_params.children) {
-        encoder_param.classList.toggle("hidden", encoder_param.id != `params_${select_encoder.value}`) 
+        encoder_param.classList.toggle("hidden", encoder_param.id != `params_${select_encoder.value}`)
       }
     }
-    
+
     select_encoder.addEventListener("change", () => {
       show_params()
     })
-    
+
     show_params()
-    
+
     files_list_add.addEventListener("click", () => {
       const e = create_element(null, "div")
-    
+
       e.input = create_element(e, "input")
-    
+
       e.remove = create_element(e, "button", "material-icons")
       e.remove.textContent = "clear"
       e.remove.addEventListener("click", () => {
         files_list.removeChild(e)
       })
-    
+
       files_list.insertBefore(e, files_list_add)
       e.input.focus()
     })
@@ -144,11 +150,18 @@ hooks.load_encoders = {
 hooks.view_project = {
   mounted() {
     this.el.addEventListener("click", () => {
-      this.pushEvent("view_project", {id: this.el.dataset.id})
+      this.pushEvent("view_project", {
+        id: this.el.dataset.id
+      })
     })
   }
 }
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
-let liveSocket = new LiveSocket("/live", Socket, {hooks: hooks, params: {_csrf_token: csrfToken}})
+let liveSocket = new LiveSocket("/live", Socket, {
+  hooks: hooks,
+  params: {
+    _csrf_token: csrfToken
+  }
+})
 liveSocket.connect()

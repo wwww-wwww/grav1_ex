@@ -101,7 +101,7 @@ defmodule Grav1.Projects do
                       |> Map.update!(segment.id, fn old_segment ->
                         %{old_segment | filesize: filesize}
                       end)
-                      
+
                     completed_frames =
                       new_project_segments
                       |> Enum.reduce(0, fn {_, segment}, acc ->
@@ -112,12 +112,19 @@ defmodule Grav1.Projects do
                         end
                       end)
 
-                    new_project = %{state_project | segments: new_project_segments, progress_nom: completed_frames}
+                    new_project = %{
+                      state_project
+                      | segments: new_project_segments,
+                        progress_nom: completed_frames
+                    }
+
                     {new_project, new_project}
                   end)
 
                 new_segments = Map.delete(state.segments, segment.id)
-                {:reply, {:ok, new_project}, %{state | projects: new_projects, segments: new_segments}}
+
+                {:reply, {:ok, new_project},
+                 %{state | projects: new_projects, segments: new_segments}}
 
               {:error, cs} ->
                 {:reply, {:error, cs}, state}

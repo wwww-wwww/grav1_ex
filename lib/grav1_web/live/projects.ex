@@ -32,10 +32,11 @@ defmodule Grav1Web.ProjectsLive do
           live_component(socket, Grav1Web.ProjectComponent,
             id: "project:#{project.id}",
             project: project,
-            page: live_component(socket, Grav1Web.ProjectSegmentsComponent,
-              id: "project_segments:#{project.id}",
-              segments: get_segments(project)
-            )
+            page:
+              live_component(socket, Grav1Web.ProjectSegmentsComponent,
+                id: "project_segments:#{project.id}",
+                segments: get_segments(project)
+              )
           )
 
         mount(socket, page)
@@ -128,13 +129,19 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   # update project list and project
-  def handle_info(%{topic: @topic, event: "update", payload: %{project: project, projects: true}}, socket) do
+  def handle_info(
+        %{topic: @topic, event: "update", payload: %{project: project, projects: true}},
+        socket
+      ) do
     send_update(Grav1Web.ProjectComponent, id: "project:#{project.id}", project: project)
     {:noreply, socket |> assign(projects: Projects.get_projects())}
   end
 
   # update only project list
-  def handle_info(%{topic: @topic, event: "update_projects", payload: %{projects: projects}}, socket) do
+  def handle_info(
+        %{topic: @topic, event: "update_projects", payload: %{projects: projects}},
+        socket
+      ) do
     {:noreply, socket |> assign(projects: projects)}
   end
 
@@ -151,7 +158,14 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   # update only project segments
-  def handle_info(%{topic: @topic, event: "update_segments", payload: %{project: project, workers: workers}}, socket) do
+  def handle_info(
+        %{
+          topic: @topic,
+          event: "update_segments",
+          payload: %{project: project, workers: workers}
+        },
+        socket
+      ) do
     send_update(Grav1Web.ProjectSegmentsComponent,
       id: "project_segments:#{project.id}",
       segments: get_segments(project)
@@ -169,12 +183,20 @@ defmodule Grav1Web.ProjectsLive do
 
     project.segments
     |> Enum.map(fn {k, segment} ->
-      {progress, pass} = if segment.filesize == 0 do
-        Map.get(workers, k, {0, 0})
-      else
-        {nil, nil}
-      end
-      %{n: segment.n, pass: pass, progress: progress, frames: segment.frames, filesize: segment.filesize}
+      {progress, pass} =
+        if segment.filesize == 0 do
+          Map.get(workers, k, {0, 0})
+        else
+          {nil, nil}
+        end
+
+      %{
+        n: segment.n,
+        pass: pass,
+        progress: progress,
+        frames: segment.frames,
+        filesize: segment.filesize
+      }
     end)
   end
 

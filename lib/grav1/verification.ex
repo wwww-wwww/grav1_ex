@@ -113,8 +113,7 @@ defmodule Grav1.VerificationExecutor do
                   :ok ->
                     File.rename(path, Path.join(new_path, "#{segment.n}.ivf"))
                     Grav1Web.ProjectsLive.update(project)
-                    workers = Grav1.WorkerAgent.get_workers()
-                    Grav1Web.ProjectsLive.update_segments(project, workers)
+                    Grav1Web.ProjectsLive.update_segments(project)
                     Grav1.WorkerAgent.cancel_segments()
 
                   {:error, reason} ->
@@ -132,8 +131,12 @@ defmodule Grav1.VerificationExecutor do
             File.rm(path)
         end
 
-      bad_frames ->
+      {:error, 1, bad_frames} ->
         IO.inspect("bad framecount #{bad_frames}, expected #{frames}")
+        File.rm(path)
+
+      error ->
+        IO.inspect(error)
         File.rm(path)
     end
   end

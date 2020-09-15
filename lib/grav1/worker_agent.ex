@@ -1,6 +1,5 @@
 defmodule Grav1.Worker do
-  defstruct client: nil,
-            progress_num: 0,
+  defstruct progress_num: 0,
             progress_den: 0,
             pass: 1,
             segment: nil
@@ -25,9 +24,7 @@ end
 defmodule Grav1.WorkerAgent do
   use Agent
 
-  alias Grav1Web.Endpoint
-
-  alias Grav1.{Repo, User, Client, Projects, Worker}
+  alias Grav1.{Client, Projects, Worker}
 
   defstruct clients: %{}
 
@@ -87,7 +84,7 @@ defmodule Grav1.WorkerAgent do
 
   def disconnect(socket) do
     Agent.update(__MODULE__, fn val ->
-      new_clients = update_client(val.clients, socket.assigns.socket_id, %{connected: false})
+      new_clients = update_clients(val.clients, socket.assigns.socket_id, %{connected: false})
 
       %{val | clients: new_clients}
     end)
@@ -109,14 +106,6 @@ defmodule Grav1.WorkerAgent do
       Enum.reduce(val.clients, [], fn {_, client}, acc ->
         acc ++ client.workers
       end)
-    end)
-  end
-
-  def update_client(socket_id, opts) do
-    Agent.update(__MODULE__, fn val ->
-      new_clients = update_client(val.clients, to_string(socket_id), opts)
-
-      %{val | clients: new_clients}
     end)
   end
 
@@ -197,7 +186,7 @@ defmodule Grav1.WorkerAgent do
 
   def distribute_segments_cast() do
     Agent.cast(__MODULE__, fn val ->
-      {clients, new_clients} = distribute_segments(val)
+      {_clients, new_clients} = distribute_segments(val)
 
       %{val | clients: Map.merge(val.clients, new_clients)}
     end)
@@ -237,7 +226,7 @@ defmodule Grav1.WorkerAgent do
     Agent.get(__MODULE__, fn val -> val end)
   end
 
-  defp update_client(clients, id, opts) do
+  defp update_clients(clients, id, opts) do
     case Map.get(clients, id) do
       nil ->
         clients
@@ -245,6 +234,40 @@ defmodule Grav1.WorkerAgent do
       client ->
         Map.put(clients, id, struct(client, opts))
     end
+  end
+
+  def update_workers(socket_id, workers) do
+    id = to_string(socket_id)
+
+    Agent.update(__MODULE__, fn val ->
+      case Map.get(val.clients, id) do
+        nil ->
+          val
+
+        client ->
+          if client.workers
+             |> Enum.zip(workers)
+             |> Enum.all?(fn x ->
+               {old_worker, new_worker} = x
+
+               new_worker.segment == old_worker.segment and
+                 (new_worker.pass >= old_worker.pass or
+                    new_worker.progress_num >= old_worker.progress_num)
+             end) do
+            %{val | clients: Map.put(val.clients, id, %{client | workers: workers})}
+          else
+            val
+          end
+      end
+    end)
+  end
+
+  def update_client(socket_id, opts) do
+    Agent.update(__MODULE__, fn val ->
+      new_clients = update_clients(val.clients, to_string(socket_id), opts)
+
+      %{val | clients: new_clients}
+    end)
   end
 
   defp new_client(socket, state) do

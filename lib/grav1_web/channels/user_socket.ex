@@ -2,6 +2,7 @@ defmodule Grav1Web.UserSocket do
   use Phoenix.Socket
 
   channel("worker", Grav1Web.WorkerChannel)
+  channel("worker_progress", Grav1Web.WorkerProgressChannel)
 
   def connect(%{"token" => token}, socket, _) do
     case Guardian.Phoenix.Socket.authenticate(socket, Grav1.Guardian, token) do

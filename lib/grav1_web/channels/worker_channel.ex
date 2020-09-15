@@ -61,37 +61,6 @@ defmodule Grav1Web.WorkerChannel do
     {:noreply, socket}
   end
 
-  def handle_in("update_workers", %{"workers" => workers}, socket) do
-    new_workers =
-      workers
-      |> Enum.map(fn worker ->
-        worker = for {k, v} <- worker, into: %{}, do: {String.to_atom(k), v}
-        struct(Worker, worker)
-      end)
-
-    WorkerAgent.update_client(socket.assigns.socket_id, %{
-      workers: new_workers
-    })
-
-    if Grav1.RateLimit.can_execute?("worker_update", 1 / 10) do
-      Grav1Web.WorkersLive.update()
-    end
-
-    segments =
-      new_workers
-      |> Enum.map(fn worker -> worker.segment end)
-
-    Grav1.Projects.get_projects()
-    |> Enum.filter(fn {_, project} ->
-      Enum.any?(Map.keys(project.segments), fn x -> x in segments end)
-    end)
-    |> Enum.each(fn {_, project} ->
-      Grav1Web.ProjectsLive.update_segments(project, new_workers, true)
-    end)
-
-    {:noreply, socket}
-  end
-
   def handle_in(
         "update",
         %{
@@ -106,22 +75,20 @@ defmodule Grav1Web.WorkerChannel do
     new_workers =
       workers
       |> Enum.map(fn worker ->
-        %{
-          "segment" => segment
-        } = worker
-
-        %Worker{
-          segment: segment
-        }
+        worker = for {k, v} <- worker, into: %{}, do: {String.to_atom(k), v}
+        struct(Grav1.Worker, worker)
       end)
 
-    WorkerAgent.update_client(socket.assigns.socket_id, %{
-      job_queue: job_queue,
-      upload_queue: upload_queue,
-      downloading: downloading,
-      uploading: uploading,
-      workers: new_workers
-    })
+    WorkerAgent.update_client(
+      socket.assigns.socket_id,
+      %{
+        job_queue: job_queue,
+        upload_queue: upload_queue,
+        downloading: downloading,
+        uploading: uploading,
+        workers: new_workers
+      }
+    )
 
     if not WorkerAgent.distribute_segments() do
       Grav1Web.WorkersLive.update()
@@ -153,5 +120,42 @@ defmodule Grav1Web.WorkerChannel do
 
   def push_test(socketid, params) do
     Endpoint.broadcast("worker:#{socketid}", "test", params)
+  end
+end
+
+defmodule Grav1Web.WorkerProgressChannel do
+  use Phoenix.Channel
+
+  def join("worker_progress", _, socket) do
+    {:ok, socket}
+  end
+
+  def handle_in("update_workers", %{"workers" => workers}, socket) do
+    new_workers =
+      workers
+      |> Enum.map(fn worker ->
+        worker = for {k, v} <- worker, into: %{}, do: {String.to_atom(k), v}
+        struct(Grav1.Worker, worker)
+      end)
+
+    Grav1.WorkerAgent.update_workers(socket.assigns.socket_id, new_workers)
+
+    if Grav1.RateLimit.can_execute?("worker_update", 1 / 10) do
+      Grav1Web.WorkersLive.update()
+    end
+
+    segments =
+      new_workers
+      |> Enum.map(fn worker -> worker.segment end)
+
+    Grav1.Projects.get_projects()
+    |> Enum.filter(fn {_, project} ->
+      Enum.any?(Map.keys(project.segments), fn x -> x in segments end)
+    end)
+    |> Enum.each(fn {_, project} ->
+      Grav1Web.ProjectsLive.update_segments(project, true)
+    end)
+
+    {:noreply, socket}
   end
 end

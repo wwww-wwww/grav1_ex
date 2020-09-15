@@ -168,7 +168,7 @@ defmodule Grav1Web.ProjectsLive do
       ) do
     send_update(Grav1Web.ProjectSegmentsComponent,
       id: "project_segments:#{project.id}",
-      segments: get_segments(project)
+      segments: get_segments(project, workers)
     )
 
     {:noreply, socket}
@@ -236,11 +236,11 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   # update only segments of project
-  def update_segments(project, workers, ratelimit \\ false) do
+  def update_segments(project, ratelimit \\ false) do
     if not ratelimit or RateLimit.can_execute?("project_segments:#{project.id}", 1 / 10) do
       Grav1Web.Endpoint.broadcast(@topic, "update_segments", %{
         project: project,
-        workers: workers
+        workers: Grav1.WorkerAgent.get_workers()
       })
     end
   end

@@ -65,6 +65,7 @@ defmodule Grav1.Split do
     {source_keyframes, total_frames} =
       get_keyframes(input, fn x -> callback.({:progress, :source_keyframes}, x) end)
 
+    callback.(:log, inspect(source_keyframes))
     callback.(:log, "getting aom keyframes")
 
     aom_keyframes =
@@ -74,10 +75,12 @@ defmodule Grav1.Split do
       |> ensure_total_frames(total_frames)
       |> kf_max_dist(min_frames, max_frames, source_keyframes)
 
-    {frames, splits, segments} =
-      partition_keyframes(source_keyframes, aom_keyframes, total_frames)
+    callback.(:log, inspect(aom_keyframes))
 
     callback.(:log, "segmenting")
+
+    {frames, splits, segments} =
+      partition_keyframes(source_keyframes, aom_keyframes, total_frames)
 
     {split_args, {frames, splits, segments}} =
       if length(frames) < length(aom_keyframes) / 2 do
@@ -95,7 +98,7 @@ defmodule Grav1.Split do
               |> String.pad_leading(5, "0")
 
             new_split = %{file: "#{split_name}.mkv", start: frame, length: length}
-            new_segment = %{n: i, file: "#{split_name}.mkv", start: frame, frames: length}
+            new_segment = %{n: i, file: "#{split_name}.mkv", start: 0, frames: length}
 
             {frames ++ [frame], splits ++ [new_split], segments ++ [new_segment]}
           end)
@@ -104,6 +107,8 @@ defmodule Grav1.Split do
       else
         {@split_args, {frames, splits, segments}}
       end
+
+    callback.(:log, "#{length(segments)} splits, #{length(segments)} segments")
 
     case split_video(input, split_args, frames, path_split, total_frames, callback) do
       ^total_frames ->
@@ -115,11 +120,11 @@ defmodule Grav1.Split do
 
         {:ok, segments, total_frames}
 
-      :error ->
-        {:error, "failed splitting"}
+      {:error, reason} ->
+        {:error, reason}
 
       fr ->
-        {:error, "expected #{total_frames}, got #{fr}"}
+        {:error, "expected #{total_frames}, got #{to_string(fr)}"}
     end
   end
 
@@ -137,14 +142,24 @@ defmodule Grav1.Split do
         "-vsync",
         "0"
       ] ++
-        split_args ++
-        [
-          "-f",
-          "segment",
-          "-segment_frames",
-          Enum.join(tl(frames), ","),
-          Path.join(path_split, "%05d.mkv")
-        ]
+        split_args
+
+    args =
+      if length(frames) > 1 do
+        args ++
+          [
+            "-f",
+            "segment",
+            "-segment_frames",
+            Enum.join(tl(frames), ","),
+            Path.join(path_split, "%05d.mkv")
+          ]
+      else
+        args ++
+          [
+            Path.join(path_split, "00000.mkv")
+          ]
+      end
 
     callback.(:log, "splitting with ffmpeg " <> Enum.join(args, " "))
 
@@ -176,8 +191,7 @@ defmodule Grav1.Split do
         end)
 
       {:error, reason} ->
-        callback.(:log, "unable to create split directory. reason: #{reason}")
-        :error
+        {:error, "unable to create split directory. reason: #{reason}"}
     end
   end
 

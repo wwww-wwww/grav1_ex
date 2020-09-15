@@ -120,66 +120,72 @@ defmodule Grav1.WorkerAgent do
     end)
   end
 
-  def distribute_segments() do
-    clients =
-      Agent.get_and_update(__MODULE__, fn val ->
-        available_clients =
-          val.clients
-          |> Enum.filter(fn {_, client} ->
-            not client.sending_job and client.connected and
-              client.downloading == nil and
-              (length(client.job_queue) < client.queue_size or
-                 (length(Enum.filter(client.workers, &(&1.segment == nil))) > 0 and
-                    length(client.job_queue) == 0))
-          end)
-
-        verifying_segments =
-          Grav1.VerificationExecutor.get_queue()
-          |> Enum.map(fn job ->
-            job.segment.id
-          end)
-
-        segments =
-          val.clients
-          |> Projects.get_segments(length(available_clients), verifying_segments)
-
-        {client_segment, _} =
-          Enum.reduce(available_clients, {[], segments}, fn {key, client}, {acc, segments} ->
-            filtered_segments =
-              segments
-              |> Enum.filter(fn segment ->
-                segment.id != client.downloading and
-                  segment.id != client.uploading and
-                  segment.id not in client.job_queue and
-                  segment.id not in client.upload_queue
-              end)
-
-            case List.first(filtered_segments) do
-              nil ->
-                {acc, segments}
-
-              new_segment ->
-                new_segments =
-                  segments
-                  |> Enum.filter(fn segment -> segment.id != new_segment.id end)
-
-                {acc ++ [{{key, client}, new_segment}], new_segments}
-            end
-          end)
-
-        new_clients =
-          client_segment
-          |> Enum.reduce(%{}, fn {{key, client}, _}, acc ->
-            Map.put(acc, key, %{client | sending_job: true})
-          end)
-
-        {client_segment, %{val | clients: Map.merge(val.clients, new_clients)}}
+  def distribute_segments(val) do
+    available_clients =
+      val.clients
+      |> Enum.filter(fn {_, client} ->
+        not client.sending_job and client.connected and
+          client.downloading == nil and
+          (length(client.job_queue) < client.queue_size or
+             (length(Enum.filter(client.workers, &(&1.segment == nil))) > 0 and
+                length(client.job_queue) == 0))
       end)
 
-    clients
+    verifying_segments =
+      Grav1.VerificationExecutor.get_queue()
+      |> Enum.map(fn job ->
+        job.segment.id
+      end)
+
+    segments =
+      val.clients
+      |> Projects.get_segments(length(available_clients), verifying_segments)
+
+    {clients_segments, _} =
+      Enum.reduce(available_clients, {[], segments}, fn {key, client}, {acc, segments} ->
+        filtered_segments =
+          segments
+          |> Enum.filter(fn segment ->
+            segment.id != client.downloading and
+              segment.id != client.uploading and
+              segment.id not in client.job_queue and
+              segment.id not in client.upload_queue
+          end)
+
+        case List.first(filtered_segments) do
+          nil ->
+            {acc, segments}
+
+          new_segment ->
+            new_segments =
+              segments
+              |> Enum.filter(fn segment -> segment.id != new_segment.id end)
+
+            {acc ++ [{{key, client}, new_segment}], new_segments}
+        end
+      end)
+
+    new_clients =
+      clients_segments
+      |> Enum.reduce(%{}, fn {{key, client}, _}, acc ->
+        Map.put(acc, key, %{client | sending_job: true})
+      end)
+
+    clients_segments
     |> Enum.each(fn {{_, client}, job} ->
       Grav1Web.WorkerChannel.push_segment(client.socket_id, job)
     end)
+
+    {clients_segments, new_clients}
+  end
+
+  def distribute_segments() do
+    clients =
+      Agent.get_and_update(__MODULE__, fn val ->
+        {clients_segments, new_clients} = distribute_segments(val)
+
+        {clients_segments, %{val | clients: Map.merge(val.clients, new_clients)}}
+      end)
 
     if length(clients) > 0 do
       Grav1Web.WorkersLive.update()
@@ -187,6 +193,14 @@ defmodule Grav1.WorkerAgent do
     else
       false
     end
+  end
+
+  def distribute_segments_cast() do
+    Agent.cast(__MODULE__, fn val ->
+      {clients, new_clients} = distribute_segments(val)
+
+      %{val | clients: Map.merge(val.clients, new_clients)}
+    end)
   end
 
   def get() do

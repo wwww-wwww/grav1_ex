@@ -175,29 +175,36 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   def get_segments(project, workers) do
-    workers =
-      workers
-      |> Enum.filter(fn worker -> worker.segment in Map.keys(project.segments) end)
-      |> Enum.map(fn worker -> {worker.segment, {worker.progress_num, worker.pass}} end)
-      |> Map.new()
+    case project.segments do
+      %Ecto.Association.NotLoaded{} ->
+        []
 
-    project.segments
-    |> Enum.map(fn {k, segment} ->
-      {progress, pass} =
-        if segment.filesize == 0 do
-          Map.get(workers, k, {0, 0})
-        else
-          {nil, nil}
-        end
+      segments ->
+        workers =
+          workers
+          |> Enum.filter(fn worker -> worker.segment in Map.keys(segments) end)
+          |> Enum.map(fn worker -> {worker.segment, {worker.progress_num, worker.pass}} end)
+          |> Map.new()
 
-      %{
-        n: segment.n,
-        pass: pass,
-        progress: progress,
-        frames: segment.frames,
-        filesize: segment.filesize
-      }
-    end)
+        segments
+        |> Enum.map(fn {k, segment} ->
+          {progress, pass} =
+            if segment.filesize == 0 do
+              Map.get(workers, k, {0, 0})
+            else
+              {nil, nil}
+            end
+
+          %{
+            n: segment.n,
+            pass: pass,
+            progress: progress,
+            frames: segment.frames,
+            filesize: segment.filesize
+          }
+        end)
+        |> Enum.sort_by(& &1.n)
+    end
   end
 
   def get_segments(projects) do

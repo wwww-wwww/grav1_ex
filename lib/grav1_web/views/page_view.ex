@@ -78,6 +78,12 @@ defmodule Grav1Web.PageView do
 
           :aom_keyframes ->
             "#{project.progress_num}/#{project.progress_den}"
+
+          :verify_split ->
+            "#{project.progress_num}/#{project.progress_den}"
+
+          status ->
+            status
         end
 
       state ->

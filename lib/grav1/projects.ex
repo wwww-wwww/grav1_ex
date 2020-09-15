@@ -1,7 +1,7 @@
 defmodule Grav1.Projects do
   use GenServer
 
-  alias Grav1.{Repo, Project, Projects}
+  alias Grav1.{Repo, Project, Projects, WorkerAgent}
   alias Ecto.Multi
 
   defstruct projects: %{},
@@ -193,6 +193,8 @@ defmodule Grav1.Projects do
       load_project(project)
     end)
 
+    WorkerAgent.distribute_segments_cast()
+
     {:noreply, state}
   end
 
@@ -267,6 +269,8 @@ defmodule Grav1.Projects do
     Enum.each(projects, fn {_, project} ->
       load_project(project)
     end)
+
+    WorkerAgent.distribute_segments()
   end
 
   def add_project(files, opts) do
@@ -457,6 +461,8 @@ defmodule Grav1.ProjectsExecutor do
             )
 
             Projects.add_segments(new_segments)
+
+            Grav1.WorkerAgent.distribute_segments()
 
             :ok
 

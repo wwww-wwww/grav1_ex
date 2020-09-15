@@ -14,11 +14,11 @@ defmodule Grav1.Application do
       Grav1.WorkerAgent,
       Grav1.RateLimit,
       Grav1Web.Endpoint,
+      Grav1.VerificationQueue,
+      Grav1.VerificationExecutor,
       Grav1.ProjectsExecutorQueue,
       Grav1.ProjectsExecutor,
-      Grav1.Projects,
-      Grav1.VerificationQueue,
-      Grav1.VerificationExecutor
+      Grav1.Projects
     ]
 
     get_version(

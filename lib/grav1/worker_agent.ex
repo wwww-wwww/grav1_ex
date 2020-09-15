@@ -203,6 +203,36 @@ defmodule Grav1.WorkerAgent do
     end)
   end
 
+  def cancel_segments() do
+    segments =
+      Projects.get_segments()
+      |> Map.keys()
+
+    Agent.get(__MODULE__, fn val ->
+      val.clients
+    end)
+    |> Enum.reduce([], fn {socket_id, client}, acc ->
+      workers_segments =
+        client.workers
+        |> Enum.reduce([], fn worker, acc ->
+          if worker.segment != nil and worker.segment not in segments do
+            acc ++ [worker.segment]
+          else
+            acc
+          end
+        end)
+
+      if length(workers_segments) > 0 do
+        acc ++ [{socket_id, workers_segments}]
+      else
+        acc
+      end
+    end)
+    |> Enum.each(fn {socket_id, segments} ->
+      Grav1Web.WorkerChannel.cancel_segments(socket_id, segments)
+    end)
+  end
+
   def get() do
     Agent.get(__MODULE__, fn val -> val end)
   end

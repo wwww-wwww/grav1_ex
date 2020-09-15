@@ -37,6 +37,11 @@ defmodule Grav1Web.WorkerChannel do
     {:noreply, socket}
   end
 
+  def handle_info(%Broadcast{topic: _, event: "cancel_segments", payload: payload}, socket) do
+    push(socket, "cancel", payload)
+    {:noreply, socket}
+  end
+
   def handle_info(%Broadcast{topic: _, event: ev, payload: payload}, socket) do
     IO.inspect(ev)
     push(socket, ev, payload)
@@ -140,6 +145,10 @@ defmodule Grav1Web.WorkerChannel do
     }
 
     Endpoint.broadcast("worker:#{socketid}", "push_segment", params)
+  end
+
+  def cancel_segments(socketid, segments) do
+    Endpoint.broadcast("worker:#{socketid}", "cancel_segments", %{segments: segments})
   end
 
   def push_test(socketid, params) do

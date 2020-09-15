@@ -113,6 +113,7 @@ defmodule Grav1.VerificationExecutor do
                   :ok ->
                     File.rename(path, Path.join(new_path, "#{segment.n}.ivf"))
                     Grav1Web.ProjectsLive.update(project)
+                    Grav1.WorkerAgent.cancel_segments()
 
                   {:error, reason} ->
                     IO.inspect(reason)

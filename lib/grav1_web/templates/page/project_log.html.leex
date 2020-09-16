@@ -1,5 +1,12 @@
-<div>
+<div class="logs">
   <%= for {timestamp, message} <- @log do %>
   <div>[<%= timestamp %>] <%= message %></div>
   <% end %>
 </div>
+
+<style>
+  .logs {
+    overflow-y: auto;
+    padding: 0.2em;
+  }
+</style>

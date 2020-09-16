@@ -186,6 +186,10 @@ defmodule Grav1Web.ProjectsLive do
           |> Enum.map(fn worker -> {worker.segment, {worker.progress_num, worker.pass}} end)
           |> Map.new()
 
+        verifying =
+          Grav1.VerificationExecutor.get_queue()
+          |> Enum.map(fn job -> job.segment.id end)
+
         segments
         |> Enum.map(fn {k, segment} ->
           {progress, pass} =
@@ -200,7 +204,8 @@ defmodule Grav1Web.ProjectsLive do
             pass: pass,
             progress: progress,
             frames: segment.frames,
-            filesize: segment.filesize
+            filesize: segment.filesize,
+            verifying: segment.id in verifying
           }
         end)
         |> Enum.sort_by(& &1.n)

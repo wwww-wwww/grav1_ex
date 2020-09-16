@@ -1,9 +1,15 @@
 <div class="page_project">
   <div class="header">
-    <div><%= @project.id %></div>
-    <div><%= @project.input %></div>
-    <div><%= @project.encoder %></div>
-    <%= submit("log", phx_click: "view_log", phx_value_id: @project.id) %>
+    <div class="title"><%= @project.input %></div>
+    <div class="details">
+      <span><%= @project.id %></span>
+      <span><%= @project.encoder %></span>
+      <div><%= @project.encoder_params |> Enum.join(" ") %></div>
+    </div>
+    <div class="tabs">
+      <%= submit("segments", phx_click: "view_project", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectSegmentsComponent)) %>
+      <%= submit("log", phx_click: "view_log", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectLogComponent)) %>
+    </div>
   </div>
   <%= @page %>
 </div>

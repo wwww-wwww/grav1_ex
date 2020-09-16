@@ -3,10 +3,17 @@
     <%= for segment <- @segments do %>
       <div class="segment">
         <%= if segment.filesize == 0 do %>
-          <%= if segment.pass == 1 do %>
-            <div class="progress pass1" style="width: <%= segment.progress / segment.frames * 100 %>%"></div>
+          <%= if segment.verifying do %>
+            <div class="progress verifying"></div>
           <% else %>
-            <div class="progress" style="width: <%= segment.progress / segment.frames * 100 %>%"></div>
+            <%= if segment.pass == 1 do %>
+              <div class="progress pass1" style="width: <%= segment_pct(segment) * 100 %>%"></div>
+            <% else %>
+              <%= if segment.pass == 2 do %>
+                <div class="progress pass1" style="left: <%= segment_pct(segment) * 100 %>%; width: <%= (1 - segment_pct(segment)) * 100 %>%"></div>
+                <div class="progress" style="width: <%= segment_pct(segment) * 100 %>%"></div>
+              <% end %>
+            <% end %>
           <% end %>
         <% else %>
           <div class="progress complete" style="width: 100%"></div>
@@ -17,9 +24,13 @@
           </div>
           <div class="desc">
             <%= if segment.filesize == 0 do %>
-              <%= segment.progress %>/<%= segment.frames %>
+              <%= if segment.verifying do %>
+                verifying
+              <% else %>
+                <%= segment.progress %>/<%= segment.frames %>
+              <% end %>
             <% else %>
-              <%= segment.filesize %>
+              <%= filesize(segment.filesize) %>
             <% end %>
           </div>
         </div>
@@ -27,49 +38,3 @@
     <% end %>
   </div>
 </div>
-
-<style>
-  .segments_outer {
-    flex: 1;
-    overflow-y: scroll;
-  }
-
-  .segments {
-    padding: 0.1em;
-    margin: 0;
-  }
-
-  .segment {
-    font-family: "Consolas", "Courier New", Courier, monospace;
-    display: inline-block;
-    min-width: 5.2em;
-    margin: 0.1em;
-    border: 1px solid rgba(0, 0, 0, 0.5);
-    position: relative;
-  }
-
-  .segment > .progress {
-    z-index: -1;
-    position: absolute;
-    height: 100%;
-    margin: 0;
-    background-color: rgba(190, 230, 255, 0.6);
-    transition: width 0.5s;
-  }
-
-  .segment > .body {
-    padding: 0.25em;
-  }
-
-  .segment > .body > .desc {
-    font-size: 0.7em;
-  }
-
-  .segment > .progress.pass1 {
-    background-color: rgba(240, 240, 160, 0.6);
-  }
-
-  .segment > .progress.complete {
-    background-color: rgba(190, 250, 210, 0.6);
-  }
-</style>

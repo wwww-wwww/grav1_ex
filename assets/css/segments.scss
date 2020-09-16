@@ -1,0 +1,51 @@
+.segments_outer {
+  flex: 1;
+  overflow-y: scroll;
+  padding: 0.2em;
+}
+
+.segments {
+  padding: 0.1em;
+  margin: 0;
+}
+
+.segment {
+  font-family: "Consolas", "Courier New", Courier, monospace;
+  display: inline-block;
+  min-width: 5em;
+  margin: 0.1em 0 0.2em 0;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  position: relative;
+  border-radius: 3px;
+
+  .progress {
+    z-index: -1;
+    position: absolute;
+    height: 100%;
+    margin: 0;
+    background-color: rgba(190, 230, 255, 0.6);
+    transition: width 0.25s, left 0.25s;
+  }
+
+  .body {
+    padding: 0.1em 0.2em;
+    font-size: 0.9em;
+
+    .desc {
+      font-size: 0.75em
+    }
+  }
+
+  .progress.verifying {
+    width: 100%;
+    background-color: rgba(255, 220, 160, 0.6);
+  }
+
+  .progress.pass1 {
+    background-color: rgba(240, 240, 160, 0.6);
+  }
+
+  .progress.complete {
+    background-color: rgba(190, 250, 210, 0.6);
+  }
+}

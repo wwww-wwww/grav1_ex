@@ -5,6 +5,8 @@ defmodule Grav1Web.PageView do
 
   alias Phoenix.HTML.{Tag, Form}
 
+  @bytes ~w(B KB MB GB TB PB EB ZB YB)
+
   def logged_in?(conn) do
     Guardian.Plug.authenticated?(conn) and Guardian.Plug.current_resource(conn) != nil
   end
@@ -113,5 +115,33 @@ defmodule Grav1Web.PageView do
       state ->
         state
     end
+  end
+
+  def tab_selected(page, component) do
+    if page.component == component do
+      "tab selected"
+    else
+      "tab"
+    end
+  end
+
+  def segment_pct(segment) do
+    segment.progress / segment.frames
+  end
+
+  def filesize(value) do
+    {exponent, _rem} =
+      (:math.log(value) / :math.log(1024))
+      |> Float.floor()
+      |> Float.to_string()
+      |> Integer.parse()
+
+    result =
+      Float.round(value / :math.pow(1024, exponent), 2)
+      |> to_string()
+
+    {:ok, unit} = Enum.fetch(@bytes, exponent)
+
+    result <> unit
   end
 end

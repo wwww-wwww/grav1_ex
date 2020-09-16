@@ -25,20 +25,21 @@
       <td><%= client.uploading %></td>
     </tr>
     <tr>
-      <td>
+      <td colspan="10">
         <table>
           <%= for worker <- client.workers do %>
             <tr>
-              <td>
-                <%= if worker.segment != nil do %>
+              <%= if worker.segment != nil do %>
+                <td>
                   <%= worker.segment %>
-                <% else %>
+                </td>
+                <td>pass <%= worker.pass %></td>
+                <td><%= worker.progress_num %> / <%= worker.progress_den %></td>
+              <% else %>
+                <td>
                   idle
-                <% end %>
-              </td>
-              <td>pass <%= worker.pass %></td>
-              <td><%= worker.progress_num %> / <%= worker.progress_den %></td>
-              <td></td>
+                </td>
+              <% end %>
             </tr>
           <% end %>
         </table>

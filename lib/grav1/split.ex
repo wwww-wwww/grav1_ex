@@ -543,18 +543,15 @@ defmodule Grav1.Split do
             fpf_frames = Enum.count(dict_list)
 
             # intentionally skipping 0th frame and last 16 frames
-            {_, keyframes} =
-              Enum.reduce(1..(fpf_frames - 16), {1, [0]}, fn x, acc ->
-                {frame_count_so_far, keyframes} = acc
-
-                if test_candidate_kf(dict_list, x, frame_count_so_far) do
-                  {1, keyframes ++ [x]}
-                else
-                  {frame_count_so_far + 1, keyframes}
-                end
-              end)
-
-            keyframes
+            1..(fpf_frames - 16)
+            |> Enum.reduce({1, [0]}, fn x, {frame_count_so_far, keyframes} ->
+              if test_candidate_kf(dict_list, x, frame_count_so_far) do
+                {1, keyframes ++ [x]}
+              else
+                {frame_count_so_far + 1, keyframes}
+              end
+            end)
+            |> elem(1)
         end
     end
   end

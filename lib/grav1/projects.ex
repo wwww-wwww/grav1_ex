@@ -60,7 +60,10 @@ defmodule Grav1.Projects do
       |> Enum.sort_by(
         &length(
           Enum.filter(clients, fn {_, client} ->
-            client.downloading == &1.id or &1.id in client.job_queue
+            &1.id == client.downloading or
+              &1.id == client.sending_job or
+              &1.id in client.job_queue or
+              &1.id in client.upload_queue
           end)
         ),
         :asc

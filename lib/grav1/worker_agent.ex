@@ -10,7 +10,7 @@ defmodule Grav1.Client do
             name: "",
             user: "",
             connected: true,
-            sending_job: false,
+            sending_job: nil,
             workers: [],
             max_workers: 0,
             job_queue: [],
@@ -61,8 +61,7 @@ defmodule Grav1.WorkerAgent do
                 %{
                   client
                   | socket_id: socket.assigns.socket_id,
-                    connected: true,
-                    sending_job: false
+                    connected: true
                 }
                 |> struct(state)
 
@@ -113,7 +112,8 @@ defmodule Grav1.WorkerAgent do
     available_clients =
       val.clients
       |> Enum.filter(fn {_, client} ->
-        not client.sending_job and client.connected and
+        client.sending_job == nil and
+          client.connected and
           client.downloading == nil and
           (length(client.job_queue) < client.queue_size or
              (length(Enum.filter(client.workers, &(&1.segment == nil))) > 0 and
@@ -156,13 +156,13 @@ defmodule Grav1.WorkerAgent do
 
     new_clients =
       clients_segments
-      |> Enum.reduce(%{}, fn {{key, client}, _}, acc ->
-        Map.put(acc, key, %{client | sending_job: true})
+      |> Enum.reduce(%{}, fn {{key, client}, segment}, acc ->
+        Map.put(acc, key, %{client | sending_job: segment.id})
       end)
 
     clients_segments
-    |> Enum.each(fn {{_, client}, job} ->
-      Grav1Web.WorkerChannel.push_segment(client.socket_id, job)
+    |> Enum.each(fn {{_, client}, segment} ->
+      Grav1Web.WorkerChannel.push_segment(client.socket_id, segment)
     end)
 
     {clients_segments, new_clients}
@@ -210,9 +210,21 @@ defmodule Grav1.WorkerAgent do
             acc
           end
         end)
+        |> Enum.concat(
+          Enum.filter(client.job_queue, fn segment ->
+            segment not in segments
+          end)
+        )
 
-      if length(workers_segments) > 0 do
-        acc ++ [{socket_id, workers_segments}]
+      client_segments =
+        if client.sending_job not in segments do
+          workers_segments ++ [client.sending_job]
+        else
+          workers_segments
+        end
+
+      if length(client_segments) > 0 do
+        acc ++ [{socket_id, client_segments}]
       else
         acc
       end
@@ -232,7 +244,20 @@ defmodule Grav1.WorkerAgent do
         clients
 
       client ->
-        Map.put(clients, id, struct(client, opts))
+        new_client = struct(client, opts)
+
+        if client.sending_job != nil and new_client.sending_job != nil do
+          case Projects.get_segment(new_client.sending_job) do
+            nil ->
+              Map.put(clients, id, %{new_client | sending_job: nil})
+
+            segment ->
+              Grav1Web.WorkerChannel.push_segment(id, segment)
+              clients
+          end
+        else
+          Map.put(clients, id, new_client)
+        end
     end
   end
 

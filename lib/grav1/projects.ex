@@ -1,7 +1,7 @@
 defmodule Grav1.Projects do
   use GenServer
 
-  alias Grav1.{Repo, Project, Projects, WorkerAgent}
+  alias Grav1.{Repo, Project, Projects, WorkerAgent, ProjectsExecutor}
   alias Ecto.Multi
 
   defstruct projects: %{},
@@ -341,18 +341,16 @@ defmodule Grav1.Projects do
   def load_project(project) do
     case project do
       %{state: :idle} ->
-        Grav1.ProjectsExecutor.add_action(:split, project)
+        ProjectsExecutor.add_action(:split, project)
 
       %{state: :ready} ->
-        completed_frames =
+        completed_segments =
           project.segments
-          |> Enum.reduce(0, fn {_, segment}, acc ->
-            if segment.filesize != 0 do
-              acc + segment.frames
-            else
-              acc
-            end
-          end)
+          |> Enum.filter(&(elem(&1, 1).filesize != 0))
+
+        completed_frames =
+          completed_segments
+          |> Enum.reduce(0, &(&2 + elem(&1, 1).frames))
 
         update_project(project, %{
           progress_num: completed_frames,
@@ -360,6 +358,10 @@ defmodule Grav1.Projects do
         })
 
         Projects.log(project, "loaded")
+
+        if length(completed_segments) == map_size(project.segments) do
+          ProjectsExecutor.add_action(:concat, project)
+        end
 
       _ ->
         IO.inspect(project)
@@ -411,6 +413,10 @@ defmodule Grav1.ProjectsExecutor do
       {:error, reason} ->
         {:stop, reason}
     end
+  end
+
+  def do_action(:concat, project) do
+    Grav1.Concat.concat(project)
   end
 
   def do_action(:split, project) do

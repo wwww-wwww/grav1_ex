@@ -4,7 +4,7 @@ defmodule Grav1.Project do
 
   import EctoEnum
 
-  defenum(State, idle: 0, ready: 1, completed: 2, preparing: 3)
+  defenum(State, idle: 0, ready: 1, completed: 2, preparing: 3, concatenating: 4)
 
   schema "projects" do
     field :input, :string

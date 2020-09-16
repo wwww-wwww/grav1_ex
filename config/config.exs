@@ -8,6 +8,7 @@ config :grav1,
   path_dav1d: System.find_executable("dav1d"),
   path_vspipe: System.find_executable("vspipe"),
   path_python: System.find_executable("python"),
+  path_mkvmerge: System.find_executable("mkvmerge"),
   path_projects: "projects",
   path_verification: "verification"
 

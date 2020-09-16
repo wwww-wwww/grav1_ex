@@ -150,7 +150,8 @@ defmodule Grav1Web.WorkerProgressChannel do
 
     Grav1.Projects.get_projects()
     |> Enum.filter(fn {_, project} ->
-      Enum.any?(Map.keys(project.segments), fn x -> x in segments end)
+      project.state == :ready and
+        Enum.any?(Map.keys(project.segments), fn x -> x in segments end)
     end)
     |> Enum.each(fn {_, project} ->
       Grav1Web.ProjectsLive.update_segments(project, true)

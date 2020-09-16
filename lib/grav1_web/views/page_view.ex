@@ -5,7 +5,7 @@ defmodule Grav1Web.PageView do
 
   alias Phoenix.HTML.{Tag, Form}
 
-  @bytes ~w(B KB MB GB TB PB EB ZB YB)
+  @bytes ~w(B K M G T P E Z Y)
 
   def logged_in?(conn) do
     Guardian.Plug.authenticated?(conn) and Guardian.Plug.current_resource(conn) != nil
@@ -86,6 +86,12 @@ defmodule Grav1Web.PageView do
 
           status ->
             status
+        end
+
+      :concatenating ->
+        case project.status do
+          status ->
+            inspect(status)
         end
 
       state ->

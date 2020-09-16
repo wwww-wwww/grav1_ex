@@ -44,6 +44,7 @@ defmodule Grav1.Application do
 
     get_version(:dav1d, Application.fetch_env!(:grav1, :path_dav1d), ["-v"], ~r/([^\r\n]+)/)
     get_version(:python, Application.fetch_env!(:grav1, :path_python), ["-V"], ~r/([^\r\n]+)/)
+    get_version(:mkvmerge, Application.fetch_env!(:grav1, :path_mkvmerge), ["-V"], ~r/([^\r\n]+)/)
 
     opts = [strategy: :one_for_one, name: Grav1.Supervisor]
     Supervisor.start_link(children, opts)

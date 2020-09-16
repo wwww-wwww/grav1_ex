@@ -844,16 +844,21 @@ defmodule Grav1.Split do
     {frames, splits, segments}
   end
 
-  def stream_port(port, acc, transform) do
+  def stream_port(port, {lines, acc}, transform) do
     receive do
       {^port, {:data, {_, data}}} ->
-        stream_port(port, transform.(to_string(data), acc), transform)
+        new_lines = lines ++ [data]
+        stream_port(port, {new_lines, transform.(to_string(data), acc)}, transform)
 
       {^port, {:exit_status, 0}} ->
         acc
 
       {^port, {:exit_status, status}} ->
-        {:error, status, acc}
+        {:error, acc, lines}
     end
+  end
+
+  def stream_port(port, acc, transform) do
+    stream_port(port, {[], acc}, transform)
   end
 end

@@ -210,16 +210,16 @@ defmodule Grav1.Split do
       misalignment = total_frames != start
 
       if misalignment,
-        do: callback.(:log, "misalignment at #{segment} expected: #{start}, got: #{total_frames}")
+        do: callback.(:log, "misalignment at #{inspect(segment)} expected: #{start}, got: #{total_frames}")
 
       bad_framecount = num_frames != length
 
       if bad_framecount,
-        do: callback.(:log, "bad framecount #{segment} expected: #{length}, got: #{num_frames}")
+        do: callback.(:log, "bad framecount #{inspect(segment)} expected: #{length}, got: #{num_frames}")
 
       # if not using vs_ffms2
       bad_framecount_slow =
-        true and
+        Application.fetch_env!(:versions, :vapoursynth) == nil and
           case get_frames(path_segment, false) do
             ^num_frames ->
               false
@@ -276,7 +276,7 @@ defmodule Grav1.Split do
       "-vf",
       "select=gte(n\\,#{start})",
       "-frames:v",
-      length,
+      to_string(length),
       "-y",
       output
     ]
@@ -314,8 +314,8 @@ defmodule Grav1.Split do
       Application.fetch_env!(:grav1, :path_ffmpeg),
       input,
       output,
-      start,
-      length
+      to_string(start),
+      to_string(length)
     ]
 
     port =
@@ -344,39 +344,63 @@ defmodule Grav1.Split do
   end
 
   defp get_frames(input, fast \\ true, callback \\ nil) do
-    # vapoursynth
-    if fast and false do
+    if fast and Application.fetch_env!(:versions, :vapoursynth) != nil do
+      get_frames_ffms2(input, fast, callback)
     else
-      fast_args = if fast, do: ["-c", "copy"], else: []
-      args = ["-hide_banner", "-i", input, "-map", "0:v:0"] ++ fast_args ++ ["-f", "null", "-"]
-
-      port =
-        Port.open(
-          {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
-          [:stderr_to_stdout, :exit_status, :line, args: args]
-        )
-
-      stream_port(port, 0, fn line, acc ->
-        case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
-          nil ->
-            acc
-
-          [_, frames_str] ->
-            case Integer.parse(frames_str) do
-              :error ->
-                acc
-
-              {new_frames, _} ->
-                if callback != nil and new_frames != acc, do: callback.(new_frames)
-
-                new_frames
-            end
-        end
-      end)
+      get_frames_ffmpeg(input, fast, callback)
     end
   end
 
-  defp get_keyframes(input, callback) do
+  defp get_frames_ffms2(input, fast, callback) do
+    args = ["-u", "helpers/vs_frames.py", input]
+      case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
+        {resp, 0} ->
+          case Regex.run(~r/([0-9]+)/, resp) do
+            [_, total_frames_s] ->
+              case Integer.parse(total_frames_s) do
+                {total_frames, _} ->
+                  total_frames
+                _ ->
+                  get_frames_ffmpeg(input, fast, callback)
+              end
+            _ ->
+              get_frames_ffmpeg(input, fast, callback)
+          end
+        _ ->
+          get_frames_ffmpeg(input, fast, callback)
+      end
+  end
+
+  defp get_frames_ffmpeg(input, fast, callback) do
+    fast_args = if fast, do: ["-c", "copy"], else: []
+    args = ["-hide_banner", "-i", input, "-map", "0:v:0"] ++ fast_args ++ ["-f", "null", "-"]
+
+    port =
+      Port.open(
+        {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+        [:stderr_to_stdout, :exit_status, :line, args: args]
+      )
+
+    stream_port(port, 0, fn line, acc ->
+      case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
+        nil ->
+          acc
+
+        [_, frames_str] ->
+          case Integer.parse(frames_str) do
+            :error ->
+              acc
+
+            {new_frames, _} ->
+              if callback != nil and new_frames != acc, do: callback.(new_frames)
+
+              new_frames
+          end
+      end
+    end)
+  end
+
+  defp get_keyframes(input, callback \\ nil) do
     {frames, total_frames} =
       case Path.extname(String.downcase(input)) do
         # get_keyframes_ebml(input)
@@ -386,9 +410,8 @@ defmodule Grav1.Split do
 
     case {frames, total_frames} do
       {:nothing, _} ->
-        # if vapoursynth supported
-        if false do
-          get_keyframes_vs_ffms2(input)
+        if Application.fetch_env!(:versions, :vapoursynth) != nil do
+          get_keyframes_vs_ffms2(input, callback)
         else
           get_keyframes_ffmpeg(input, callback)
         end
@@ -401,10 +424,32 @@ defmodule Grav1.Split do
   defp get_keyframes_ebml(input) do
   end
 
-  defp get_keyframes_vs_ffms2(input) do
+  defp get_keyframes_vs_ffms2(input, callback) do
+    args = ["-u", "helpers/vs_keyframes.py", input]
+    case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
+      {resp, 0} ->
+        try do
+          [_, total_frames_s] = Regex.run(~r/total_frames: ([0-9]+)/, resp)
+          [_, keyframes_s] = Regex.run(~r/([0-9,]+)/, resp)
+
+          {total_frames, _} = Integer.parse(total_frames_s)
+
+          keyframes =
+            keyframes_s
+            |> String.split(",")
+            |> Enum.map(&(Integer.parse(&1) |> elem(0)))
+          {keyframes, total_frames}
+
+        rescue
+          _ ->
+            get_keyframes_ffmpeg(input, callback)
+        end
+      _ ->
+        get_keyframes_ffmpeg(input, callback)
+    end
   end
 
-  defp get_keyframes_ffmpeg(input, callback \\ nil) do
+  defp get_keyframes_ffmpeg(input, callback) do
     args = [
       "-hide_banner",
       "-i",
@@ -463,27 +508,6 @@ defmodule Grav1.Split do
           end
       end
     end)
-  end
-
-  defp pipe(port1, port2) do
-    receive do
-      {^port1, {:exit_status, status}} ->
-        IO.inspect("port1 exited, status #{status}")
-
-      {^port2, {:exit_status, status}} ->
-        IO.inspect("port2 exited, status #{status}")
-
-      {^port2, {:data, data}} ->
-        IO.inspect(data)
-        pipe(port1, port2)
-
-      {^port1, {:data, data}} ->
-        Port.command(port2, data)
-        pipe(port1, port2)
-
-      b ->
-        IO.inspect(b)
-    end
   end
 
   defp get_aom_keyframes(input, callback) do

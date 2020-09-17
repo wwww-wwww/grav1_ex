@@ -200,7 +200,7 @@ defmodule Grav1.WorkerAgent do
     Agent.get(__MODULE__, fn val ->
       val.clients
     end)
-    |> Enum.filter(&(elem(&1, 1).connected))
+    |> Enum.filter(&elem(&1, 1).connected)
     |> Enum.reduce([], fn {socket_id, client}, acc ->
       workers_segments =
         client.workers

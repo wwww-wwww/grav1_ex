@@ -210,12 +210,20 @@ defmodule Grav1.Split do
       misalignment = total_frames != start
 
       if misalignment,
-        do: callback.(:log, "misalignment at #{inspect(segment)} expected: #{start}, got: #{total_frames}")
+        do:
+          callback.(
+            :log,
+            "misalignment at #{inspect(segment)} expected: #{start}, got: #{total_frames}"
+          )
 
       bad_framecount = num_frames != length
 
       if bad_framecount,
-        do: callback.(:log, "bad framecount #{inspect(segment)} expected: #{length}, got: #{num_frames}")
+        do:
+          callback.(
+            :log,
+            "bad framecount #{inspect(segment)} expected: #{length}, got: #{num_frames}"
+          )
 
       # if not using vs_ffms2
       bad_framecount_slow =
@@ -342,10 +350,11 @@ defmodule Grav1.Split do
             end
         end
       end)
-    
+
     case resp do
       {:error, _} ->
         correct_split_ffmpeg(input, output, start, length, callback)
+
       resp ->
         resp
     end
@@ -361,22 +370,26 @@ defmodule Grav1.Split do
 
   defp get_frames_ffms2(input, fast, callback) do
     args = ["-u", "helpers/vs_frames.py", input]
-      case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
-        {resp, 0} ->
-          case Regex.run(~r/([0-9]+)/, resp) do
-            [_, total_frames_s] ->
-              case Integer.parse(total_frames_s) do
-                {total_frames, _} ->
-                  total_frames
-                _ ->
-                  get_frames_ffmpeg(input, fast, callback)
-              end
-            _ ->
-              get_frames_ffmpeg(input, fast, callback)
-          end
-        _ ->
-          get_frames_ffmpeg(input, fast, callback)
-      end
+
+    case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
+      {resp, 0} ->
+        case Regex.run(~r/([0-9]+)/, resp) do
+          [_, total_frames_s] ->
+            case Integer.parse(total_frames_s) do
+              {total_frames, _} ->
+                total_frames
+
+              _ ->
+                get_frames_ffmpeg(input, fast, callback)
+            end
+
+          _ ->
+            get_frames_ffmpeg(input, fast, callback)
+        end
+
+      _ ->
+        get_frames_ffmpeg(input, fast, callback)
+    end
   end
 
   defp get_frames_ffmpeg(input, fast, callback) do
@@ -434,6 +447,7 @@ defmodule Grav1.Split do
 
   defp get_keyframes_vs_ffms2(input, callback) do
     args = ["-u", "helpers/vs_keyframes.py", input]
+
     case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
       {resp, 0} ->
         try do
@@ -446,12 +460,13 @@ defmodule Grav1.Split do
             keyframes_s
             |> String.split(",")
             |> Enum.map(&(Integer.parse(&1) |> elem(0)))
-          {keyframes, total_frames}
 
+          {keyframes, total_frames}
         rescue
           _ ->
             get_keyframes_ffmpeg(input, callback)
         end
+
       _ ->
         get_keyframes_ffmpeg(input, callback)
     end

@@ -55,7 +55,7 @@ defmodule Grav1.Application do
 
     case File.ls("actions") do
       {:ok, files} ->
-        files = Enum.map(files, &(Path.join("actions", &1)))
+        files = Enum.map(files, &Path.join("actions", &1))
         Application.put_env(:on_complete_actions, :actions, files)
 
       _ ->

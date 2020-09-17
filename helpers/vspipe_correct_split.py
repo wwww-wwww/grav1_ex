@@ -15,6 +15,7 @@ def correct_split(path_vspipe, path_ffmpeg, path_in, path_out, start, length):
     "-e", str(start + length - 1),
     "-y", "-"
   ]
+  
   ffmpeg_cmd = [
     path_ffmpeg, "-hide_banner",
     "-i", "-",
@@ -22,15 +23,18 @@ def correct_split(path_vspipe, path_ffmpeg, path_in, path_out, start, length):
     "-crf", "0",
     "-y", path_out
   ]
-  pipe1 = subprocess.Popen(cmd1,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.STDOUT)
 
-  pipe2 = subprocess.Popen(cmd2,
+  pipe1 = subprocess.Popen(vspipe_cmd,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,
+    creationflags=subprocess.CREATE_NO_WINDOW)
+
+  pipe2 = subprocess.Popen(ffmpeg_cmd,
     stdin=pipe1.stdout,
     stdout=subprocess.PIPE,
     stderr=subprocess.STDOUT,
-    universal_newlines=True)
+    universal_newlines=True,
+    creationflags=subprocess.CREATE_NO_WINDOW)
 
   frame = -1
   while True:
@@ -52,10 +56,9 @@ def correct_split(path_vspipe, path_ffmpeg, path_in, path_out, start, length):
 
 if len(sys.argv) > 1:
   correct_split(
-    sys.argb[1],
+    sys.argv[1],
     sys.argv[2],
     sys.argv[3],
     sys.argv[4],
-    sys.argv[5],
-    int(sys.argv[6]),
-    int(sys.argv[7]))
+    int(sys.argv[5]),
+    int(sys.argv[6]))

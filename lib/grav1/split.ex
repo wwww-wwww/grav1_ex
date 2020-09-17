@@ -249,7 +249,7 @@ defmodule Grav1.Split do
   end
 
   defp correct_split(input, output, start, length, callback) do
-    if Application.fetch_env!(:grav1, :path_vspipe) do
+    if Application.fetch_env!(:grav1, :path_vspipe) != nil do
       correct_split_vspipe(input, output, start, length, callback)
     else
       correct_split_ffmpeg(input, output, start, length, callback)
@@ -321,26 +321,34 @@ defmodule Grav1.Split do
     port =
       Port.open(
         {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
-        [:exit_status, :line, args: args]
+        [:exit_status, :line, :binary, args: args]
       )
 
-    stream_port(port, 0, fn line, acc ->
-      case Regex.scan(@re_python_aom, line) |> List.last() do
-        nil ->
-          acc
+    resp =
+      stream_port(port, 0, fn line, acc ->
+        case Regex.scan(@re_python_aom, line) |> List.last() do
+          nil ->
+            acc
 
-        [_, frame_str] ->
-          case Integer.parse(frame_str) do
-            :error ->
-              acc
+          [_, frame_str] ->
+            case Integer.parse(frame_str) do
+              :error ->
+                acc
 
-            {new_frame, _} ->
-              if callback != nil and acc != new_frame, do: callback.(new_frame)
+              {new_frame, _} ->
+                if callback != nil and acc != new_frame, do: callback.(new_frame)
 
-              new_frame
-          end
-      end
-    end)
+                new_frame
+            end
+        end
+      end)
+    
+    case resp do
+      {:error, _} ->
+        correct_split_ffmpeg(input, output, start, length, callback)
+      resp ->
+        resp
+    end
   end
 
   defp get_frames(input, fast \\ true, callback \\ nil) do

@@ -16,4 +16,4 @@ if __name__ == "__main__":
     "{}.mkv".format(projectid)
   ]
 
-  subprocess.run(ffmpeg, creationflags=subprocess.CREATE_NO_WINDOW))
+  subprocess.run(ffmpeg, creationflags=subprocess.CREATE_NO_WINDOW)

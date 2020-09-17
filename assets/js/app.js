@@ -1,11 +1,11 @@
 import "../css/app.scss"
 
-import {create_element} from "./util"
+import { create_element } from "./util"
 import Modal from "./modals"
 
 import "phoenix_html"
 
-import {Socket} from "phoenix"
+import { Socket } from "phoenix"
 import LiveSocket from "phoenix_live_view"
 
 import NProgress from "nprogress"
@@ -14,6 +14,8 @@ window.addEventListener("phx:page-loading-start", _ => NProgress.start())
 window.addEventListener("phx:page-loading-stop", _ => NProgress.done())
 
 const hooks = {}
+
+const re_args = /"[^"\\]*(?:\\[\S\s][^"\\]*)*"|'[^'\\]*(?:\\[\S\s][^'\\]*)*'|\/[^\/\\]*(?:\\[\S\s][^\/\\]*)*\/[gimy]*(?=\s|$)|(?:\\\s|\S)+/g
 
 hooks.load_encoders = {
   mounted() {
@@ -55,6 +57,8 @@ hooks.load_encoders = {
         }
       }
 
+      params.push(...[...opt_extra_encoder_params.value.matchAll(re_args)].flat())
+
       const files = []
       for (const c of files_list.children) {
         if (c.tagName == "DIV" && c.children[0].value.length > 0) {
@@ -72,6 +76,11 @@ hooks.load_encoders = {
       }
       extra_params.priority = opt_extra_priority.value
       extra_params.name = opt_extra_name.value
+      extra_params.on_complete = opt_extra_on_complete.value
+      extra_params.on_complete_params = [...opt_extra_on_complete_params.value.matchAll(re_args)].flat()
+      extra_params.ffmpeg_params = [...opt_extra_ffmpeg_params.value.matchAll(re_args)].flat()
+
+      console.log(extra_params)
 
       const confirm_modal = new Modal({
         title: "Create Project"
@@ -164,4 +173,5 @@ let liveSocket = new LiveSocket("/live", Socket, {
     _csrf_token: csrfToken
   }
 })
+
 liveSocket.connect()

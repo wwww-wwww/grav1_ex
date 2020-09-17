@@ -53,6 +53,15 @@ defmodule Grav1.Application do
       ~r/([^\r\n]+)/
     )
 
+    case File.ls("actions") do
+      {:ok, files} ->
+        files = Enum.map(files, &(Path.join("actions", &1)))
+        Application.put_env(:on_complete_actions, :actions, files)
+
+      _ ->
+        Application.put_env(:on_complete_actions, :actions, [])
+    end
+
     opts = [strategy: :one_for_one, name: Grav1.Supervisor]
     Supervisor.start_link(children, opts)
   end

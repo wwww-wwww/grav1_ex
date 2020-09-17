@@ -109,6 +109,27 @@
         <label for="opt_extra_name">Name</label>
         <input id="opt_extra_name">
       </div>
+      <div>
+        <label for="opt_extra_on_complete">On complete</label>
+        <select id="opt_extra_on_complete">
+          <option value="">Do nothing</option>
+          <%= for action <- Application.fetch_env!(:on_complete_actions, :actions) do %>
+            <option><%= action %></option>
+          <% end %>
+        </select>
+      </div>
+      <div>
+        <label for="opt_extra_on_complete_params">On complete params</label>
+        <input id="opt_extra_on_complete_params">
+      </div>
+      <div>
+        <label for="opt_extra_encoder_params">Encoder params</label>
+        <input id="opt_extra_encoder_params">
+      </div>
+      <div>
+        <label for="opt_extra_ffmpeg_params">FFmpeg params</label>
+        <input id="opt_extra_ffmpeg_params">
+      </div>
     </div>
     <%= submit("add", id: "btn_add_project") %>
   </div>

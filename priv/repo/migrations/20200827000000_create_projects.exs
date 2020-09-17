@@ -23,6 +23,9 @@ defmodule Grav1.Repo.Migrations.CreateProjects do
 
       add :state, :integer, default: 0
 
+      add :on_complete, :string, default: nil
+      add :on_complete_params, {:array, :string}
+
       timestamps()
     end
   end

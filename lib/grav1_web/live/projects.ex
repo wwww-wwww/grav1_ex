@@ -60,7 +60,10 @@ defmodule Grav1Web.ProjectsLive do
           "extra_params" => %{
             "split" => %{"min_frames" => min_frames, "max_frames" => max_frames},
             "name" => name,
-            "priority" => priority
+            "priority" => priority,
+            "on_complete" => on_complete,
+            "on_complete_params" => on_complete_params,
+            "ffmpeg_params" => ffmpeg_params
           }
         },
         socket
@@ -68,10 +71,13 @@ defmodule Grav1Web.ProjectsLive do
     case Projects.add_project(files, %{
            encoder: encoder,
            encoder_params: encoder_params,
+           ffmpeg_params: ffmpeg_params,
            split_min_frames: min_frames,
            split_max_frames: max_frames,
            name: name,
-           priority: priority
+           priority: priority,
+           on_complete: on_complete,
+           on_complete_params: on_complete_params
          }) do
       {:error, reason} ->
         {:reply, %{success: false, reason: reason}, socket}

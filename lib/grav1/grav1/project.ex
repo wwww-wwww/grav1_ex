@@ -25,6 +25,9 @@ defmodule Grav1.Project do
 
     field :state, State, default: :idle
 
+    field :on_complete, :string, default: nil
+    field :on_complete_params, {:array, :string}, default: []
+
     field :status, :string, default: "", virtual: true
     field :progress_num, :float, default: nil, virtual: true
     field :progress_den, :float, default: nil, virtual: true

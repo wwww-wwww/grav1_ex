@@ -46,9 +46,9 @@ hooks.load_encoders = {
       const params = []
       for (const param_name of Object.keys(options)) {
         if (options[param_name].length > 0) {
-          if (param_name.startsWith("--")) {
+          if (encoders[selected_encoder][param_name].oneword) {
             params.push(`${param_name}=${options[param_name]}`)
-          } else if (param_name.startsWith("-")) {
+          } else {
             params.push(param_name)
             params.push(options[param_name])
           }
@@ -79,8 +79,6 @@ hooks.load_encoders = {
       extra_params.on_complete = opt_extra_on_complete.value
       extra_params.on_complete_params = [...opt_extra_on_complete_params.value.matchAll(re_args)].flat()
       extra_params.ffmpeg_params = [...opt_extra_ffmpeg_params.value.matchAll(re_args)].flat()
-
-      console.log(extra_params)
 
       const confirm_modal = new Modal({
         title: "Create Project"

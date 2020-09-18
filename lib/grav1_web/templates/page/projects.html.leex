@@ -41,7 +41,7 @@
     <% encoder_params = Grav1.Encoder.params() %>
     <% encoders = encoder_params |> Map.keys() %>
 
-    <div id="encoders" style="display: none"><%= encoders_json() %></div>
+    <div id="encoders" style="display: none"><%= Grav1.Encoder.params_json() %></div>
 
     <label for="select_encoder">encoder</label>
     <select id="select_encoder">
@@ -60,31 +60,19 @@
       <%= for encoder <- encoders do %>
         <div id="params_<%= encoder %>" class="hidden">
           <h2><%= encoder %> params</h2>
-
-          <% {simple, advanced} = encoder_params[encoder] %>
-
-          <div id="<%= encoder %>_params_simple">
+          <%= for {cat_name, params} <- encoder_params[encoder] do %>
             <div>
-              <%= for {param_name, param} <- simple do %>
-                <div>
-                  <label for="opt_<%= encoder %>_<%= param_name %>"><%= param_name %></label>
-                  <%= render_encoder_param(encoder, param_name, param) %>
-                </div>
-              <% end %>
+              <h3><%= cat_name %></h3>
+              <div>
+                <%= for param <- params do %>
+                  <div>
+                    <label for="opt_<%= encoder %>_<%= param.name %>"><%= param.name %></label>
+                    <%= render_encoder_param(encoder, param) %>
+                  </div>
+                <% end %>
+              </div>
             </div>
-          </div>
-
-          <div id="<%= encoder %>_params_advanced">
-            <div>advanced</div>
-            <div>
-              <%= for {param_name, param} <- advanced do %>
-                <div>
-                  <label for="opt_<%= encoder %>_<%= param_name %>"><%= param_name %></label>
-                  <%= render_encoder_param(encoder, param_name, param) %>
-                </div>
-              <% end %>
-            </div>
-          </div>
+          <% end %>
         </div>
       <% end %>
     </div>

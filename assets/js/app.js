@@ -25,19 +25,27 @@ hooks.load_encoders = {
       const selected_encoder = select_encoder.value
 
       const options = {}
+      const overrides = []
       for (const param_name of Object.keys(encoders[selected_encoder])) {
-        const param = encoders[selected_encoder][param_name]
+        const param = encoders[selected_encoder][param_name].data
         const e = document.getElementById(`opt_${selected_encoder}_${param_name}`)
         if (param.requires) {
           const req_e = document.getElementById(`opt_${selected_encoder}_${param.requires}`)
           if (!param.requires_values.includes(req_e.value)) continue
         }
-        if (param_name == "resolution") {
+        if (param.overrides) {
+          if (param.overrides[e.value]) {
+            overrides.push(...param.overrides[e.value])
+          }
+        }
+        if (param_name == "Resolution") {
           if (e.value != "custom") {
             const res_dims = e.value.split("x")
             options["--width"] = res_dims[0]
             options["--height"] = res_dims[1]
           }
+        } else if (param.type == "flag") {
+          if (e.checked) options[param_name] = true
         } else {
           options[param_name] = e.value
         }
@@ -45,9 +53,12 @@ hooks.load_encoders = {
 
       const params = []
       for (const param_name of Object.keys(options)) {
+        const param = encoders[selected_encoder][param_name].data
         if (options[param_name].length > 0) {
-          if (encoders[selected_encoder][param_name].oneword) {
+          if (param.oneword) {
             params.push(`${param_name}=${options[param_name]}`)
+          } else if (param.type == "flag") {
+            params.push(param_name)
           } else {
             params.push(param_name)
             params.push(options[param_name])
@@ -57,6 +68,7 @@ hooks.load_encoders = {
         }
       }
 
+      params.push(...overrides)
       params.push(...[...opt_extra_encoder_params.value.matchAll(re_args)].flat())
 
       const files = []
@@ -114,7 +126,7 @@ hooks.load_encoders = {
 
     for (const encoder_name of Object.keys(encoders)) {
       for (const param_name of Object.keys(encoders[encoder_name])) {
-        const param = encoders[encoder_name][param_name]
+        const param = encoders[encoder_name][param_name].data
         const e = document.getElementById(`opt_${encoder_name}_${param_name}`)
         if (param.requires) {
           const req_e = document.getElementById(`opt_${encoder_name}_${param.requires}`)

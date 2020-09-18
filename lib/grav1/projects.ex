@@ -363,6 +363,9 @@ defmodule Grav1.Projects do
           ProjectsExecutor.add_action(:concat, project)
         end
 
+      %{state: :completed} ->
+        Projects.log(project, "loaded")
+
       _ ->
         IO.inspect(project)
     end

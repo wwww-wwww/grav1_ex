@@ -65,7 +65,7 @@ defmodule Grav1Web.ApiController do
             end
 
           {:error, reason} ->
-            IO.inspect(reason)
+            conn |> json(%{success: false, reason: inspect(reason)})
         end
     end
   end

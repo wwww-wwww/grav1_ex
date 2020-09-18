@@ -15,6 +15,7 @@ defmodule Grav1.Actions do
     case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
       {_, 0} ->
         Grav1.Projects.log(project, project.on_complete <> " exited with code 0")
+
       {resp, 1} ->
         Grav1.Projects.log(project, project.on_complete <> " exited with code 1")
         Grav1.Projects.log(project, resp)

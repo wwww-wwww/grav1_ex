@@ -59,13 +59,18 @@ defmodule Grav1Web.PageView do
 
   def render_project_progressbar(project) do
     width =
-      if project.progress_num != nil and
-           project.progress_den != nil and
-           (project.state != :preparing or
-              project.status != :source_keyframes) do
-        100 * project.progress_num / project.progress_den
-      else
-        0
+      cond do
+        project.progress_num != nil and
+          project.progress_den != nil and
+            (project.state != :preparing or
+               project.status != :source_keyframes) ->
+          100 * project.progress_num / project.progress_den
+
+        project.state == :completed ->
+          100
+
+        true ->
+          0
       end
 
     Tag.content_tag(:div, "", class: "progress_bar", style: "width: #{width}%")
@@ -93,6 +98,9 @@ defmodule Grav1Web.PageView do
           status ->
             inspect(status)
         end
+
+      :completed ->
+        "100% | #{project.input_frames} frames"
 
       state ->
         total_projects = map_size(project.segments)

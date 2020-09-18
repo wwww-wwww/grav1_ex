@@ -38,7 +38,7 @@ defmodule Grav1.Concat do
           Grav1.Actions.run_complete(project, output)
         end
 
-        Projects.update_project(project, %{state: :complete}, true)
+        Projects.update_project(project, %{state: :completed}, true)
 
       {:error, reason} ->
         Projects.log(project, reason)

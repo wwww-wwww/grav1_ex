@@ -10,8 +10,14 @@ defmodule Grav1.Actions do
       ]
       |> Enum.concat(project.on_complete_params)
 
-    Grav1.Projects.log(project, Enum.join(args, " "))
+    Grav1.Projects.log(project, "Running #{project.on_complete} " <> Enum.join(args, " "))
 
-    System.cmd(Application.fetch_env!(:grav1, :path_python), args)
+    case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
+      {_, 0} ->
+        Grav1.Projects.log(project, project.on_complete <> " exited with code 0")
+      {resp, 1} ->
+        Grav1.Projects.log(project, project.on_complete <> " exited with code 1")
+        Grav1.Projects.log(project, resp)
+    end
   end
 end

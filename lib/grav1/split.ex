@@ -65,6 +65,7 @@ defmodule Grav1.Split do
     {source_keyframes, total_frames} =
       get_keyframes(input, fn x -> callback.({:progress, :source_keyframes}, x) end)
 
+    callback.(:log, "#{length(source_keyframes)} keyframes")
     callback.(:log, inspect(source_keyframes))
     callback.(:log, "getting aom keyframes")
 
@@ -108,7 +109,7 @@ defmodule Grav1.Split do
         {@split_args, {frames, splits, segments}}
       end
 
-    callback.(:log, "#{length(segments)} splits, #{length(segments)} segments")
+    callback.(:log, "#{length(splits)} splits, #{length(segments)} segments")
 
     case split_video(input, split_args, frames, path_split, total_frames, callback) do
       ^total_frames ->
@@ -208,29 +209,31 @@ defmodule Grav1.Split do
       num_frames = get_frames(path_segment)
 
       misalignment = total_frames != start
+      bad_framecount = num_frames != length
 
-      if misalignment,
-        do:
+      cond do
+        misalignment ->
           callback.(
             :log,
             "misalignment at #{inspect(segment)} expected: #{start}, got: #{total_frames}"
           )
 
-      bad_framecount = num_frames != length
-
-      if bad_framecount,
-        do:
+        bad_framecount ->
           callback.(
             :log,
             "bad framecount #{inspect(segment)} expected: #{length}, got: #{num_frames}"
           )
 
+        true ->
+          :ok
+      end
+
       # if not using vs_ffms2
-      bad_framecount_slow =
-        Application.fetch_env!(:versions, :vapoursynth) == nil and
+      {num_frames, bad_framecount_slow} =
+        if Application.fetch_env!(:versions, :vapoursynth) == nil do
           case get_frames(path_segment, false) do
             ^num_frames ->
-              false
+              {num_frames, false}
 
             num_frames_slow ->
               callback.(
@@ -238,8 +241,11 @@ defmodule Grav1.Split do
                 "bad framecount #{segment} expected: #{num_frames}, got: #{num_frames_slow}"
               )
 
-              true
+              {num_frames_slow, true}
           end
+        else
+          {num_frames, false}
+        end
 
       if misalignment or bad_framecount or bad_framecount_slow do
         path_old = Path.join(path_split, "old")
@@ -891,11 +897,11 @@ defmodule Grav1.Split do
     {frames, splits, segments}
   end
 
-  def stream_port(port, {lines, acc}, transform) do
+  def stream_port_lines(port, {lines, acc}, transform) do
     receive do
       {^port, {:data, {_, data}}} ->
         new_lines = lines ++ [data]
-        stream_port(port, {new_lines, transform.(to_string(data), acc)}, transform)
+        stream_port_lines(port, {new_lines, transform.(to_string(data), acc)}, transform)
 
       {^port, {:exit_status, 0}} ->
         acc
@@ -906,6 +912,6 @@ defmodule Grav1.Split do
   end
 
   def stream_port(port, acc, transform) do
-    stream_port(port, {[], acc}, transform)
+    stream_port_lines(port, {[], acc}, transform)
   end
 end

@@ -119,64 +119,72 @@ defmodule Grav1.WorkerAgent do
              (length(Enum.filter(client.workers, &(&1.segment == nil))) > 0 and
                 length(client.job_queue) == 0))
       end)
+    
+    if length(available_clients) > 0 do
+      verifying_segments =
+        Grav1.VerificationExecutor.get_queue()
+        |> Enum.map(fn job ->
+          job.segment.id
+        end)
 
-    verifying_segments =
-      Grav1.VerificationExecutor.get_queue()
-      |> Enum.map(fn job ->
-        job.segment.id
-      end)
+      segments =
+        val.clients
+        |> Projects.get_segments(verifying_segments)
 
-    segments =
-      val.clients
-      |> Projects.get_segments(length(available_clients), verifying_segments)
+      {clients_segments, _} =
+        Enum.reduce(available_clients, {[], segments}, fn {key, client}, {acc, segments} ->
+          filtered_segments =
+            segments
+            |> Enum.filter(fn segment ->
+              segment.id != client.downloading and
+                segment.id != client.uploading and
+                segment.id not in client.job_queue and
+                segment.id not in client.upload_queue
+            end)
 
-    {clients_segments, _} =
-      Enum.reduce(available_clients, {[], segments}, fn {key, client}, {acc, segments} ->
-        filtered_segments =
-          segments
-          |> Enum.filter(fn segment ->
-            segment.id != client.downloading and
-              segment.id != client.uploading and
-              segment.id not in client.job_queue and
-              segment.id not in client.upload_queue
-          end)
+          case List.first(filtered_segments) do
+            nil ->
+              {acc, segments}
 
-        case List.first(filtered_segments) do
-          nil ->
-            {acc, segments}
+            new_segment ->
+              new_segments =
+                segments
+                |> Enum.filter(fn segment -> segment.id != new_segment.id end)
 
-          new_segment ->
-            new_segments =
-              segments
-              |> Enum.filter(fn segment -> segment.id != new_segment.id end)
+              {acc ++ [{{key, client}, new_segment}], new_segments}
+          end
+        end)
 
-            {acc ++ [{{key, client}, new_segment}], new_segments}
-        end
-      end)
+      new_clients =
+        clients_segments
+        |> Enum.reduce(%{}, fn {{key, client}, segment}, acc ->
+          Map.put(acc, key, %{client | sending_job: segment.id})
+        end)
 
-    new_clients =
       clients_segments
-      |> Enum.reduce(%{}, fn {{key, client}, segment}, acc ->
-        Map.put(acc, key, %{client | sending_job: segment.id})
+      |> Enum.each(fn {{_, client}, segment} ->
+        Grav1Web.WorkerChannel.push_segment(client.socket_id, segment)
       end)
 
-    clients_segments
-    |> Enum.each(fn {{_, client}, segment} ->
-      Grav1Web.WorkerChannel.push_segment(client.socket_id, segment)
-    end)
-
-    {clients_segments, new_clients}
+      {clients_segments, new_clients}
+    else
+      nil
+    end
   end
 
   def distribute_segments() do
     clients =
       Agent.get_and_update(__MODULE__, fn val ->
-        {clients_segments, new_clients} = distribute_segments(val)
-
-        {clients_segments, %{val | clients: Map.merge(val.clients, new_clients)}}
+        case distribute_segments(val) do
+          nil ->
+            {nil, val}
+          
+          {clients_segments, new_clients} ->
+            {clients_segments, %{val | clients: Map.merge(val.clients, new_clients)}}
+        end
       end)
 
-    if length(clients) > 0 do
+    if clients != nil do
       Grav1Web.WorkersLive.update()
       true
     else
@@ -186,9 +194,13 @@ defmodule Grav1.WorkerAgent do
 
   def distribute_segments_cast() do
     Agent.cast(__MODULE__, fn val ->
-      {_clients, new_clients} = distribute_segments(val)
+      case distribute_segments(val) do
+        nil ->
+          val
 
-      %{val | clients: Map.merge(val.clients, new_clients)}
+        {_clients, new_clients} ->
+          %{val | clients: Map.merge(val.clients, new_clients)}
+      end
     end)
   end
 

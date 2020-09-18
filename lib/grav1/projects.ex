@@ -15,7 +15,7 @@ defmodule Grav1.Projects do
         segments =
           project.segments
           |> Enum.reduce(%{}, fn segment, segments ->
-            Map.put(segments, segment.id, %{segment | project: project})
+            Map.put(segments, segment.id, %{segment | project: %{project | segments: []}})
           end)
 
         incomplete_segments = for {k, v} <- segments, v.filesize == 0, into: %{}, do: {k, v}
@@ -42,7 +42,7 @@ defmodule Grav1.Projects do
     {:reply, Map.get(state.segments, id), state}
   end
 
-  def handle_call({:get_segments, clients, n, filter}, _, state) do
+  def handle_call({:get_segments, clients, filter}, _, state) do
     workers =
       clients
       |> Enum.reduce([], fn {_, client}, acc ->
@@ -52,9 +52,6 @@ defmodule Grav1.Projects do
     sorted =
       state.segments
       |> Map.values()
-      |> Enum.filter(fn segment ->
-        segment.id not in filter
-      end)
       |> Enum.sort_by(& &1.frames, :desc)
       |> Enum.sort_by(& &1.project.priority, :asc)
       |> Enum.sort_by(
@@ -72,8 +69,12 @@ defmodule Grav1.Projects do
         &length(Enum.filter(workers, fn worker -> worker.segment == &1.id end)),
         :asc
       )
+      |> Enum.sort_by(
+        &(&1.id in filter),
+        :asc
+      )
 
-    {:reply, Enum.take(sorted, n), state}
+    {:reply, sorted, state}
   end
 
   def handle_call(:get_segments, _, state) do
@@ -211,8 +212,8 @@ defmodule Grav1.Projects do
     GenServer.call(__MODULE__, {:get_segment, id})
   end
 
-  def get_segments(workers, n, filter) do
-    GenServer.call(__MODULE__, {:get_segments, workers, n, filter})
+  def get_segments(workers, filter) do
+    GenServer.call(__MODULE__, {:get_segments, workers, filter})
   end
 
   def get_segments() do

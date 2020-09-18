@@ -1,5 +1,6 @@
 main > div {
   display: flex;
+  overflow: hidden;
   flex: 1;
 }
 
@@ -86,6 +87,7 @@ main > div {
 
 .page_project {
   flex: 1;
+  overflow: hidden;
 }
 
 .scene_list {

@@ -63,7 +63,7 @@ defmodule Grav1.Split do
     callback.(:log, "getting keyframes")
 
     {source_keyframes, total_frames} =
-      get_keyframes(input, fn x -> callback.({:progress, :source_keyframes}, x) end)
+      get_keyframes(input, callback)
 
     callback.(:log, "#{length(source_keyframes)} keyframes")
     callback.(:log, inspect(source_keyframes))
@@ -172,24 +172,27 @@ defmodule Grav1.Split do
             [:stderr_to_stdout, :exit_status, :line, args: args]
           )
 
-        stream_port(port, 0, fn line, acc ->
-          case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
-            nil ->
-              acc
+        {:ok, frames, _} =
+          stream_port(port, 0, fn line, acc ->
+            case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
+              nil ->
+                acc
 
-            [_, frame_str] ->
-              case Integer.parse(frame_str) do
-                :error ->
-                  acc
+              [_, frame_str] ->
+                case Integer.parse(frame_str) do
+                  :error ->
+                    acc
 
-                {new_frame, _} ->
-                  if callback != nil and acc != new_frame,
-                    do: callback.({:progress, :splitting}, {new_frame, total_frames})
+                  {frame, _} ->
+                    if callback != nil and acc != frame,
+                      do: callback.({:progress, :splitting}, {frame, total_frames})
 
-                  new_frame
-              end
-          end
-        end)
+                      frame
+                end
+            end
+          end)
+
+        frames
 
       {:error, reason} ->
         {:error, "unable to create split directory. reason: #{reason}"}
@@ -408,30 +411,32 @@ defmodule Grav1.Split do
         [:stderr_to_stdout, :exit_status, :line, args: args]
       )
 
-    stream_port(port, 0, fn line, acc ->
-      case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
-        nil ->
-          acc
+    {:ok, frames, _} =
+      stream_port(port, 0, fn line, acc ->
+        case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
+          nil ->
+            acc
 
-        [_, frames_str] ->
-          case Integer.parse(frames_str) do
-            :error ->
-              acc
+          [_, frames_str] ->
+            case Integer.parse(frames_str) do
+              :error ->
+                acc
 
-            {new_frames, _} ->
-              if callback != nil and new_frames != acc, do: callback.(new_frames)
+              {new_frames, _} ->
+                if callback != nil and new_frames != acc, do: callback.(new_frames)
 
-              new_frames
-          end
-      end
-    end)
+                new_frames
+            end
+        end
+      end)
+
+    frames
   end
 
   defp get_keyframes(input, callback \\ nil) do
     {frames, total_frames} =
       case Path.extname(String.downcase(input)) do
-        # get_keyframes_ebml(input)
-        ".mkv" -> {:nothing, :nothing}
+        ".mkv" -> get_keyframes_ebml(input, callback)
         _ -> {:nothing, :nothing}
       end
 
@@ -445,19 +450,52 @@ defmodule Grav1.Split do
 
       {frames, :nothing} ->
         {frames, get_frames(input, true, callback)}
+
+      {frames, total_frames} ->
+        {frames, total_frames}
     end
   end
 
-  defp get_keyframes_ebml(input) do
+  defp get_keyframes_ebml(input, callback) do
+    callback.(:log, "getting keyframes from ebml")
+
+    args = ["-u", "helpers/ebml_keyframes.py", input]
+
+    case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
+      {resp, 0} ->
+        try do
+          [_, total_frames_s] = Regex.run(~r/total frames: ([0-9]+)/, resp)
+          [_, keyframes_s] = Regex.run(~r/([0-9,]+)/, resp)
+
+          {total_frames, _} = Integer.parse(total_frames_s)
+
+          keyframes =
+            keyframes_s
+            |> String.split(",")
+            |> Enum.map(&(Integer.parse(&1) |> elem(0)))
+
+          {keyframes, total_frames}
+        rescue
+          _ ->
+            callback.(:log, resp)
+            {:nothing, :nothing}
+        end
+
+      resp ->
+        callback.(:log, inspect(resp))
+        {:nothing, :nothing}
+    end
   end
 
   defp get_keyframes_vs_ffms2(input, callback) do
+    callback.(:log, "getting keyframes using vs ffms2")
+
     args = ["-u", "helpers/vs_keyframes.py", input]
 
     case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
       {resp, 0} ->
         try do
-          [_, total_frames_s] = Regex.run(~r/total_frames: ([0-9]+)/, resp)
+          [_, total_frames_s] = Regex.run(~r/total frames: ([0-9]+)/, resp)
           [_, keyframes_s] = Regex.run(~r/([0-9,]+)/, resp)
 
           {total_frames, _} = Integer.parse(total_frames_s)
@@ -479,6 +517,8 @@ defmodule Grav1.Split do
   end
 
   defp get_keyframes_ffmpeg(input, callback) do
+    callback.(:log, "getting keyframes using ffmpeg")
+
     args = [
       "-hide_banner",
       "-i",
@@ -502,41 +542,40 @@ defmodule Grav1.Split do
         [:stderr_to_stdout, :exit_status, :line, args: args]
       )
 
-    stream_port(port, {[], 0}, fn line, acc ->
-      {keyframes, frames} = acc
+    {:ok, keyframes, lines} =
+      stream_port(port, [], fn line, acc ->
+        case Regex.scan(@re_ffmpeg_keyframe, line) |> List.last() do
+          nil ->
+            acc
 
-      case Regex.scan(@re_ffmpeg_keyframe, line) |> List.last() do
-        nil ->
-          case Regex.scan(@re_ffmpeg_frames2, line) |> List.last() do
-            nil ->
-              acc
+          [_, frame_str, key, pict_type] ->
+            case Integer.parse(frame_str) do
+              :error ->
+                acc
 
-            [_, frame_str] ->
-              case Integer.parse(frame_str) do
-                :error ->
-                  acc
+              {frame, _} ->
+                callback.({:progress, :source_keyframes}, frame)
 
-                {new_frame, _} ->
-                  if callback != nil and frames != new_frame, do: callback.(new_frame)
+                if key == "1" and pict_type == "I",
+                  do: acc ++ [frame],
+                  else: acc
+            end
+        end
+      end)
 
-                  {keyframes, new_frame}
-              end
-          end
+    case Regex.scan(@re_ffmpeg_frames2, Enum.join(lines)) |> List.last() do
+      [_, frame_str] ->
+        case Integer.parse(frame_str) do
+          {frames, _} ->
+            {keyframes, frames}
 
-        [_, frame_str, key, pict_type] ->
-          case Integer.parse(frame_str) do
-            :error ->
-              acc
+          :error ->
+            {keyframes, :nothing}
+        end
 
-            {new_frame, _} ->
-              if callback != nil and frames != new_frame, do: callback.(new_frame)
-
-              if key == "1" and pict_type == "I",
-                do: {keyframes ++ [new_frame], frames},
-                else: acc
-          end
-      end
-    end)
+      nil ->
+        {keyframes, :nothing}
+    end
   end
 
   defp get_aom_keyframes(input, callback) do
@@ -547,7 +586,7 @@ defmodule Grav1.Split do
         [:exit_status, :line, args: ["-u", "helpers/aom_firstpass.py", input]]
       )
 
-    result =
+    {:ok, result, _lines} =
       stream_port(port, 0, fn line, acc ->
         case Regex.scan(@re_python_aom, line) |> List.last() do
           nil ->
@@ -904,7 +943,7 @@ defmodule Grav1.Split do
         stream_port_lines(port, {new_lines, transform.(to_string(data), acc)}, transform)
 
       {^port, {:exit_status, 0}} ->
-        acc
+        {:ok, acc, lines}
 
       {^port, {:exit_status, status}} ->
         {:error, acc, lines}

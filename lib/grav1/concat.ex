@@ -1,5 +1,5 @@
 defmodule Grav1.Concat do
-  alias Grav1.{Projects, Repo}
+  alias Grav1.Projects
 
   @re_ffmpeg_frames ~r/frame= *([^ ]+?) /
   @re_mkvmerge_frames ~r/Appending track 0 from file no. ([0-9]+)/

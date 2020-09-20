@@ -986,7 +986,7 @@ defmodule Grav1.Split do
       {^port, {:exit_status, 0}} ->
         {:ok, acc, lines}
 
-      {^port, {:exit_status, status}} ->
+      {^port, {:exit_status, _}} ->
         {:error, acc, lines}
     end
   end

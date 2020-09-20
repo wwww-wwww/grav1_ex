@@ -3,7 +3,7 @@ defmodule Grav1Web.WorkerChannel do
 
   alias Phoenix.Socket.Broadcast
   alias Grav1Web.Endpoint
-  alias Grav1.{WorkerAgent, Worker}
+  alias Grav1.WorkerAgent
 
   def join("worker", %{"state" => state, "id" => id}, socket) do
     send(self(), {:reconnect, id, state})

@@ -3,8 +3,6 @@ defmodule Grav1Web.PageController do
 
   import Phoenix.LiveView.Controller
 
-  alias Grav1.User
-
   def index(conn, _params) do
     render(conn, "index.html", layout: false)
   end

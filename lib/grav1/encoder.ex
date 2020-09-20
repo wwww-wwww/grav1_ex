@@ -232,7 +232,7 @@ defmodule Grav1.Encoder do
   @params_json Enum.map(@params, fn {enc, cat} ->
       all_params =
         cat
-        |> Enum.reduce(%{}, fn {cat_name, params}, acc ->
+        |> Enum.reduce(%{}, fn {_, params}, acc ->
           params = params |> Enum.reduce(%{}, fn %{name: name, desc: desc, data: data}, acc2 ->
             Map.put(acc2, name, %{desc: desc, data: data})
           end)

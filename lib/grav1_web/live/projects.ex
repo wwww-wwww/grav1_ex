@@ -3,7 +3,7 @@ defmodule Grav1Web.ProjectsLive do
 
   @topic "projects_live"
 
-  alias Grav1.{Projects, Project, Repo, RateLimit}
+  alias Grav1.{Projects, Project, RateLimit}
   alias Grav1Web.Endpoint
 
   def render(assigns) do

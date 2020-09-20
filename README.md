@@ -11,6 +11,13 @@ vapoursynth and vspipe (optional)
 mkvmerge (optional)
 ```
 
+### Python dependencies
+Not required but will make speed up the program considerably
+```
+enzyme
+vapoursynth
+```
+
 To start your Phoenix server:
 
   * Install dependencies with `mix deps.get`

@@ -106,7 +106,7 @@ defmodule Grav1.Concat do
           end)
 
         case resp do
-          ^total_frames ->
+          {:ok, ^total_frames, _lines} ->
             :ok
 
           {:error, _acc, lines} ->
@@ -163,7 +163,7 @@ defmodule Grav1.Concat do
       end)
 
     case resp do
-      ^total_segments ->
+      {:ok, ^total_segments, _lines} ->
         :ok
 
       {:error, _acc, lines} ->

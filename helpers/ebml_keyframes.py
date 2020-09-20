@@ -130,11 +130,13 @@ class SimpleTag(object):
     return cls(name, language, default, string, binary)
 
 def get_track_frames(mkv, track):
-  for tag in mkv.tags:
-    if tag.targets[1].data == track:
-      for st in tag.simpletags:
-        if st.name.lower() == "number_of_frames":
-          return st.string
+  try:
+    for tag in mkv.tags:
+      if tag.targets[1].data == track:
+        for st in tag.simpletags:
+          if st.name.lower() == "number_of_frames":
+            return st.string
+  except: pass
   return None
 
 if __name__ == "__main__":

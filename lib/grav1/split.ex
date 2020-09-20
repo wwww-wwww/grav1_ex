@@ -2,7 +2,8 @@ defmodule Grav1.Split do
   @re_ffmpeg_frames ~r/frame= *([^ ]+?) /
   @re_ffmpeg_frames2 ~r/([0-9]+?) frames successfully decoded/
   @re_ffmpeg_keyframe ~r/n:([0-9]+)\.[0-9]+ pts:.+key:(.).+pict_type:(.)/
-  @re_python_aom ~r/frame *([^ ]+)/
+  @re_python_aom ~r/frame ([0-9]+)/
+  @re_aom_onepass ~r/frame ([0-9]+) (0|1)/
 
   @split_args ["-c:v", "copy"]
 
@@ -70,8 +71,9 @@ defmodule Grav1.Split do
 
     aom_keyframes =
       input
-      |> get_aom_keyframes(fn x -> callback.({:progress, :aom_keyframes}, {x, total_frames}) end)
+      |> get_aom_keyframes(total_frames, callback)
       |> kf_min_dist(min_frames, total_frames)
+      |> ensure_zero()
       |> ensure_total_frames(total_frames)
       |> kf_max_dist(min_frames, max_frames, source_keyframes)
 
@@ -406,7 +408,7 @@ defmodule Grav1.Split do
     frames
   end
 
-  defp get_keyframes(input, callback \\ nil) do
+  defp get_keyframes(input, callback) do
     {frames, total_frames} =
       case Path.extname(String.downcase(input)) do
         ".mkv" -> get_keyframes_ebml(input, callback)
@@ -422,6 +424,7 @@ defmodule Grav1.Split do
         end
 
       {frames, :nothing} ->
+        callback.(:log, "getting total number of frames")
         {frames, get_frames(input, true, callback)}
 
       {frames, total_frames} ->
@@ -437,17 +440,21 @@ defmodule Grav1.Split do
     case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
       {resp, 0} ->
         try do
-          [_, total_frames_s] = Regex.run(~r/total frames: ([0-9]+)/, resp)
           [_, keyframes_s] = Regex.run(~r/([0-9,]+)/, resp)
-
-          {total_frames, _} = Integer.parse(total_frames_s)
 
           keyframes =
             keyframes_s
             |> String.split(",")
             |> Enum.map(&(Integer.parse(&1) |> elem(0)))
 
-          {keyframes, total_frames}
+          case Regex.run(~r/total frames: ([0-9]+)/, resp) do
+            [_, total_frames_s] ->
+              {total_frames, _} = Integer.parse(total_frames_s)
+              {keyframes, total_frames}
+
+            _ ->
+              {keyframes, :nothing}
+          end
         rescue
           _ ->
             callback.(:log, resp)
@@ -543,12 +550,75 @@ defmodule Grav1.Split do
     end
   end
 
-  defp get_aom_keyframes(input, callback) do
-    # until i can get piping to work
+  defp get_aom_keyframes(input, total_frames, callback) do
+    if Application.fetch_env!(:grav1, :path_aomenc_onepass_kf) != nil do
+      get_aom_keyframes_aio(input, total_frames, callback)
+    else
+      get_aom_keyframes_aomenc(input, total_frames, callback)
+    end
+  end
+
+  defp get_aom_keyframes_aio(input, total_frames, callback) do
+    callback.(:log, "getting keyframes using onepass_keyframes")
+
+    args = [
+      "-u",
+      "helpers/aom_onepass.py",
+      Application.fetch_env!(:grav1, :path_ffmpeg),
+      Application.fetch_env!(:grav1, :path_aomenc_onepass_kf),
+      input
+    ]
+
     port =
       Port.open(
         {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
-        [:exit_status, :line, args: ["-u", "helpers/aom_firstpass.py", input]]
+        [:exit_status, :line, args: args]
+      )
+
+    resp =
+      stream_port(port, {[], 0}, fn line, {keyframes, frames} ->
+        case Regex.scan(@re_aom_onepass, line) |> List.last() do
+          [_, frame_str, is_keyframe] ->
+            {frame, _} = Integer.parse(frame_str)
+            callback.({:progress, :aom_keyframes}, {frame, total_frames})
+
+            if is_keyframe == "1" or is_keyframe == 1 do
+              {keyframes ++ [frame], frame}
+            else
+              {keyframes, frame}
+            end
+
+          _ ->
+            {keyframes, frames}
+        end
+      end)
+
+    case resp do
+      {:ok, {keyframes, frames}, _lines} when frames + 21 >= total_frames ->
+        callback.(:log, inspect(keyframes))
+        keyframes
+
+      resp ->
+        callback.(:log, inspect(resp))
+        get_aom_keyframes_aomenc(input, total_frames, callback)
+    end
+  end
+
+  defp get_aom_keyframes_aomenc(input, total_frames, callback) do
+    callback.(:log, "getting keyframes using aomenc")
+
+    args = [
+      "-u",
+      "helpers/aom_firstpass.py",
+      Application.fetch_env!(:grav1, :path_ffmpeg),
+      Application.fetch_env!(:grav1, :path_aomenc),
+      input
+    ]
+
+    port =
+      Port.open(
+        {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
+        [:exit_status, :line, args: args]
       )
 
     {:ok, result, _lines} =
@@ -556,7 +626,7 @@ defmodule Grav1.Split do
         case Regex.scan(@re_python_aom, line) |> List.last() do
           [_, frame_str] ->
             {frame, _} = Integer.parse(frame_str)
-            if callback != nil and acc != frame, do: callback.(frame)
+            callback.({:progress, :aom_keyframes}, {frame, total_frames})
             frame
 
           _ ->
@@ -594,15 +664,19 @@ defmodule Grav1.Split do
             fpf_frames = Enum.count(dict_list)
 
             # intentionally skipping 0th frame and last 16 frames
-            1..(fpf_frames - 16)
-            |> Enum.reduce({1, [0]}, fn x, {frame_count_so_far, keyframes} ->
-              if test_candidate_kf(dict_list, x, frame_count_so_far) do
-                {1, keyframes ++ [x]}
-              else
-                {frame_count_so_far + 1, keyframes}
-              end
-            end)
-            |> elem(1)
+            kf =
+              1..(fpf_frames - 16)
+              |> Enum.reduce({1, [0]}, fn x, {frame_count_so_far, keyframes} ->
+                if test_candidate_kf(dict_list, x, frame_count_so_far) do
+                  {1, keyframes ++ [x]}
+                else
+                  {frame_count_so_far + 1, keyframes}
+                end
+              end)
+              |> elem(1)
+
+            callback.(:log, inspect(kf))
+            kf
         end
     end
   end
@@ -833,6 +907,14 @@ defmodule Grav1.Split do
       end)
     else
       aom_keyframes
+    end
+  end
+
+  defp ensure_zero(aom_keyframes) do
+    if 0 in aom_keyframes do
+      aom_keyframes
+    else
+      [0] ++ aom_keyframes
     end
   end
 

@@ -11,6 +11,7 @@ config :grav1,
   path_mkvmerge: System.find_executable("mkvmerge"),
   path_projects: "projects",
   path_verification: "verification"
+  path_aomenc_onepass_kf: System.find_executable("onepass_keyframes"),
 
 # Configures the endpoint
 config :grav1, Grav1Web.Endpoint,

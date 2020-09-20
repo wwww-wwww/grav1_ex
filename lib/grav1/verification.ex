@@ -60,32 +60,17 @@ defmodule Grav1.VerificationExecutor do
   def get_frames("av1", path) do
     args = ["-i", path, "-o", "/dev/null", "--framethreads", "1", "--tilethreads", "16"]
 
-    port =
-      Port.open(
-        {:spawn_executable, Application.fetch_env!(:grav1, :path_dav1d)},
-        [:stderr_to_stdout, :exit_status, :line, args: args]
-      )
-
-    resp =
-      Grav1.Split.stream_port(port, 0, fn line, acc ->
-        case Regex.scan(@re_dav1d, line) |> List.last() do
-          nil ->
-            acc
-
+    case System.cmd(Application.fetch_env!(:grav1, :path_dav1d), args, stderr_to_stdout: true) do
+      {resp, 0} ->
+        case Regex.scan(@re_dav1d, resp) |> List.last() do
           [_, frame_str] ->
-            case Integer.parse(frame_str) do
-              :error ->
-                acc
+            {frame, _} = Integer.parse(frame_str)
+            frame
 
-              {new_frame, _} ->
-                new_frame
-            end
+          _ ->
+            nil
         end
-      end)
 
-    case resp do
-      {:ok, frames, _lines} ->
-        frames
       _ ->
         nil
     end

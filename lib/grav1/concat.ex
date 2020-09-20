@@ -87,25 +87,21 @@ defmodule Grav1.Concat do
         resp =
           Grav1.Split.stream_port(port, 0, fn line, acc ->
             case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
-              nil ->
-                acc
-
               [_, frame_str] ->
-                case Integer.parse(frame_str) do
-                  :error ->
-                    acc
+                {frame, _} = Integer.parse(frame_str)
 
-                  {new_frame, _} ->
-                    if acc != new_frame,
-                      do:
-                        Projects.update_progress(
-                          project,
-                          :concatenating,
-                          {new_frame, total_frames}
-                        )
+                if acc != frame,
+                  do:
+                    Projects.update_progress(
+                      project,
+                      :concatenating,
+                      {frame, total_frames}
+                    )
 
-                    new_frame
-                end
+                frame
+
+              _ ->
+                acc
             end
           end)
 
@@ -148,25 +144,21 @@ defmodule Grav1.Concat do
     resp =
       Grav1.Split.stream_port(port, 0, fn line, acc ->
         case Regex.scan(@re_mkvmerge_frames, line) |> List.last() do
-          nil ->
-            acc
-
           [_, group] ->
-            case Integer.parse(group) do
-              :error ->
-                acc
+            {segment, _} = Integer.parse(group)
 
-              {new_segment, _} ->
-                if acc != new_segment,
-                  do:
-                    Projects.update_progress(
-                      project,
-                      :concatenating,
-                      {new_segment, total_segments}
-                    )
+            if acc != segment,
+              do:
+                Projects.update_progress(
+                  project,
+                  :concatenating,
+                  {segment, total_segments}
+                )
 
-                new_segment
-            end
+            segment
+
+          _ ->
+            acc
         end
       end)
 

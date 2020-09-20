@@ -119,7 +119,7 @@ defmodule Grav1.WorkerAgent do
              (length(Enum.filter(client.workers, &(&1.segment == nil))) > 0 and
                 length(client.job_queue) == 0))
       end)
-    
+
     if length(available_clients) > 0 do
       verifying_segments =
         Grav1.VerificationExecutor.get_queue()
@@ -178,7 +178,7 @@ defmodule Grav1.WorkerAgent do
         case distribute_segments(val) do
           nil ->
             {nil, val}
-          
+
           {clients_segments, new_clients} ->
             {clients_segments, %{val | clients: Map.merge(val.clients, new_clients)}}
         end

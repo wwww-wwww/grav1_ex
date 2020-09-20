@@ -66,21 +66,29 @@ defmodule Grav1.VerificationExecutor do
         [:stderr_to_stdout, :exit_status, :line, args: args]
       )
 
-    Grav1.Split.stream_port(port, 0, fn line, acc ->
-      case Regex.scan(@re_dav1d, line) |> List.last() do
-        nil ->
-          acc
+    resp =
+      Grav1.Split.stream_port(port, 0, fn line, acc ->
+        case Regex.scan(@re_dav1d, line) |> List.last() do
+          nil ->
+            acc
 
-        [_, frame_str] ->
-          case Integer.parse(frame_str) do
-            :error ->
-              acc
+          [_, frame_str] ->
+            case Integer.parse(frame_str) do
+              :error ->
+                acc
 
-            {new_frame, _} ->
-              new_frame
-          end
-      end
-    end)
+              {new_frame, _} ->
+                new_frame
+            end
+        end
+      end)
+
+    case resp do
+      {:ok, frames, _lines} ->
+        frames
+      _ ->
+        nil
+    end
   end
 
   def get_frames(:aomenc, path) do

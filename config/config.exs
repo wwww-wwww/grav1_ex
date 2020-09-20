@@ -9,9 +9,9 @@ config :grav1,
   path_vspipe: System.find_executable("vspipe"),
   path_python: System.find_executable("python"),
   path_mkvmerge: System.find_executable("mkvmerge"),
+  path_aomenc_onepass_kf: System.find_executable("onepass_keyframes"),
   path_projects: "projects",
   path_verification: "verification"
-  path_aomenc_onepass_kf: System.find_executable("onepass_keyframes"),
 
 # Configures the endpoint
 config :grav1, Grav1Web.Endpoint,

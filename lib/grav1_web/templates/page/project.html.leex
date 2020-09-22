@@ -8,7 +8,8 @@
     </div>
     <div class="tabs">
       <%= submit("segments", phx_click: "view_project", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectSegmentsComponent)) %>
-      <%= submit("log", phx_click: "view_log", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectLogComponent)) %>
+      <%= submit("settings", phx_click: "view_project_settings", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectSettingsComponent)) %>
+      <%= submit("log", phx_click: "view_project_log", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectLogComponent)) %>
     </div>
   </div>
   <%= @page %>

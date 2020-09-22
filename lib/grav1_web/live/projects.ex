@@ -87,7 +87,7 @@ defmodule Grav1Web.ProjectsLive do
     end
   end
 
-  def handle_event("view_log", %{"id" => id}, socket) do
+  def view_project_page(socket, page, id, assign) do
     case Projects.get_project(id) do
       nil ->
         {:noreply, socket |> assign(page: nil)}
@@ -101,9 +101,8 @@ defmodule Grav1Web.ProjectsLive do
                id: "project:#{project.id}",
                project: project,
                page:
-                 live_component(socket, Grav1Web.ProjectLogComponent,
-                   id: "project_log:#{project.id}",
-                   log: project.log
+                 live_component(socket, page,
+                   [id: "project_log:#{project.id}"] ++ assign.(project)
                  )
              )
          )}
@@ -111,27 +110,15 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   def handle_event("view_project", %{"id" => id}, socket) do
-    case Projects.get_project(id) do
-      nil ->
-        {:noreply, socket |> assign(page: nil)}
+    view_project_page(socket, Grav1Web.ProjectSegmentsComponent, id, fn project -> [segments: get_segments(project)] end)
+  end
 
-      project ->
-        {:noreply,
-         socket
-         |> assign(
-           page:
-             live_component(socket, Grav1Web.ProjectComponent,
-               id: "project:#{project.id}",
-               project: project,
-               a: 5,
-               page:
-                 live_component(socket, Grav1Web.ProjectSegmentsComponent,
-                   id: "project_segments:#{project.id}",
-                   segments: get_segments(project)
-                 )
-             )
-         )}
-    end
+  def handle_event("view_project_log", %{"id" => id}, socket) do
+    view_project_page(socket, Grav1Web.ProjectLogComponent, id, fn project -> [log: project.log] end)
+  end
+
+  def handle_event("view_project_settings", %{"id" => id}, socket) do
+    view_project_page(socket, Grav1Web.ProjectSettingsComponent, id, fn project -> [project: project] end)
   end
 
   # update project list and project

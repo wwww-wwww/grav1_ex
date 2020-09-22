@@ -21,3 +21,11 @@ defmodule Grav1Web.ProjectSegmentsComponent do
     Grav1Web.PageView.render("project_segments.html", assigns)
   end
 end
+
+defmodule Grav1Web.ProjectSettingsComponent do
+  use Phoenix.LiveComponent
+
+  def render(assigns) do
+    Grav1Web.PageView.render("project_settings.html", assigns)
+  end
+end

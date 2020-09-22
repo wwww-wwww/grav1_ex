@@ -322,8 +322,8 @@ defmodule Grav1.Projects do
             case Repo.transaction(q) do
               {:ok, transactions} ->
                 transactions
-                |> Enum.reduce(%{}, fn {_, x}, acc ->
-                  Map.put(acc, x.id, x)
+                |> Enum.reduce(%{}, fn {_, project}, acc ->
+                  Map.put(acc, project.id, %{project | segments: []})
                 end)
                 |> add_projects()
 

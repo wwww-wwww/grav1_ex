@@ -34,7 +34,7 @@ defmodule Grav1Web.ProjectsLive do
             project: project,
             page:
               live_component(socket, Grav1Web.ProjectSegmentsComponent,
-                id: "project_segments:#{project.id}",
+                id: "#{Grav1Web.ProjectSegmentsComponent}:#{project.id}",
                 segments: get_segments(project)
               )
           )
@@ -101,24 +101,28 @@ defmodule Grav1Web.ProjectsLive do
                id: "project:#{project.id}",
                project: project,
                page:
-                 live_component(socket, page,
-                   [id: "project_log:#{project.id}"] ++ assign.(project)
-                 )
+                 live_component(socket, page, [id: "#{page}:#{project.id}"] ++ assign.(project))
              )
          )}
     end
   end
 
   def handle_event("view_project", %{"id" => id}, socket) do
-    view_project_page(socket, Grav1Web.ProjectSegmentsComponent, id, fn project -> [segments: get_segments(project)] end)
+    view_project_page(socket, Grav1Web.ProjectSegmentsComponent, id, fn project ->
+      [segments: get_segments(project)]
+    end)
   end
 
   def handle_event("view_project_log", %{"id" => id}, socket) do
-    view_project_page(socket, Grav1Web.ProjectLogComponent, id, fn project -> [log: project.log] end)
+    view_project_page(socket, Grav1Web.ProjectLogComponent, id, fn project ->
+      [log: project.log]
+    end)
   end
 
   def handle_event("view_project_settings", %{"id" => id}, socket) do
-    view_project_page(socket, Grav1Web.ProjectSettingsComponent, id, fn project -> [project: project] end)
+    view_project_page(socket, Grav1Web.ProjectSettingsComponent, id, fn project ->
+      [project: project]
+    end)
   end
 
   # update project list and project
@@ -146,7 +150,11 @@ defmodule Grav1Web.ProjectsLive do
 
   # update only project logs
   def handle_info(%{topic: @topic, event: "log", payload: %{project: project}}, socket) do
-    send_update(Grav1Web.ProjectLogComponent, id: "project_log:#{project.id}", log: project.log)
+    send_update(Grav1Web.ProjectLogComponent,
+      id: "#{Grav1Web.ProjectLogComponent}:#{project.id}",
+      log: project.log
+    )
+
     {:noreply, socket}
   end
 
@@ -160,7 +168,7 @@ defmodule Grav1Web.ProjectsLive do
         socket
       ) do
     send_update(Grav1Web.ProjectSegmentsComponent,
-      id: "project_segments:#{project.id}",
+      id: "#{Grav1Web.ProjectSegmentsComponent}:#{project.id}",
       segments: get_segments(project, workers)
     )
 

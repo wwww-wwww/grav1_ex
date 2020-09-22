@@ -1,6 +1,8 @@
 # Grav1
 ## Distributed encoding management server
 
+Client is located [here](https://github.com/wwww-wwww/grav1_ex_client)
+
 ### Requirements
 
 - elixir ~> 1.7 (Erlang/OTP ~> 21)

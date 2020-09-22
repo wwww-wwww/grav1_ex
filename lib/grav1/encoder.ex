@@ -112,7 +112,7 @@ defmodule Grav1.Encoder do
         {
           "-b",
           "Bit depth",
-          %{type: :option, oneword: true, options: ["8", "10", "12"], overrides: %{"10" => ["--profile=2"], "12" => ["--profile=2"]}}
+          %{type: :option, oneword: false, options: ["8", "10", "12"], overrides: %{"10" => ["--profile=2"], "12" => ["--profile=2"]}}
         }
       ],
       "Keyframe Placement" => [

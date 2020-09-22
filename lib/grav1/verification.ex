@@ -48,6 +48,7 @@ defmodule Grav1.VerificationExecutor do
   alias Grav1.{Repo, Projects, Segment, VerificationQueue}
 
   @re_dav1d ~r/Decoded [0-9]+\/([0-9]+) frames/
+  @re_ffmpeg_frames_d ~r/([0-9]+?) frames successfully decoded/
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
@@ -80,6 +81,25 @@ defmodule Grav1.VerificationExecutor do
     get_frames("av1", path)
   end
 
+  def get_frames(_, path) do
+    args = ["-hide_banner", "-loglevel", "debug", "-i", path, "-f", "null", "-"]
+
+    case System.cmd(Application.fetch_env!(:grav1, :path_ffmpeg), args, stderr_to_stdout: true) do
+      {resp, 0} ->
+        case Regex.scan(@re_ffmpeg_frames_d, resp) |> List.last() do
+          [_, frame_str] ->
+            {frame, _} = Integer.parse(frame_str)
+            frame
+
+          _ ->
+            nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
   def verify(%{
         segment: segment,
         path: path,
@@ -108,6 +128,14 @@ defmodule Grav1.VerificationExecutor do
                     Grav1Web.ProjectsLive.update(project)
                     Grav1Web.ProjectsLive.update_segments(project)
                     Grav1.WorkerAgent.cancel_segments()
+
+                    incomplete_segments =
+                      project.segments
+                      |> Enum.filter(&(elem(&1, 1).filesize == 0))
+
+                    if length(incomplete_segments) == 0 do
+                      ProjectsExecutor.add_action(:concat, project)
+                    end
 
                   {:error, reason} ->
                     IO.inspect(reason)

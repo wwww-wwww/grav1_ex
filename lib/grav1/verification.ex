@@ -134,7 +134,7 @@ defmodule Grav1.VerificationExecutor do
                       |> Enum.filter(&(elem(&1, 1).filesize == 0))
 
                     if length(incomplete_segments) == 0 do
-                      ProjectsExecutor.add_action(:concat, project)
+                      Grav1.ProjectsExecutor.add_action(:concat, project)
                     end
 
                   {:error, reason} ->

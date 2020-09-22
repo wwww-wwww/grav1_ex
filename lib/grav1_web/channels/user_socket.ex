@@ -17,13 +17,8 @@ defmodule Grav1Web.UserSocket do
     end
   end
 
-  def connect(_, socket, _) do
-    socket_id = new_id()
-
-    {:ok,
-     socket
-     |> assign(:socket_id, socket_id)
-     |> assign(:user_id, "$" <> socket_id)}
+  def connect(_params, _socket, _) do
+    :error
   end
 
   def id(socket) do

@@ -5,16 +5,36 @@ defmodule Grav1Web.WorkerChannel do
   alias Grav1Web.Endpoint
   alias Grav1.WorkerAgent
 
-  def join("worker", %{"state" => state, "id" => id}, socket) do
-    send(self(), {:reconnect, id, state})
-    :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
-    {:ok, socket.assigns.socket_id, socket}
+  def join("worker", %{"versions" => versions, "state" => state, "id" => id}, socket) do
+    bad_versions =
+      versions
+      |> Enum.filter(fn {encoder, version} ->
+        Application.fetch_env!(:versions, String.to_atom(encoder)) != version
+      end)
+
+    if length(bad_versions) > 0 do
+      {:error, %{reason: "bad versions: " <> inspect(bad_versions)}}
+    else
+      send(self(), {:reconnect, id, state})
+      :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
+      {:ok, socket.assigns.socket_id, socket}
+    end
   end
 
-  def join("worker", %{"state" => state}, socket) do
-    send(self(), {:after_join, state})
-    :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
-    {:ok, socket.assigns.socket_id, socket}
+  def join("worker", %{"versions" => versions, "state" => state}, socket) do
+    bad_versions =
+      versions
+      |> Enum.filter(fn {encoder, version} ->
+        Application.fetch_env!(:versions, String.to_atom(encoder)) != version
+      end)
+
+    if length(bad_versions) > 0 do
+      {:error, %{reason: "bad versions: " <> inspect(bad_versions)}}
+    else
+      send(self(), {:after_join, state})
+      :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
+      {:ok, socket.assigns.socket_id, socket}
+    end
   end
 
   def terminate(_, socket) do

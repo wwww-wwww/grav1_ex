@@ -86,26 +86,34 @@ defmodule Grav1Web.ApiController do
            %{
              "encoder_params" => encoder_params,
              "ffmpeg_params" => ffmpeg_params,
-             "passes" => passes
+             "passes" => passes,
+             "encoder" => encoder,
+             "version" => version
            }} ->
             case Projects.get_segment(segment_id) do
               nil ->
                 conn |> json(%{success: false, reason: "segment not found"})
 
               segment ->
-                if encoder_params == segment.project.encoder_params and
-                     ffmpeg_params == segment.project.ffmpeg_params and
-                     passes == 2 do
-                  new_path =
-                    Application.fetch_env!(:grav1, :path_verification)
-                    |> Path.join("#{segment_id}_#{socket_id}_#{Ecto.UUID.generate()}.ivf")
-                    |> Path.absname()
+                cond do
+                  version != Application.fetch_env!(:versions, String.to_atom(encoder)) ->
+                    conn |> json(%{success: false, reason: "bad version of" <> encoder})
 
-                  File.cp(path, new_path)
-                  VerificationExecutor.add_segment(segment, new_path, user, socket_id)
-                  conn |> json(%{success: true})
-                else
-                  conn |> json(%{success: false, reason: "outdated segment settings"})
+                  encoder_params == segment.project.encoder_params and
+                    ffmpeg_params == segment.project.ffmpeg_params and
+                    String.to_atom(encoder) == segment.project.encoder and
+                      passes == 2 ->
+                    new_path =
+                      Application.fetch_env!(:grav1, :path_verification)
+                      |> Path.join("#{segment_id}_#{socket_id}_#{Ecto.UUID.generate()}.ivf")
+                      |> Path.absname()
+
+                    File.cp(path, new_path)
+                    VerificationExecutor.add_segment(segment, new_path, user, socket_id)
+                    conn |> json(%{success: true})
+
+                  true ->
+                    conn |> json(%{success: false, reason: "outdated segment settings"})
                 end
             end
 

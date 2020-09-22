@@ -24,6 +24,55 @@ main > div {
   background-color: rgba(255, 255, 255, 0.6);
   padding: 0.25em 0.5em;
   cursor: pointer;
+
+  .top {
+    font-size: 0.9em;
+    margin-bottom: 0.25em;
+  }
+
+  .bottom {
+    font-size: 0.7em;
+    width: 100%;
+    position: relative;
+    line-height: 1em;
+    display: flex;
+    justify-content: center;
+
+    * {
+      z-index: 0;
+    }
+
+    .progress_bar {
+      max-width: 100%;
+      height: 100%;
+      width: 0%;
+      background-color: rgba(80, 210, 240, 0.4);
+      position: absolute;
+      left: 0;
+      transition: width 0.5s;
+    }
+
+    div:not(:first-child) {
+      padding: 0 0.2em;
+    }
+
+    .progress_left {
+      flex: 1;
+    }
+
+    .progress_center {
+      text-align: center;
+    }
+
+    .progress_right {
+      text-align: right;
+      flex-shrink: 0;
+    }
+  }
+
+  div:first-child > div:last-child {
+    font-size: 0.8em;
+  }
 }
 
 .project:hover {
@@ -35,116 +84,18 @@ main > div {
   background-color: rgba(230, 230, 230, 0.6);
 }
 
-.project > .top {
-  font-size: 0.9em;
-  margin-bottom: 0.25em;
-}
-
-.project > .bottom {
-  font-size: 0.7em;
-  width: 100%;
-  position: relative;
-  line-height: 1em;
-  display: flex;
-  justify-content: center;
-}
-
-.project > .bottom  > * {
-  z-index: 0;
-}
-
-.project > .bottom > .progress_bar {
-  max-width: 100%;
-  height: 100%;
-  width: 0%;
-  background-color: rgba(80, 210, 240, 0.4);
-  position: absolute;
-  left: 0;
-  transition: width 0.5s;
-}
-
-.project > .bottom > div:not(:first-child) {
-  padding: 0 0.2em;
-
-}
-
-.project > .bottom > .progress_left {
-  flex: 1;
-}
-
-.project > .bottom > .progress_center {
-  text-align: center;
-}
-
-.project > .bottom > .progress_right {
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.project > div:first-child > div:last-child {
-  font-size: 0.8em;
-}
-
 .page_project {
   flex: 1;
   overflow: hidden;
 }
 
-.scene_list {
-  flex: 1;
-  overflow-y: scroll;
-}
-.scene_list > .scenes {
-  padding: 0.1em;
-  margin: 0;
-}
-.scene_list > .scenes > div {
-  border-radius: 3px;
-  font-family: "Consolas", "Courier New", Courier, monospace;
-  border: 1px solid rgba(0, 0, 0, 0.5);
-  padding: 0.25em;
-  margin: 0.1em;
-  text-decoration: none;
-  min-width: 5.2em;
-  display: inline-block;
-  background-color: rgba(255, 255, 255, 0.6);
-}
-.scene_list > .scenes > div > div:first-child {
-  display: inline-block;
-}
-.scene_list > .scenes > div .link, .scenes > div .link:visited {
-  color: rgb(50, 120, 255);
-  text-decoration: none;
-  cursor: pointer;
-}
-.scene_list > .scenes > div > div:last-child {
-  font-size: 0.7em;
-  white-space: pre;
-}
-.scene_list > .scenes > div > button {
-  font-size: 0.7em;
-}
-.form {
-  border: 1px solid black;
-  display: inline-block;
-  padding: 0.5em;
-}
-.form > .field {
-  display: flex;
-}
-.form > .field:not(:first-child) {
-  margin-top: 0.25em;
-}
-.form > .field > label {
-  flex: 1;
-  margin-right: 1em;
-}
 #text_refresh {
   flex: 1;
   text-align: right;
   align-self: center;
   margin: 0 0.5em;
 }
+
 .square {
   width: 1.5em;
   height: 1.5em;
@@ -248,38 +199,6 @@ button {
 
 #input_filter_projects {
   flex: 1;
-}
-
-.project_page {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.project_page > .header {
-  padding: 0.5em;
-  display: flex;
-  background-color: rgba(255, 255, 255, 0.6);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.6);
-}
-
-.project_page > .header > .left {
-  flex: 1;
-}
-
-.project_page > .header > .left > div {
-  min-height: 1.3em;
-}
-
-.project_page > .header > .right {
-  display: flex;
-  align-items: center;
-  padding: 0 0.5em;
-}
-
-.project_page > .header > .left > .id,
-.project_page > .header > .left > .settings {
-  font-size: 0.75em;
 }
 
 #page {

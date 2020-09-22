@@ -33,6 +33,9 @@
   margin: -1rem 0 2rem;
 }
 
+.hidden {
+  display: none;
+}
 
 html {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -47,6 +50,14 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+
+  header {
+    display: flex;
+    border-bottom: 1px solid black;
+    align-items: stretch;
+    padding: 0.25em;
+    background-color: rgba(255, 255, 255, 0.7);
+  }
 }
 
 main {
@@ -56,18 +67,9 @@ main {
   overflow-y: auto;
 }
 
-body > header {
-  display: flex;
-  border-bottom: 1px solid black;
-  align-items: stretch;
-  padding: 0.25em;
-  background-color: rgba(255, 255, 255, 0.7);
-}
-
 nav > a:not(:last-child) {
   margin-right: 0.5em;
 }
-
 
 table{
   border-collapse: collapse;

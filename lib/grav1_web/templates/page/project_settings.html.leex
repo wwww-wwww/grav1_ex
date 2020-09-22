@@ -15,7 +15,10 @@
           <option><%= action %></option>
         <% end %>
       </select>
-      <%= submit("run", id: "settings_actions_submit", data_id: @project.id, phx_hook: "settings_actions") %>
+      <div>
+        <input id="on_complete_action_params" placeholder="Action parameters">
+      </div>
+      <%= submit("Run", id: "settings_actions_submit", data_id: @project.id, phx_hook: "settings_actions") %>
     </div>
   </div>
 </div>

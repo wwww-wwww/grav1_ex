@@ -105,8 +105,8 @@ defmodule Grav1Web.ProjectsLive do
     end)
   end
 
-  def handle_event("run_complete_action", %{"id" => id, "action" => action}, socket) do
-    Grav1.Actions.add(Projects.get_project(id), action)
+  def handle_event("run_complete_action", %{"id" => id, "action" => action, "params" => params}, socket) do
+    Grav1.Actions.add(Projects.get_project(id), action, params)
     {:reply, %{success: true}, socket}
   end
 

@@ -87,26 +87,6 @@ defmodule Grav1Web.ProjectsLive do
     end
   end
 
-  def view_project_page(socket, page, id, assign) do
-    case Projects.get_project(id) do
-      nil ->
-        {:noreply, socket |> assign(page: nil)}
-
-      project ->
-        {:noreply,
-         socket
-         |> assign(
-           page:
-             live_component(socket, Grav1Web.ProjectComponent,
-               id: "project:#{project.id}",
-               project: project,
-               page:
-                 live_component(socket, page, [id: "#{page}:#{project.id}"] ++ assign.(project))
-             )
-         )}
-    end
-  end
-
   def handle_event("view_project", %{"id" => id}, socket) do
     view_project_page(socket, Grav1Web.ProjectSegmentsComponent, id, fn project ->
       [segments: get_segments(project)]
@@ -123,6 +103,11 @@ defmodule Grav1Web.ProjectsLive do
     view_project_page(socket, Grav1Web.ProjectSettingsComponent, id, fn project ->
       [project: project]
     end)
+  end
+
+  def handle_event("run_complete_action", %{"id" => id, "action" => action}, socket) do
+    Grav1.Actions.add(Projects.get_project(id), action)
+    {:reply, %{success: true}, socket}
   end
 
   # update project list and project
@@ -173,6 +158,26 @@ defmodule Grav1Web.ProjectsLive do
     )
 
     {:noreply, socket}
+  end
+
+  def view_project_page(socket, page, id, assign) do
+    case Projects.get_project(id) do
+      nil ->
+        {:noreply, socket |> assign(page: nil)}
+
+      project ->
+        {:noreply,
+         socket
+         |> assign(
+           page:
+             live_component(socket, Grav1Web.ProjectComponent,
+               id: "project:#{project.id}",
+               project: project,
+               page:
+                 live_component(socket, page, [id: "#{page}:#{project.id}"] ++ assign.(project))
+             )
+         )}
+    end
   end
 
   def get_segments(project, workers) do

@@ -1,2 +1,31 @@
-<div>
+<div class="project_settings">
+  <div>
+    <span>Encoder</span>
+    <span><%= @project.encoder %></span>
+  </div>
+  <div>
+    <span>Encoder parameters</span>
+    <span><%= @project.encoder_params |> Enum.join(" ") %></span>
+  </div>
+  <div>
+    <span>Action</span>
+    <div>
+      <select id="on_complete_actions">
+        <%= for action <- Application.fetch_env!(:on_complete_actions, :actions) do %>
+          <option><%= action %></option>
+        <% end %>
+      </select>
+      <%= submit("run", id: "settings_actions_submit", data_id: @project.id, phx_hook: "settings_actions") %>
+    </div>
+  </div>
 </div>
+
+<style>
+  .project_settings > div {
+    margin: 0.25em;
+  }
+
+  .project_settings > div > span {
+    display: block;
+  }
+</style>

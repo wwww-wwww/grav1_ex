@@ -4,12 +4,12 @@
     <div class="details">
       <span><%= @project.id %></span>
       <span><%= @project.encoder %></span>
-      <div><%= @project.encoder_params |> Enum.join(" ") %></div>
+      <span style="float: right"><%= @project.inserted_at %></span>
     </div>
     <div class="tabs">
-      <%= submit("segments", phx_click: "view_project", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectSegmentsComponent)) %>
-      <%= submit("settings", phx_click: "view_project_settings", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectSettingsComponent)) %>
-      <%= submit("log", phx_click: "view_project_log", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectLogComponent)) %>
+      <%= submit("Segments", phx_click: "view_project", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectSegmentsComponent)) %>
+      <%= submit("Settings", phx_click: "view_project_settings", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectSettingsComponent)) %>
+      <%= submit("Logs", phx_click: "view_project_log", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectLogComponent)) %>
     </div>
   </div>
   <%= @page %>

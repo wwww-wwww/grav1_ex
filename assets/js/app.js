@@ -176,6 +176,17 @@ hooks.view_project = {
   }
 }
 
+hooks.settings_actions = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      this.pushEvent("run_complete_action", {
+        id: this.el.dataset.id,
+        action: on_complete_actions.value
+      })
+    })
+  }
+}
+
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
   hooks: hooks,

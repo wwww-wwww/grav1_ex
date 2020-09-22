@@ -35,7 +35,7 @@ defmodule Grav1.Concat do
     case concat(method, project, segments, output) do
       :ok ->
         if project.on_complete != nil do
-          Grav1.Actions.run_complete(project, output)
+          Grav1.Actions.add(project, project.on_complete, project.on_complete_params)
         end
 
         Projects.update_project(project, %{state: :completed}, true)

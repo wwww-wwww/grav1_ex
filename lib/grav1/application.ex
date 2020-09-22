@@ -16,6 +16,8 @@ defmodule Grav1.Application do
       Grav1Web.Endpoint,
       Grav1.VerificationQueue,
       Grav1.VerificationExecutor,
+      Grav1.ActionsQueue,
+      Grav1.Actions,
       Grav1.ProjectsExecutorQueue,
       Grav1.ProjectsExecutor,
       Grav1.Projects

@@ -223,20 +223,13 @@ defmodule Grav1.WorkerAgent do
           end
         end)
         |> Enum.concat(
-          Enum.filter(client.job_queue, fn segment ->
-            segment not in segments
+          Enum.filter(client.job_queue ++ [client.sending_job, client.downloading], fn segment ->
+            segment not in segments and segment != nil
           end)
         )
 
-      client_segments =
-        if client.sending_job != nil and client.sending_job not in segments do
-          workers_segments ++ [client.sending_job]
-        else
-          workers_segments
-        end
-
-      if length(client_segments) > 0 do
-        acc ++ [{socket_id, client_segments}]
+      if length(workers_segments) > 0 do
+        acc ++ [{socket_id, workers_segments}]
       else
         acc
       end

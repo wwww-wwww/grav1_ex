@@ -156,6 +156,10 @@ defmodule Grav1.VerificationExecutor do
         IO.inspect("bad framecount #{bad_frames}, expected #{frames}")
         File.rm(path)
 
+      bad_frames when is_integer(bad_frames) ->
+        IO.inspect("bad framecount #{bad_frames}, expected #{frames}")
+        File.rm(path)
+
       error ->
         IO.inspect(error)
         File.rm(path)

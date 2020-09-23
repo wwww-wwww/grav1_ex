@@ -2,8 +2,8 @@ defmodule Grav1.Encoder do
   use EctoEnum, type: :encoder, enums: [:aomenc, :vpxenc, :svt_av1]
 
   @params %{
-    :aomenc => %{
-      "General" => [
+    :aomenc => [
+      General: [
         {
           "--cpu-used",
           "Speed setting (0..6 in good mode, 6..9 in realtime mode)",
@@ -30,7 +30,7 @@ defmodule Grav1.Encoder do
           %{type: :option, oneword: false, options: ["8", "10", "12"]}
         }
       ],
-      "Rate Control" => [
+      "Rate Control": [
         {
           "--end-usage",
           "Rate control mode",
@@ -47,7 +47,7 @@ defmodule Grav1.Encoder do
           %{type: :integer, oneword: true, default: 500, min: 0, max: :inf, requires: "--end-usage", requires_values: ["vbr", "cbr"]}
         },
       ],
-      "Keyframe Placement" => [
+      "Keyframe Placement": [
         {
           "--kf-max-dist",
           "Maximum keyframe interval (frames)",
@@ -59,7 +59,7 @@ defmodule Grav1.Encoder do
           %{type: :flag, default: false}
         }
       ],
-      "Other" => [
+      Other: [
         {
           "--tile-columns",
           "Number of tile columns to use, log2",
@@ -86,9 +86,9 @@ defmodule Grav1.Encoder do
           %{type: :integer, oneword: true, default: 25, min: 0, max: 35}
         },
       ]
-    },
-    :vpxenc => %{
-      "General" => [
+    ],
+    :vpxenc => [
+      General: [
         {
           "--cpu-used",
           "Speed setting",
@@ -115,7 +115,24 @@ defmodule Grav1.Encoder do
           %{type: :option, oneword: false, options: ["8", "10", "12"], overrides: %{"10" => ["--profile=2"], "12" => ["--profile=2"]}}
         }
       ],
-      "Keyframe Placement" => [
+      "Rate Control": [
+        {
+          "--end-usage",
+          "Rate control mode",
+          %{type: :option, oneword: true, options: ["q", "cq", "vbr", "cbr"]}
+        },
+        {
+          "--cq-level",
+          "Constant/Constrained Quality level",
+          %{type: :integer, oneword: true, default: 20, min: 0, max: 63, requires: "--end-usage", requires_values: ["q", "cq"]}
+        }, 
+        {
+          "--target-bitrate",
+          "Bitrate (kbps)",
+          %{type: :integer, oneword: true, default: 500, min: 0, max: :inf, requires: "--end-usage", requires_values: ["vbr", "cbr"]}
+        },
+      ],
+      "Keyframe Placement": [
         {
           "--kf-max-dist",
           "Maximum keyframe interval (frames)",
@@ -127,7 +144,7 @@ defmodule Grav1.Encoder do
           %{type: :flag, default: false}
         }
       ],
-      "Other" => [
+      Other: [
         {
           "--tile-columns",
           "Number of tile columns to use, log2",
@@ -149,9 +166,9 @@ defmodule Grav1.Encoder do
           %{type: :integer, oneword: true, default: 25, min: 0, max: 25}
         },
       ]
-    },
-    :svt_av1 => %{
-      "General" => [
+    ],
+    :svt_av1 => [
+      General: [
         {
           "--preset",
           "Encoder mode/Preset used",
@@ -173,7 +190,7 @@ defmodule Grav1.Encoder do
           %{type: :integer, oneword: false, default: 1080, min: 1, max: :inf, requires: "Resolution", requires_values: ["custom"]}
         },
       ],
-      "Rate Control" => [
+      "Rate Control": [
         {
           "--rc",
           "Rate control mode (0: CQP, 1: VBR, 2: CBR)",
@@ -197,7 +214,7 @@ defmodule Grav1.Encoder do
       #    %{type: :integer, oneword: false, default: 240, min: 0, max: :inf}
       #  },
       #],
-      "Other" => [
+      Other: [
         {
           "--tile-columns",
           "Number of tile columns to use, log2",
@@ -209,7 +226,7 @@ defmodule Grav1.Encoder do
           %{type: :integer, oneword: false, default: 0, min: 0, max: 4}
         },
       ]
-    }
+    ]
   }
   |> Enum.map(fn {enc, cat} ->
     new_cat =
@@ -223,7 +240,6 @@ defmodule Grav1.Encoder do
 
         {cat_name, new_params}
       end)
-      |> Map.new()        
 
     {enc, new_cat}
   end)

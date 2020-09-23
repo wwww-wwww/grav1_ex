@@ -131,13 +131,18 @@ defmodule Grav1.WorkerAgent do
 
       {clients_segments, _} =
         Enum.reduce(available_clients, {[], segments}, fn {key, client}, {acc, segments} ->
+          client_segments =
+            client.workers
+            |> Enum.map(& &1.segment)
+
           filtered_segments =
             segments
             |> Enum.filter(fn segment ->
               segment.id != client.downloading and
                 segment.id not in client.uploading and
                 segment.id not in client.job_queue and
-                segment.id not in client.upload_queue
+                segment.id not in client.upload_queue and
+                segment.id not in client_segments
             end)
 
           case List.first(filtered_segments) do

@@ -7,3 +7,53 @@
 <div><span>name:</span><span><%= @user.name %></span></div>
 <div><span>level:</span><span><%= @user.level %></span></div>
 <div><span>key:</span><span><%= @user.key %></span></div>
+
+<table>
+  <tr>
+    <th>connected</th>
+    <th>user</th>
+    <th>socket_id</th>
+    <th>name</th>
+    <th>platform</th>
+    <th>job_queue</th>
+    <th>queue_size</th>
+    <th>upload_queue</th>
+    <th>downloading</th>
+    <th>uploading</th>
+  </tr>
+  <%= for {_k, client} <- @clients do %>
+    <tr>
+      <td><%= client.connected %></td>
+      <td><%= client.user %></td>
+      <td><%= client.socket_id %></td>
+      <td><%= client.name %></td>
+      <td><%= client.platform %></td>
+      <td><%= Enum.join(client.job_queue, ", ") %></td>
+      <td><%= client.queue_size %></td>
+      <td><%= Enum.join(client.upload_queue, ", ") %></td>
+      <td><%= client.downloading %></td>
+      <td><%= Enum.join(client.uploading, ", ") %></td>
+    </tr>
+    <tr>
+      <td colspan="10">
+        <table>
+          <%= for worker <- client.workers do %>
+            <tr>
+              <%= if worker.segment != nil do %>
+                <td>
+                  <%= worker.segment %>
+                </td>
+                <td>pass <%= worker.pass %></td>
+                <td><%= worker.progress_num %> / <%= worker.progress_den %></td>
+              <% else %>
+                <td>
+                  idle
+                </td>
+              <% end %>
+            </tr>
+          <% end %>
+        </table>
+      </td>
+    </tr>
+  <% end %>
+</table>

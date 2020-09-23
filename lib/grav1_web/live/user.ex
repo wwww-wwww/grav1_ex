@@ -28,6 +28,8 @@ end
 defmodule Grav1Web.UserLive do
   use Phoenix.LiveView
 
+  @topic "client_workers_live:"
+
   def render(assigns) do
     Grav1Web.UserView.render("user.html", assigns)
   end
@@ -35,14 +37,23 @@ defmodule Grav1Web.UserLive do
   def mount(_, session, socket) do
     case Grav1.Guardian.resource_from_claims(session) do
       {:ok, user} ->
-        {:ok, socket |> assign(user: user)}
+        if connected?(socket), do: Grav1Web.Endpoint.subscribe("#{@topic}#{user.username}")
+        {:ok, socket |> assign(user: user) |> assign(clients: %{})}
 
       _ ->
         {:ok, socket |> put_flash(:error, "bad resource") |> redirect(to: "/")}
     end
   end
 
-  def handle_params(_, _, socket) do
+  def handle_info(%{topic: @topic <> username, payload: %{clients: clients}}, socket) do
+    {:noreply, socket |> assign(clients: clients)}
+  end
+
+  def handle_params(a, b, socket) do
     {:noreply, socket}
+  end
+
+  def update(username, clients) do
+    Grav1Web.Endpoint.broadcast(@topic <> username, "workers:update", %{clients: clients})
   end
 end

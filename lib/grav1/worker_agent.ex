@@ -137,7 +137,7 @@ defmodule Grav1.WorkerAgent do
             segments
             |> Enum.filter(fn segment ->
               segment.id != client.downloading and
-                segment.id != client.uploading and
+                segment.id not in client.uploading and
                 segment.id not in client.job_queue and
                 segment.id not in client.upload_queue
             end)
@@ -217,7 +217,7 @@ defmodule Grav1.WorkerAgent do
       workers_segments =
         client.workers
         |> Enum.reduce([], fn worker, acc ->
-          if worker.segment != nil and worker.segment not in segments do
+          if worker.segment not in segments do
             acc ++ [worker.segment]
           else
             acc
@@ -230,7 +230,7 @@ defmodule Grav1.WorkerAgent do
         )
 
       client_segments =
-        if client.sending_job not in segments do
+        if client.sending_job != nil and client.sending_job not in segments do
           workers_segments ++ [client.sending_job]
         else
           workers_segments
@@ -283,19 +283,7 @@ defmodule Grav1.WorkerAgent do
           val
 
         client ->
-          if client.workers
-             |> Enum.zip(workers)
-             |> Enum.all?(fn x ->
-               {old_worker, new_worker} = x
-
-               new_worker.segment == old_worker.segment and
-                 (new_worker.pass >= old_worker.pass or
-                    new_worker.progress_num >= old_worker.progress_num)
-             end) do
-            %{val | clients: Map.put(val.clients, id, %{client | workers: workers})}
-          else
-            val
-          end
+          %{val | clients: Map.put(val.clients, id, %{client | workers: workers})}
       end
     end)
   end

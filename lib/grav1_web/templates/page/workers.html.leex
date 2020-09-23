@@ -22,7 +22,7 @@
       <td><%= client.queue_size %></td>
       <td><%= Enum.join(client.upload_queue, ", ") %></td>
       <td><%= client.downloading %></td>
-      <td><%= client.uploading %></td>
+      <td><%= Enum.join(client.uploading, ", ") %></td>
     </tr>
     <tr>
       <td colspan="10">

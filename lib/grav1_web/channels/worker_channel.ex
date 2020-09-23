@@ -74,9 +74,7 @@ defmodule Grav1Web.WorkerChannel do
       sending_job: nil
     })
 
-    if not WorkerAgent.distribute_segments() do
-      Grav1Web.WorkersLive.update()
-    end
+    WorkerAgent.distribute_segments()
 
     {:noreply, socket}
   end
@@ -110,9 +108,7 @@ defmodule Grav1Web.WorkerChannel do
       }
     )
 
-    if not WorkerAgent.distribute_segments() do
-      Grav1Web.WorkersLive.update()
-    end
+    WorkerAgent.distribute_segments()
 
     {:noreply, socket}
   end
@@ -158,10 +154,22 @@ defmodule Grav1Web.WorkerProgressChannel do
         struct(Grav1.Worker, worker)
       end)
 
-    Grav1.WorkerAgent.update_workers(socket.assigns.socket_id, new_workers)
+    new_clients = Grav1.WorkerAgent.update_workers(socket.assigns.socket_id, new_workers)
+
+    if Grav1.RateLimit.can_execute?("worker_update:#{socket.assigns.user_id}", 1 / 10) do
+      clients =
+        new_clients
+        |> Enum.filter(fn {_, client} ->
+          client.user == socket.assigns.user_id
+        end)
+
+      if length(clients) > 0 do
+        Grav1Web.UserLive.update(socket.assigns.user_id, clients)
+      end
+    end
 
     if Grav1.RateLimit.can_execute?("worker_update", 1 / 10) do
-      Grav1Web.WorkersLive.update()
+      Grav1Web.WorkersLive.update(new_clients)
     end
 
     segments =

@@ -201,7 +201,7 @@ defmodule Grav1.Projects do
       load_project(project)
     end)
 
-    WorkerAgent.distribute_segments_cast()
+    WorkerAgent.distribute_segments()
 
     {:noreply, state}
   end

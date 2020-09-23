@@ -40,9 +40,7 @@ defmodule Grav1.WorkerAgent do
       %{val | clients: new_clients}
     end)
 
-    if not distribute_segments() do
-      Grav1Web.WorkersLive.update()
-    end
+    distribute_segments()
   end
 
   # reconnect
@@ -76,28 +74,28 @@ defmodule Grav1.WorkerAgent do
       %{val | clients: new_clients}
     end)
 
-    if not distribute_segments() do
-      Grav1Web.WorkersLive.update()
-    end
+    distribute_segments()
   end
 
   def disconnect(socket) do
-    Agent.update(__MODULE__, fn val ->
-      new_clients = update_clients(val.clients, socket.assigns.socket_id, %{connected: false})
+    new_clients =
+      Agent.get_and_update(__MODULE__, fn val ->
+        new_clients = update_clients(val.clients, socket.assigns.socket_id, %{connected: false})
 
-      %{val | clients: new_clients}
-    end)
+        {new_clients, %{val | clients: new_clients}}
+      end)
 
-    Grav1Web.WorkersLive.update()
+    Grav1Web.WorkersLive.update(new_clients)
   end
 
   def remove(socket_id) do
-    Agent.update(__MODULE__, fn val ->
-      new_clients = Map.delete(val.clients, socket_id)
-      %{val | clients: new_clients}
-    end)
+    new_clients =
+      Agent.get_and_update(__MODULE__, fn val ->
+        new_clients = Map.delete(val.clients, socket_id)
+        {new_clients, %{val | clients: new_clients}}
+      end)
 
-    Grav1Web.WorkersLive.update()
+    Grav1Web.WorkersLive.update(new_clients)
   end
 
   def get_workers() do
@@ -108,7 +106,7 @@ defmodule Grav1.WorkerAgent do
     end)
   end
 
-  def distribute_segments(val) do
+  defp distribute_segments(val) do
     available_clients =
       val.clients
       |> Enum.filter(fn {_, client} ->
@@ -173,35 +171,31 @@ defmodule Grav1.WorkerAgent do
   end
 
   def distribute_segments() do
-    clients =
+    {clients_segments, new_clients} =
       Agent.get_and_update(__MODULE__, fn val ->
         case distribute_segments(val) do
           nil ->
-            {nil, val}
+            {{nil, val.clients}, val}
 
           {clients_segments, new_clients} ->
-            {clients_segments, %{val | clients: Map.merge(val.clients, new_clients)}}
+            new_clients = Map.merge(val.clients, new_clients)
+            {{clients_segments, new_clients}, %{val | clients: new_clients}}
         end
       end)
 
-    if clients != nil do
-      Grav1Web.WorkersLive.update()
-      true
-    else
-      false
-    end
-  end
-
-  def distribute_segments_cast() do
-    Agent.cast(__MODULE__, fn val ->
-      case distribute_segments(val) do
-        nil ->
-          val
-
-        {_clients, new_clients} ->
-          %{val | clients: Map.merge(val.clients, new_clients)}
+    if clients_segments != nil do
+      if length(clients_segments) > 0 do
+        Grav1Web.WorkersLive.update(new_clients)
       end
-    end)
+
+      new_clients
+      |> Enum.group_by(fn {_, client} ->
+        client.user
+      end)
+      |> Enum.each(fn {user, clients} ->
+        Grav1Web.UserLive.update(user, clients)
+      end)
+    end
   end
 
   def cancel_segments() do
@@ -248,7 +242,7 @@ defmodule Grav1.WorkerAgent do
   end
 
   def get() do
-    Agent.get(__MODULE__, fn val -> val end)
+    Agent.get(__MODULE__, fn val -> val.clients end)
   end
 
   defp update_clients(clients, id, opts) do
@@ -277,13 +271,13 @@ defmodule Grav1.WorkerAgent do
   def update_workers(socket_id, workers) do
     id = to_string(socket_id)
 
-    Agent.update(__MODULE__, fn val ->
+    Agent.get_and_update(__MODULE__, fn val ->
       case Map.get(val.clients, id) do
         nil ->
-          val
+          {val.clients, val}
 
         client ->
-          %{val | clients: Map.put(val.clients, id, %{client | workers: workers})}
+          {val.clients, %{val | clients: Map.put(val.clients, id, %{client | workers: workers})}}
       end
     end)
   end

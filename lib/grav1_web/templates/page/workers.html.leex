@@ -11,7 +11,7 @@
     <th>downloading</th>
     <th>uploading</th>
   </tr>
-  <%= for {_k, client} <- @workers.clients do %>
+  <%= for {_k, client} <- @clients do %>
     <tr>
       <td><%= client.connected %></td>
       <td><%= client.user %></td>
@@ -47,5 +47,3 @@
     </tr>
   <% end %>
 </table>
-
-<script defer type="text/javascript" src='<%= Routes.static_path(@socket, "/js/app.js") %>'></script>

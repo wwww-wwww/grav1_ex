@@ -38,11 +38,18 @@ defmodule Grav1Web.UserLive do
     case Grav1.Guardian.resource_from_claims(session) do
       {:ok, user} ->
         if connected?(socket), do: Grav1Web.Endpoint.subscribe("#{@topic}#{user.username}")
-        {:ok, socket |> assign(user: user) |> assign(clients: %{})}
+        {:ok, socket |> assign(user: user) |> assign(clients: get_clients(user.username))}
 
       _ ->
         {:ok, socket |> put_flash(:error, "bad resource") |> redirect(to: "/")}
     end
+  end
+
+  def get_clients(username) do
+    Grav1.WorkerAgent.get()
+    |> Enum.filter(fn {_, client} ->
+      client.user == username
+    end)
   end
 
   def handle_info(%{topic: @topic <> username, payload: %{clients: clients}}, socket) do

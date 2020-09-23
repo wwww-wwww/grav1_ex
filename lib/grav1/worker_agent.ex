@@ -17,7 +17,7 @@ defmodule Grav1.Client do
             queue_size: 0,
             upload_queue: [],
             downloading: nil,
-            uploading: nil,
+            uploading: [],
             platform: nil
 end
 

@@ -25,12 +25,12 @@ defmodule Grav1.Concat do
 
     Projects.update_project(project, %{state: :concatenating})
 
-    method =
-      if Application.fetch_env!(:grav1, :path_mkvmerge) != nil do
-        :mkvmerge
-      else
-        :ffmpeg
-      end
+    method = :ffmpeg
+    #  if Application.fetch_env!(:grav1, :path_mkvmerge) != nil do
+    #    :mkvmerge
+    #  else
+    #    :ffmpeg
+    #  end
 
     case concat(method, project, segments, output) do
       :ok ->

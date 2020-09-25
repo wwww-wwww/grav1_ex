@@ -59,7 +59,7 @@ defmodule Grav1.VerificationExecutor do
   end
 
   def get_frames("av1", path) do
-    args = ["-i", path, "-o", "/dev/null", "--framethreads", "1", "--tilethreads", "16"]
+    args = ["-i", path, "--muxer", "null", "--framethreads", "1", "--tilethreads", "16"]
 
     case System.cmd(Application.fetch_env!(:grav1, :path_dav1d), args, stderr_to_stdout: true) do
       {resp, 0} ->
@@ -69,11 +69,11 @@ defmodule Grav1.VerificationExecutor do
             frame
 
           _ ->
-            nil
+            {:error, resp}
         end
 
-      _ ->
-        nil
+      resp ->
+        {:error, resp}
     end
   end
 
@@ -92,11 +92,11 @@ defmodule Grav1.VerificationExecutor do
             frame
 
           _ ->
-            nil
+            {:error, resp}
         end
 
-      _ ->
-        nil
+      resp ->
+        {:error, resp}
     end
   end
 
@@ -113,6 +113,8 @@ defmodule Grav1.VerificationExecutor do
         IO.inspect(reason)
 
       ^frames ->
+        IO.inspect(frames)
+        
         case File.stat(path) do
           {:ok, %{size: size}} ->
             case Projects.finish_segment(segment, size) do

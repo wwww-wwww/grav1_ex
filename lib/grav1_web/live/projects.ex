@@ -88,20 +88,32 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   def handle_event("view_project", %{"id" => id}, socket) do
-    view_project_page(socket, Grav1Web.ProjectSegmentsComponent, id, fn project ->
-      [segments: get_segments(project)]
+    view_project_page(socket, id, fn project ->
+      case get_segments(project) do
+        [] ->
+          {Grav1Web.ProjectLogComponent, [log: project.log]}
+
+        segments ->
+          {Grav1Web.ProjectSegmentsComponent, [segments: segments]}
+      end
+    end)
+  end
+
+  def handle_event("view_project_segments", %{"id" => id}, socket) do
+    view_project_page(socket, id, fn project ->
+      {Grav1Web.ProjectSegmentsComponent, [segments: get_segments(project)]}
     end)
   end
 
   def handle_event("view_project_log", %{"id" => id}, socket) do
-    view_project_page(socket, Grav1Web.ProjectLogComponent, id, fn project ->
-      [log: project.log]
+    view_project_page(socket, id, fn project ->
+      {Grav1Web.ProjectLogComponent, [log: project.log]}
     end)
   end
 
   def handle_event("view_project_settings", %{"id" => id}, socket) do
-    view_project_page(socket, Grav1Web.ProjectSettingsComponent, id, fn project ->
-      [project: project]
+    view_project_page(socket, id, fn project ->
+      {Grav1Web.ProjectSettingsComponent, [project: project]}
     end)
   end
 
@@ -164,23 +176,27 @@ defmodule Grav1Web.ProjectsLive do
     {:noreply, socket}
   end
 
-  def view_project_page(socket, page, id, assign) do
+  def view_project_page(socket, id, assign) do
     case Projects.get_project(id) do
       nil ->
         {:noreply, socket |> assign(page: nil)}
 
       project ->
-        {:noreply,
-         socket
-         |> assign(
-           page:
-             live_component(socket, Grav1Web.ProjectComponent,
-               id: "project:#{project.id}",
-               project: project,
-               page:
-                 live_component(socket, page, [id: "#{page}:#{project.id}"] ++ assign.(project))
-             )
-         )}
+        {page, assigns} = assign.(project)
+
+        new_socket =
+          socket
+          |> push_patch(to: "/projects/#{id}")
+          |> assign(
+            page:
+              live_component(socket, Grav1Web.ProjectComponent,
+                id: "project:#{project.id}",
+                project: project,
+                page: live_component(socket, page, [id: "#{page}:#{project.id}"] ++ assigns)
+              )
+          )
+
+        {:noreply, new_socket}
     end
   end
 

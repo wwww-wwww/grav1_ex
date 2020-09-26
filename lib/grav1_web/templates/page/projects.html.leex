@@ -18,7 +18,7 @@
       </div>
     </div>
     <div id="list_projects">
-      <%= for {id, project} <- @projects do %>
+      <%= for {id, project} <- @projects |> Enum.sort_by(& elem(&1, 1).inserted_at, :desc) do %>
         <div id="proj_<%= id %>" class="project" data-id="<%= id %>" phx-hook="view_project">
           <div class="top"><%= render_project_name(project) %></div>
           <div class="bottom">

@@ -98,7 +98,7 @@ defmodule Grav1Web.PageView do
       state ->
         case project.progress_den do
           nil ->
-            ""
+            project.progress_num
 
           den ->
             total_projects = map_size(project.segments)

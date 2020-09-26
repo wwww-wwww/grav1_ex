@@ -113,8 +113,6 @@ defmodule Grav1.VerificationExecutor do
         IO.inspect(reason)
 
       ^frames ->
-        IO.inspect(frames)
-        
         case File.stat(path) do
           {:ok, %{size: size}} ->
             case Projects.finish_segment(segment, size) do

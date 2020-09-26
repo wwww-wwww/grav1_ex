@@ -83,6 +83,7 @@ defmodule Grav1Web.WorkerChannel do
         "update",
         %{
           "workers" => workers,
+          "max_workers" => max_workers,
           "job_queue" => job_queue,
           "upload_queue" => upload_queue,
           "downloading" => downloading,
@@ -104,7 +105,8 @@ defmodule Grav1Web.WorkerChannel do
         upload_queue: upload_queue,
         downloading: downloading,
         uploading: uploading,
-        workers: new_workers
+        workers: new_workers,
+        max_workers: max_workers
       }
     )
 

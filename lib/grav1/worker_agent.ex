@@ -2,7 +2,8 @@ defmodule Grav1.Worker do
   defstruct progress_num: 0,
             progress_den: 0,
             pass: 1,
-            segment: nil
+            segment: nil,
+            project: nil
 end
 
 defmodule Grav1.Client do

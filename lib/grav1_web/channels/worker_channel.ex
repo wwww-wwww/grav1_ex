@@ -118,6 +118,7 @@ defmodule Grav1Web.WorkerChannel do
   def push_segment(socketid, segment) do
     params = %{
       segment_id: segment.id,
+      project_id: segment.project_id,
       start: segment.start,
       frames: segment.frames,
       encoder: segment.project.encoder,
@@ -174,14 +175,13 @@ defmodule Grav1Web.WorkerProgressChannel do
       Grav1Web.WorkersLive.update(new_clients)
     end
 
-    segments =
+    projects =
       new_workers
-      |> Enum.map(fn worker -> worker.segment end)
+      |> Enum.map(fn worker -> worker.project end)
 
     Grav1.Projects.get_projects()
     |> Enum.filter(fn {_, project} ->
-      project.state == :ready and
-        Enum.any?(Map.keys(project.segments), fn x -> x in segments end)
+      project.state == :ready and project.id in projects
     end)
     |> Enum.each(fn {_, project} ->
       Grav1Web.ProjectsLive.update_segments(project, true)

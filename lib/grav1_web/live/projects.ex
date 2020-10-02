@@ -3,7 +3,9 @@ defmodule Grav1Web.ProjectsLive do
 
   @topic "projects_live"
 
-  alias Grav1.{Projects, Project, RateLimit, Repo, WorkerAgent}
+  import Ecto.Query, only: [from: 2]
+
+  alias Grav1.{Projects, Project, RateLimit, Repo, Segment, WorkerAgent}
   alias Grav1Web.Endpoint
 
   def render(assigns) do
@@ -135,10 +137,13 @@ defmodule Grav1Web.ProjectsLive do
       Repo.get(Project, id)
       |> Project.changeset(%{state: :ready, encoder_params: params})
 
+    segments_query =
+      from s in Grav1.Segment, where: s.project_id == ^id, update: [set: [filesize: 0]]
+
     res =
       Ecto.Multi.new()
       |> Ecto.Multi.update(:project, changeset)
-      |> Ecto.Multi.update_all(:segments, Grav1.Segment, set: [filesize: 0])
+      |> Ecto.Multi.update_all(:segments, segments_query, [])
       |> Repo.transaction()
 
     case res do

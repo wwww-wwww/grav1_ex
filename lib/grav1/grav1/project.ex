@@ -39,8 +39,8 @@ defmodule Grav1.Project do
   end
 
   @doc false
-  def changeset(user, attrs \\ %{}) do
-    user
+  def changeset(project, attrs \\ %{}) do
+    project
     |> cast(attrs, [
       :input,
       :name,

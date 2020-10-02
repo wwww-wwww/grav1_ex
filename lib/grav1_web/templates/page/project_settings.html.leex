@@ -5,7 +5,9 @@
   </div>
   <div>
     <span>Encoder parameters</span>
-    <span><%= @project.encoder_params |> Enum.join(" ") %></span>
+    <%= content_tag(:div, @project.encoder_params |> Enum.join(" "), [id: "settings_encoder_params", phx_hook: "settings_change_encoder_params"])%>
+    <%= submit("Save", id: "settings_encoder_params_save", class: "hidden", data_id: @project.id, phx_hook: "settings_encoder_params_save") %>
+    <%= submit("Cancel", id: "settings_encoder_params_cancel", class: "hidden", phx_hook: "settings_encoder_params_cancel") %>
   </div>
   <div>
     <span>Action</span>

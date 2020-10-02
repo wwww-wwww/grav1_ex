@@ -145,6 +145,36 @@ defmodule Grav1.Projects do
     {:reply, :ok, %{state | segments: Map.merge(state.segments, segments)}}
   end
 
+  def handle_call({:reload_project, id}, _, state) do
+    project =
+      Repo.get(Project, id)
+      |> Repo.preload(:segments)
+
+    segments =
+      project.segments
+      |> Enum.reduce(%{}, fn segment, segments ->
+        Map.put(segments, segment.id, %{segment | project: %{project | segments: []}})
+      end)
+
+    complete_segments = for {k, v} <- segments, v.filesize != 0, into: %{}, do: {k, v}
+    incomplete_segments = for {k, v} <- segments, v.filesize == 0, into: %{}, do: {k, v}
+
+    new_project = %{project | segments: segments}
+
+    new_projects = Map.put(state.projects, project.id, new_project)
+
+    complete_segment_keys = Map.keys(complete_segments)
+
+    new_segments =
+      for {k, v} <- state.segments, v.id not in complete_segment_keys, into: %{}, do: {k, v}
+
+    new_segments = Map.merge(new_segments, incomplete_segments)
+
+    new_state = %{state | projects: new_projects, segments: new_segments}
+
+    {:reply, {:ok, new_project}, new_state}
+  end
+
   def handle_cast({:log, id, message}, state) do
     case Map.get(state.projects, id) do
       nil ->
@@ -228,6 +258,12 @@ defmodule Grav1.Projects do
     {id, _} = Integer.parse(to_string(id))
 
     GenServer.call(__MODULE__, {:get_project, id})
+  end
+
+  def reload_project(id) do
+    {id, _} = Integer.parse(to_string(id))
+
+    GenServer.call(__MODULE__, {:reload_project, id})
   end
 
   def log(project, message) do

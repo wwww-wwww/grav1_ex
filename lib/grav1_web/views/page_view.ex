@@ -87,9 +87,12 @@ defmodule Grav1Web.PageView do
         end
 
       :concatenating ->
-        case project.status do
-          status ->
-            inspect(status)
+        case project.progress_den do
+          nil ->
+            inspect(project.status)
+
+          den ->
+            "#{project.progress_num}/#{den} | #{project.status}"
         end
 
       :completed ->

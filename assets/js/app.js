@@ -189,6 +189,73 @@ hooks.settings_actions = {
   }
 }
 
+hooks.settings_change_encoder_params = {
+  mounted() {
+    this.el.original_value = this.el.textContent
+    this.el.addEventListener("click", () => {
+      this.el.contentEditable = true
+      this.el.classList.toggle("div-editing", true)
+      this.el.focus()
+      settings_encoder_params_save.classList.toggle("hidden", false)
+      settings_encoder_params_cancel.classList.toggle("hidden", false)
+    })
+  }
+}
+
+hooks.settings_encoder_params_save = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      const params = [...settings_encoder_params.textContent.matchAll(re_args)].flat()
+
+      const confirm_modal = new Modal({
+        title: "Restart encode"
+      })
+      confirm_modal.show()
+
+      confirm_modal.get_body().style.textAlign = "center"
+
+      for (const param of params) {
+        const e = create_element(confirm_modal, "div")
+        e.textContent = param
+      }
+
+      confirm_modal.confirm = create_element(confirm_modal, "button")
+      confirm_modal.confirm.textContent = "Confirm"
+      confirm_modal.confirm.focus()
+      confirm_modal.confirm.addEventListener("click", () => {
+        this.pushEvent("restart_project", {
+          id: this.el.dataset.id,
+          encoder_params: params
+        }, (reply, _ref) => {
+          confirm_modal.close()
+          if (!reply.success) {
+            const err_modal = new Modal({
+              title: "Error"
+            })
+            const reason_t = create_element(err_modal, "div")
+            reason_t.textContent = "Reason:"
+            const reason = create_element(err_modal, "div")
+            reason.textContent = reply.reason
+            err_modal.show()
+          }
+        })
+      })
+    })
+  }
+}
+
+hooks.settings_encoder_params_cancel = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      settings_encoder_params.textContent = settings_encoder_params.original_value
+      settings_encoder_params.contentEditable = false
+      settings_encoder_params.classList.toggle("div-editing", false)
+      settings_encoder_params_save.classList.toggle("hidden", true)
+      settings_encoder_params_cancel.classList.toggle("hidden", true)
+    })
+  }
+}
+
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
   hooks: hooks,

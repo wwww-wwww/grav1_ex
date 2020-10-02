@@ -7,6 +7,7 @@
     <th>platform</th>
     <th>job_queue</th>
     <th>queue_size</th>
+    <th>max_workers</th>
     <th>upload_queue</th>
     <th>downloading</th>
     <th>uploading</th>
@@ -20,6 +21,7 @@
       <td><%= client.platform %></td>
       <td><%= Enum.join(client.job_queue, ", ") %></td>
       <td><%= client.queue_size %></td>
+      <td><%= client.max_workers %></td>
       <td><%= Enum.join(client.upload_queue, ", ") %></td>
       <td><%= client.downloading %></td>
       <td><%= Enum.join(client.uploading, ", ") %></td>

@@ -3,7 +3,7 @@ defmodule Grav1Web.ProjectsLive do
 
   @topic "projects_live"
 
-  alias Grav1.{Projects, Project, RateLimit}
+  alias Grav1.{Projects, Project, RateLimit, Repo, WorkerAgent}
   alias Grav1Web.Endpoint
 
   def render(assigns) do
@@ -126,6 +126,39 @@ defmodule Grav1Web.ProjectsLive do
     {:reply, %{success: true}, socket}
   end
 
+  def handle_event(
+        "restart_project",
+        %{"id" => id, "encoder_params" => params},
+        socket
+      ) do
+    changeset =
+      Repo.get(Project, id)
+      |> Project.changeset(%{state: :ready, encoder_params: params})
+
+    res =
+      Ecto.Multi.new()
+      |> Ecto.Multi.update(:project, changeset)
+      |> Ecto.Multi.update_all(:segments, Grav1.Segment, set: [filesize: 0])
+      |> Repo.transaction()
+
+    case res do
+      {:ok, _} ->
+        case Projects.reload_project(id) do
+          {:ok, new_project} ->
+            Grav1Web.ProjectsLive.update(new_project, true)
+            WorkerAgent.distribute_segments()
+
+          err ->
+            {:reply, %{success: false, reason: inspect(err)}, socket}
+        end
+
+        {:reply, %{success: true}, socket}
+
+      {:error, err} ->
+        {:reply, %{success: false, reason: inspect(err)}, socket}
+    end
+  end
+
   # update project list and project
   def handle_info(
         %{topic: @topic, event: "update", payload: %{project: project, projects: true}},
@@ -239,7 +272,7 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   def get_segments(projects) do
-    get_segments(projects, Grav1.WorkerAgent.get_workers())
+    get_segments(projects, WorkerAgent.get_workers())
   end
 
   # update project list and project
@@ -271,7 +304,7 @@ defmodule Grav1Web.ProjectsLive do
     if not ratelimit or RateLimit.can_execute?("project_segments:#{project.id}", 1 / 10) do
       Grav1Web.Endpoint.broadcast(@topic, "update_segments", %{
         project: project,
-        workers: Grav1.WorkerAgent.get_workers()
+        workers: WorkerAgent.get_workers()
       })
     end
   end

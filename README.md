@@ -14,9 +14,9 @@ Client is located [here](https://github.com/wwww-wwww/grav1_ex_client)
 - ffmpeg
 - [aomenc](https://aomedia.googlesource.com/aom/)
 - [dav1d](https://code.videolan.org/videolan/dav1d)
-- python 3
+- python 3.6+
 - [vapoursynth](https://github.com/vapoursynth/vapoursynth/releases) and vspipe (optional)
-- [mkvmerge](https://mkvtoolnix.download/downloads.html) (optional)
+- [mkvmerge v50.0.0.43+](https://mkvtoolnix.download/downloads.html) (optional)
 - [onepass_keyframes](https://gist.github.com/wwww-wwww/aeed66e165fe60cbbb7fed2827ad912e) [binaries](https://bin.grass.moe/onepass_keyframes/) example program (optional)
 
 ### Python dependencies

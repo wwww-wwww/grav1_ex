@@ -43,15 +43,16 @@ defmodule Grav1.Projects do
   end
 
   def handle_call({:get_segments, clients, filter}, _, state) do
-    workers =
+    {workers, limit} =
       clients
-      |> Enum.reduce([], fn {_, client}, acc ->
-        acc ++ client.workers
+      |> Enum.reduce({[], 0}, fn {_, client}, {acc_w, acc_l} ->
+        {acc_w ++ client.workers, acc_l + client.max_workers + client.queue_size}
       end)
 
     sorted =
       state.segments
       |> Map.values()
+      |> Enum.take(limit)
       |> Enum.sort_by(& &1.frames, :desc)
       |> Enum.sort_by(& &1.project.priority, :asc)
       |> Enum.sort_by(
@@ -95,48 +96,42 @@ defmodule Grav1.Projects do
         {:reply, {:error, "cant find project"}, state}
 
       project ->
-        case Map.get(state.segments, segment.id) do
-          nil ->
-            {:reply, {:error, "can't find segment"}, state}
-
-          segment ->
-            case Repo.update(Ecto.Changeset.change(segment, filesize: filesize)) do
-              {:ok, new_segment} ->
-                {new_project, new_projects} =
-                  Map.get_and_update(state.projects, project.id, fn state_project ->
-                    new_project_segments =
-                      state_project.segments
-                      |> Map.update!(segment.id, fn _ ->
-                        %{new_segment | filesize: filesize}
-                      end)
-
-                    completed_frames =
-                      new_project_segments
-                      |> Enum.reduce(0, fn {_, segment}, acc ->
-                        if segment.filesize != 0 do
-                          acc + segment.frames
-                        else
-                          acc
-                        end
-                      end)
-
-                    new_project = %{
-                      state_project
-                      | segments: new_project_segments,
-                        progress_num: completed_frames
-                    }
-
-                    {new_project, new_project}
+        case Repo.update(Ecto.Changeset.change(segment, filesize: filesize)) do
+          {:ok, new_segment} ->
+            {new_project, new_projects} =
+              Map.get_and_update(state.projects, project.id, fn state_project ->
+                new_project_segments =
+                  state_project.segments
+                  |> Map.update!(segment.id, fn _ ->
+                    %{new_segment | filesize: filesize}
                   end)
 
-                new_segments = Map.delete(state.segments, segment.id)
+                completed_frames =
+                  new_project_segments
+                  |> Enum.reduce(0, fn {_, segment}, acc ->
+                    if segment.filesize != 0 do
+                      acc + segment.frames
+                    else
+                      acc
+                    end
+                  end)
 
-                {:reply, {:ok, new_project},
-                 %{state | projects: new_projects, segments: new_segments}}
+                new_project = %{
+                  state_project
+                  | segments: new_project_segments,
+                    progress_num: completed_frames
+                }
 
-              {:error, cs} ->
-                {:reply, {:error, cs}, state}
-            end
+                {new_project, new_project}
+              end)
+
+            new_segments = Map.delete(state.segments, segment.id)
+
+            {:reply, {:ok, new_project},
+             %{state | projects: new_projects, segments: new_segments}}
+
+          {:error, cs} ->
+            {:reply, {:error, cs}, state}
         end
     end
   end
@@ -242,8 +237,8 @@ defmodule Grav1.Projects do
     GenServer.call(__MODULE__, {:get_segment, id})
   end
 
-  def get_segments(workers, filter) do
-    GenServer.call(__MODULE__, {:get_segments, workers, filter})
+  def get_segments(clients, filter) do
+    GenServer.call(__MODULE__, {:get_segments, clients, filter})
   end
 
   def get_segments() do

@@ -98,27 +98,25 @@ defmodule Grav1Web.PageView do
       :completed ->
         "100% | #{project.input_frames} frames"
 
-      state ->
+      _ ->
         case project.progress_den do
           nil ->
             project.progress_num
 
           den ->
-            total_projects = map_size(project.segments)
+            total_segments = map_size(project.segments)
 
-            incomplete_projects =
+            incomplete_segments =
               project.segments
               |> Enum.filter(&(elem(&1, 1).filesize == 0))
               |> length()
 
             pct =
-              (100 * project.progress_num / project.progress_den)
+              (100 * project.progress_num / den)
               |> Float.round(2)
               |> Float.to_string()
 
-            "#{pct}% | #{project.progress_num}/#{project.progress_den} | #{incomplete_projects}/#{
-              total_projects
-            }"
+            "#{pct}% | #{project.progress_num}/#{den} | #{incomplete_segments}/#{total_segments}"
         end
     end
   end

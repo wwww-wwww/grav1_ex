@@ -25,12 +25,12 @@ defmodule Grav1.Concat do
 
     Projects.update_project(project, %{state: :concatenating})
 
-    method = :ffmpeg
-    #  if Application.fetch_env!(:grav1, :path_mkvmerge) != nil do
-    #    :mkvmerge
-    #  else
-    #    :ffmpeg
-    #  end
+    method =
+      if Application.fetch_env!(:grav1, :path_mkvmerge) != nil do
+        :mkvmerge
+      else
+        :ffmpeg
+      end
 
     case concat(method, project, segments, output) do
       :ok ->
@@ -123,13 +123,44 @@ defmodule Grav1.Concat do
 
     [first | tail] = segments
 
+    args = [
+      "-o",
+      output,
+      first
+    ]
+
+    {segments_args, remaining, _} =
+      tail
+      |> Enum.reduce({[], [], String.length(Enum.join(args))}, fn segment, acc ->
+        {s_args, remaining, size} = acc
+
+        if size > 32000 do
+          {s_args, remaining ++ [segment], size}
+        else
+          segment_arg = "+#{segment}"
+          s_length = String.length(segment_arg) + 1
+
+          new_size = size + s_length
+
+          if new_size > 32000 do
+            {s_args, remaining ++ [segment], new_size}
+          else
+            {s_args ++ [segment_arg], remaining, new_size}
+          end
+        end
+      end)
+
     args =
-      [
-        "-o",
-        output,
-        first
-      ]
-      |> Enum.concat(Enum.map(tail, &"+#{&1}"))
+      if length(remaining) > 0 do
+        [
+          "-o",
+          "#{output}.tmp.mkv",
+          first
+        ]
+      else
+        args
+      end
+      |> Enum.concat(segments_args)
 
     Projects.log(project, Enum.join(args, " "))
 
@@ -139,7 +170,7 @@ defmodule Grav1.Concat do
         [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
       )
 
-    total_segments = length(tail)
+    total_segments = length(segments_args)
 
     resp =
       Grav1.Split.stream_port(port, 0, fn line, acc ->
@@ -164,7 +195,11 @@ defmodule Grav1.Concat do
 
     case resp do
       {:ok, ^total_segments, _lines} ->
-        :ok
+        if length(remaining) > 0 do
+          concat(:mkvmerge, project, ["#{output}.tmp.mkv"] ++ remaining, output)
+        else
+          :ok
+        end
 
       {:error, _acc, lines} ->
         {:error, Enum.join(lines, "\n")}

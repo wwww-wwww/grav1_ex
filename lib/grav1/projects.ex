@@ -172,7 +172,7 @@ defmodule Grav1.Projects do
 
     new_state = %{state | projects: new_projects, segments: new_segments}
 
-    {:reply, {:ok, new_project}, new_state}
+    {:reply, new_project, new_state}
   end
 
   def handle_cast({:log, id, message}, state) do
@@ -263,7 +263,10 @@ defmodule Grav1.Projects do
   def reload_project(id) do
     {id, _} = Integer.parse(to_string(id))
 
-    GenServer.call(__MODULE__, {:reload_project, id})
+    new_project = GenServer.call(__MODULE__, {:reload_project, id})
+    load_project(new_project)
+
+    new_project
   end
 
   def log(project, message) do

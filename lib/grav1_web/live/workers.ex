@@ -9,6 +9,14 @@ defmodule Grav1Web.WorkersLive do
 
   def get_clients() do
     Grav1.WorkerAgent.get()
+    |> group_clients()
+  end
+
+  def group_clients(clients) do
+    clients
+    |> Enum.group_by(fn {id, client} ->
+      client.user
+    end)
   end
 
   def mount(_, _, socket) do
@@ -21,6 +29,6 @@ defmodule Grav1Web.WorkersLive do
   end
 
   def update(new_clients) do
-    Grav1Web.Endpoint.broadcast(@topic, "workers:update", %{clients: new_clients})
+    Grav1Web.Endpoint.broadcast(@topic, "workers:update", %{clients: new_clients |> group_clients})
   end
 end

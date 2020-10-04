@@ -27,6 +27,11 @@ defmodule Grav1Web.Endpoint do
     only: ~w(css fonts images js favicon.ico robots.txt),
     content_types: %{"subtitles-octopus-worker.wasm" => "application/wasm"}
 
+  plug Plug.Static,
+    at: "/segment",
+    from: Application.fetch_env!(:grav1, :path_projects),
+    gzip: false
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do

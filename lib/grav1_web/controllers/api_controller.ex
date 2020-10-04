@@ -11,13 +11,13 @@ defmodule Grav1Web.ApiController do
 
       segment ->
         path =
-          Application.fetch_env!(:grav1, :path_projects)
+          "/segment"
           |> Path.join(to_string(segment.project.id))
           |> Path.join("split")
           |> Path.join(segment.file)
 
         conn
-        |> send_download({:file, path})
+        |> redirect(to: Routes.static_path(conn, path))
     end
   end
 

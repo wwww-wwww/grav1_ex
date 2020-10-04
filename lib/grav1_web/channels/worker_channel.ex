@@ -119,6 +119,7 @@ defmodule Grav1Web.WorkerChannel do
     params = %{
       segment_id: segment.id,
       project_id: segment.project_id,
+      file: segment.file,
       start: segment.start,
       frames: segment.frames,
       encoder: segment.project.encoder,

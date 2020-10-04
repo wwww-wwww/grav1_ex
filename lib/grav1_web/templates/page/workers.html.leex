@@ -12,40 +12,36 @@
     <th>downloading</th>
     <th>uploading</th>
   </tr>
-  <%= for {_k, client} <- @clients do %>
-    <tr>
-      <td><%= client.connected %></td>
-      <td><%= client.user %></td>
-      <td><%= client.socket_id %></td>
-      <td><%= client.name %></td>
-      <td><%= client.platform %></td>
-      <td><%= Enum.join(client.job_queue, ", ") %></td>
-      <td><%= client.queue_size %></td>
-      <td><%= client.max_workers %></td>
-      <td><%= Enum.join(client.upload_queue, ", ") %></td>
-      <td><%= client.downloading %></td>
-      <td><%= Enum.join(client.uploading, ", ") %></td>
-    </tr>
-    <tr>
-      <td colspan="10">
-        <table>
-          <%= for worker <- client.workers do %>
-            <tr>
-              <%= if worker.segment != nil do %>
+  <%= for {user, clients} <- @clients do %>
+    <%= for {_, client} <- clients do %>
+      <tr>
+        <td><%= client.connected %></td>
+        <td><%= client.user %></td>
+        <td><%= client.socket_id %></td>
+        <td><%= client.name %></td>
+        <td><%= client.platform %></td>
+        <td><%= Enum.join(client.job_queue, ", ") %></td>
+        <td><%= client.queue_size %></td>
+        <td><%= client.max_workers %></td>
+        <td><%= Enum.join(client.upload_queue, ", ") %></td>
+        <td><%= client.downloading %></td>
+        <td><%= Enum.join(client.uploading, ", ") %></td>
+      </tr>
+      <tr>
+        <td colspan="10">
+          <table>
+            <%= for worker <- client.workers do %>
+              <tr>
                 <td>
                   <%= worker.segment %>
                 </td>
                 <td>pass <%= worker.pass %></td>
                 <td><%= worker.progress_num %> / <%= worker.progress_den %></td>
-              <% else %>
-                <td>
-                  idle
-                </td>
-              <% end %>
-            </tr>
-          <% end %>
-        </table>
-      </td>
-    </tr>
+              </tr>
+            <% end %>
+          </table>
+        </td>
+      </tr>
+    <% end %>
   <% end %>
 </table>

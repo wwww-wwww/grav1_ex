@@ -52,9 +52,9 @@ defmodule Grav1.Projects do
     sorted =
       state.segments
       |> Map.values()
-      |> Enum.take(limit)
       |> Enum.sort_by(& &1.frames, :desc)
       |> Enum.sort_by(& &1.project.priority, :asc)
+      |> Enum.take(limit)
       |> Enum.sort_by(
         &length(
           Enum.filter(clients, fn {_, client} ->

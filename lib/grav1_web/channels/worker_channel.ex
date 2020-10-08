@@ -177,7 +177,6 @@ defmodule Grav1Web.WorkerProgressChannel do
     end
 
     projects =
-
       Grav1.Projects.get_projects()
       |> Enum.reduce([], fn {_, project}, acc ->
         changed_segments =

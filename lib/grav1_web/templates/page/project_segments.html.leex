@@ -1,17 +1,17 @@
 <div class="segments_outer">
-  <div class="segments">
+  <div id="segments_list" class="segments" phx-update="<%= @update_action %>">
     <%= for segment <- @segments do %>
-      <div class="segment">
+      <div id="<%= segment.id %>" class="segment">
         <%= if segment.filesize == 0 do %>
           <%= if segment.verifying do %>
             <div class="progress verifying"></div>
           <% else %>
             <%= if segment.pass == 1 do %>
-              <div class="progress pass1" style="width: <%= segment_pct(segment) * 100 %>%"></div>
+              <div class="progress pass1" style="width: <%= segment_pct(segment) %>%"></div>
             <% else %>
               <%= if segment.pass == 2 do %>
-                <div class="progress pass1" style="left: <%= segment_pct(segment) * 100 %>%; width: <%= (1 - segment_pct(segment)) * 100 %>%"></div>
-                <div class="progress" style="width: <%= segment_pct(segment) * 100 %>%"></div>
+                <div class="progress pass1" style="left: <%= segment_pct(segment) %>%; width: <%= 100 - segment_pct(segment) %>%"></div>
+                <div class="progress" style="width: <%= segment_pct(segment) %>%"></div>
               <% end %>
             <% end %>
           <% end %>
@@ -19,20 +19,8 @@
           <div class="progress complete" style="width: 100%"></div>
         <% end %>
         <div class="body">
-          <div class="title">
-            <%= segment.n %>
-          </div>
-          <div class="desc">
-            <%= if segment.filesize == 0 do %>
-              <%= if segment.verifying do %>
-                verifying
-              <% else %>
-                <%= segment.progress %>/<%= segment.frames %>
-              <% end %>
-            <% else %>
-              <%= filesize(segment.filesize) %>
-            <% end %>
-          </div>
+          <%= content_tag("div", segment.n, class: "title") %>
+          <%= segment_desc(segment) %>
         </div>
       </div>
     <% end %>

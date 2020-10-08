@@ -126,7 +126,7 @@ defmodule Grav1.VerificationExecutor do
                   :ok ->
                     File.rename(path, Path.join(new_path, "#{segment.n}.ivf"))
                     Grav1Web.ProjectsLive.update(project)
-                    Grav1Web.ProjectsLive.update_segments(project)
+                    Grav1Web.ProjectsLive.update_segments(project, [{segment, []}])
                     Grav1.WorkerAgent.cancel_segments()
 
                     incomplete_segments =

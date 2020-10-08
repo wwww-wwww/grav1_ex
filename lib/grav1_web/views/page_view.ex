@@ -140,7 +140,23 @@ defmodule Grav1Web.PageView do
   end
 
   def segment_pct(segment) do
-    segment.progress / segment.frames
+    Float.round(segment.progress / segment.frames * 100, 2)
+  end
+
+  def segment_desc(segment) do
+    content =
+      cond do
+        segment.filesize > 0 ->
+          filesize(segment.filesize)
+
+        segment.verifying ->
+          "verifying"
+
+        true ->
+          "#{segment.progress}/#{segment.frames}"
+      end
+
+    content_tag("div", content, class: "desc")
   end
 
   def filesize(value) do

@@ -6,6 +6,14 @@ defmodule Grav1Web.ProjectComponent do
   end
 end
 
+defmodule Grav1Web.ProjectPageComponent do
+  use Phoenix.LiveComponent
+
+  def render(assigns) do
+    Grav1Web.PageView.render("project_page.html", assigns)
+  end
+end
+
 defmodule Grav1Web.ProjectLogComponent do
   use Phoenix.LiveComponent
 
@@ -19,6 +27,10 @@ defmodule Grav1Web.ProjectSegmentsComponent do
 
   def render(assigns) do
     Grav1Web.PageView.render("project_segments.html", assigns)
+  end
+
+  def mount(socket) do
+    {:ok, socket |> assign(:update_action, :replace)}
   end
 end
 

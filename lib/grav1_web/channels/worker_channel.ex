@@ -177,16 +177,32 @@ defmodule Grav1Web.WorkerProgressChannel do
     end
 
     projects =
-      new_workers
-      |> Enum.map(fn worker -> worker.project end)
 
-    Grav1.Projects.get_projects()
-    |> Enum.filter(fn {_, project} ->
-      project.state == :ready and project.id in projects
-    end)
-    |> Enum.each(fn {_, project} ->
-      Grav1Web.ProjectsLive.update_segments(project, true)
-    end)
+      Grav1.Projects.get_projects()
+      |> Enum.reduce([], fn {_, project}, acc ->
+        changed_segments =
+          project.segments
+          |> Enum.reduce([], fn {_, segment}, acc ->
+            working =
+              new_workers
+              |> Enum.filter(&(segment.id == &1.segment))
+
+            if length(working) > 0 do
+              acc ++ [{segment, working}]
+            else
+              acc
+            end
+          end)
+
+        if length(changed_segments) > 0 do
+          acc ++ [{project, changed_segments}]
+        else
+          acc
+        end
+      end)
+      |> Enum.each(fn {project, changed_segments} ->
+        Grav1Web.ProjectsLive.update_segments(project, changed_segments)
+      end)
 
     {:noreply, socket}
   end

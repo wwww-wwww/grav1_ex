@@ -20,8 +20,10 @@ defmodule Grav1Web.ProjectsLive do
       |> assign(projects: Projects.get_projects())
       |> assign(project_changeset: Project.changeset(%Project{}))
       |> assign(page: page)
+      |> assign(encoder_params: Grav1.Encoder.params())
+      |> assign(encoder_params_json: Grav1.Encoder.params_json())
 
-    {:ok, new_socket}
+    {:ok, new_socket, temporary_assigns: [encoder_params: %{}, encoder_params_json: ""]}
   end
 
   def mount(%{"id" => id}, _, socket) do
@@ -31,7 +33,7 @@ defmodule Grav1Web.ProjectsLive do
 
       project ->
         page =
-          live_component(socket, Grav1Web.ProjectComponent,
+          live_component(socket, Grav1Web.ProjectPageComponent,
             id: "project:#{project.id}",
             project: project,
             page:
@@ -169,7 +171,11 @@ defmodule Grav1Web.ProjectsLive do
         %{topic: @topic, event: "update", payload: %{project: project, projects: true}},
         socket
       ) do
-    send_update(Grav1Web.ProjectComponent, id: "project:#{project.id}", project: project)
+    send_update(Grav1Web.ProjectComponent,
+      id: "#{Grav1Web.ProjectComponent}:#{project.id}",
+      project: project
+    )
+
     {:noreply, socket |> assign(projects: Projects.get_projects())}
   end
 
@@ -183,7 +189,11 @@ defmodule Grav1Web.ProjectsLive do
 
   # update only project
   def handle_info(%{topic: @topic, event: "update_project", payload: %{project: project}}, socket) do
-    send_update(Grav1Web.ProjectComponent, id: "project:#{project.id}", project: project)
+    send_update(Grav1Web.ProjectComponent,
+      id: "#{Grav1Web.ProjectComponent}:#{project.id}",
+      project: project
+    )
+
     {:noreply, socket}
   end
 
@@ -202,13 +212,14 @@ defmodule Grav1Web.ProjectsLive do
         %{
           topic: @topic,
           event: "update_segments",
-          payload: %{project: project, workers: workers}
+          payload: %{project: project, segments: segments}
         },
         socket
       ) do
     send_update(Grav1Web.ProjectSegmentsComponent,
       id: "#{Grav1Web.ProjectSegmentsComponent}:#{project.id}",
-      segments: get_segments(project, workers)
+      segments: segments,
+      update_action: :append
     )
 
     {:noreply, socket}
@@ -227,7 +238,7 @@ defmodule Grav1Web.ProjectsLive do
           |> push_patch(to: "/projects/#{id}")
           |> assign(
             page:
-              live_component(socket, Grav1Web.ProjectComponent,
+              live_component(socket, Grav1Web.ProjectPageComponent,
                 id: "project:#{project.id}",
                 project: project,
                 page: live_component(socket, page, [id: "#{page}:#{project.id}"] ++ assigns)
@@ -264,6 +275,7 @@ defmodule Grav1Web.ProjectsLive do
             end
 
           %{
+            id: segment.id,
             n: segment.n,
             pass: pass,
             progress: progress,
@@ -276,8 +288,36 @@ defmodule Grav1Web.ProjectsLive do
     end
   end
 
-  def get_segments(projects) do
-    get_segments(projects, WorkerAgent.get_workers())
+  def map_changed_segments(segments) do
+    verifying =
+      Grav1.VerificationExecutor.get_queue()
+      |> Enum.map(fn job -> job.segment.id end)
+
+    segments
+    |> Enum.map(fn {segment, workers} ->
+      {progress, pass} =
+        if length(workers) > 0 and segment.filesize == 0 do
+          workers
+          |> Enum.map(&{&1.progress_num, &1.pass})
+          |> Enum.at(0)
+        else
+          {nil, nil}
+        end
+
+      %{
+        id: segment.id,
+        n: segment.n,
+        pass: pass,
+        progress: progress,
+        frames: segment.frames,
+        filesize: segment.filesize,
+        verifying: segment.id in verifying
+      }
+    end)
+  end
+
+  def get_segments(project) do
+    get_segments(project, WorkerAgent.get_workers())
   end
 
   # update project list and project
@@ -305,13 +345,11 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   # update only segments of project
-  def update_segments(project, ratelimit \\ false) do
-    if not ratelimit or RateLimit.can_execute?("project_segments:#{project.id}", 1 / 10) do
-      Grav1Web.Endpoint.broadcast(@topic, "update_segments", %{
-        project: project,
-        workers: WorkerAgent.get_workers()
-      })
-    end
+  def update_segments(project, changed_segments) do
+    Grav1Web.Endpoint.broadcast(@topic, "update_segments", %{
+      project: project,
+      segments: map_changed_segments(changed_segments)
+    })
   end
 
   # update only project list

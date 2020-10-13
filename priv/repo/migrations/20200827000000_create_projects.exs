@@ -26,6 +26,8 @@ defmodule Grav1.Repo.Migrations.CreateProjects do
       add :on_complete, :string, default: nil
       add :on_complete_params, {:array, :string}
 
+      add :start_after_split, :boolean, default: true
+
       timestamps()
     end
   end

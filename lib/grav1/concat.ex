@@ -119,58 +119,57 @@ defmodule Grav1.Concat do
   end
 
   def concat(:mkvmerge, project, segments, output) do
+    case concat_mkvmerge(project, segments, output) do
+      ^output ->
+        :ok
+      {:ok, tmp} ->
+        File.rename(tmp, output)
+        :ok
+      err ->
+        err
+    end
+  end
+
+  def concat_mkvmerge(project, segments, output, flip \\ 0) do
     Projects.log(project, "concatenating using mkvmerge")
+
+    path_mkvmerge = Application.fetch_env!(:grav1, :path_mkvmerge)
 
     [first | tail] = segments
 
     args = [
       "-o",
-      output,
+      "#{output}.#{flip}.mkv",
       first
     ]
 
-    {segments_args, remaining, _} =
+    cmd_size = String.length(Enum.join([path_mkvmerge] ++ args, " "))
+
+    {args, remaining, _} =
       tail
-      |> Enum.reduce({[], [], String.length(Enum.join(args))}, fn segment, acc ->
-        {s_args, remaining, size} = acc
-
-        if size > 32000 do
-          {s_args, remaining ++ [segment], size}
+      |> Enum.reduce({args, [], cmd_size}, fn segment, acc ->
+        {args, remaining, size} = acc
+        if size > 32767 do
+          {args, remaining ++ [segment], size}
         else
-          segment_arg = "+#{segment}"
-          s_length = String.length(segment_arg) + 1
-
-          new_size = size + s_length
-
-          if new_size > 32000 do
-            {s_args, remaining ++ [segment], new_size}
+          new_size = size + String.length(segment) + 2
+          if new_size > 32767 do
+            {args, remaining ++ [segment], new_size}
           else
-            {s_args ++ [segment_arg], remaining, new_size}
+            {args ++ ["+#{segment}"], remaining, new_size}
           end
         end
       end)
-
-    args =
-      if length(remaining) > 0 do
-        [
-          "-o",
-          "#{output}.tmp.mkv",
-          first
-        ]
-      else
-        args
-      end
-      |> Enum.concat(segments_args)
 
     Projects.log(project, Enum.join(args, " "))
 
     port =
       Port.open(
-        {:spawn_executable, Application.fetch_env!(:grav1, :path_mkvmerge)},
+        {:spawn_executable, path_mkvmerge},
         [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
       )
 
-    total_segments = length(segments_args)
+    total_segments = length(args) - 3
 
     resp =
       Grav1.Split.stream_port(port, 0, fn line, acc ->
@@ -196,9 +195,10 @@ defmodule Grav1.Concat do
     case resp do
       {:ok, ^total_segments, _lines} ->
         if length(remaining) > 0 do
-          concat(:mkvmerge, project, ["#{output}.tmp.mkv"] ++ remaining, output)
+          new_flip = if flip == 0, do: 1, else: 0
+          concat_mkvmerge(project, ["#{output}.#{flip}.mkv"] ++ remaining, output, new_flip)
         else
-          :ok
+          {:ok, "#{output}.#{flip}.mkv"}
         end
 
       {:error, _acc, lines} ->

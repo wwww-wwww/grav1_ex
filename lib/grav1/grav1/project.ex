@@ -33,6 +33,8 @@ defmodule Grav1.Project do
     field :progress_den, :float, default: nil, virtual: true
     field :log, {:array, :string}, default: [], virtual: true
 
+    field :start_after_split, :boolean, default: true
+
     has_many :segments, Grav1.Segment
 
     timestamps()
@@ -55,5 +57,11 @@ defmodule Grav1.Project do
       :input_frames
     ])
     |> validate_required([:input, :encoder, :encoder_params, :ffmpeg_params])
+  end
+
+  def can_start(project) do
+    project.state == :idle and
+      (project.segments != %Ecto.Association.NotLoaded{} and
+         map_size(project.segments) > 0)
   end
 end

@@ -21,39 +21,13 @@ defmodule Grav1Web.ApiController do
     end
   end
 
-  def add_project(
-        conn,
-        %{
-          "files" => files,
-          "encoder" => encoder,
-          "encoder_params" => encoder_params,
-          "extra_params" => %{
-            "split" => %{"min_frames" => min_frames, "max_frames" => max_frames},
-            "name" => name,
-            "priority" => priority,
-            "on_complete" => on_complete,
-            "on_complete_params" => on_complete_params,
-            "ffmpeg_params" => ffmpeg_params
-          },
-          "key" => key
-        }
-      ) do
+  def add_project(conn, %{"files" => files, "params" => params, "key" => key}) do
     case Repo.get_by(User, key: key) do
       nil ->
         conn |> json(%{success: false, reason: "bad key"})
 
       user ->
-        case Projects.add_project(files, %{
-               encoder: encoder,
-               encoder_params: encoder_params,
-               ffmpeg_params: ffmpeg_params,
-               split_min_frames: min_frames,
-               split_max_frames: max_frames,
-               name: name,
-               priority: priority,
-               on_complete: on_complete,
-               on_complete_params: on_complete_params
-             }) do
+        case Projects.add_project(files, params) do
           :ok ->
             conn |> json(%{success: true})
 

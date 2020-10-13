@@ -51,25 +51,25 @@ hooks.load_encoders = {
         }
       }
 
-      const params = []
+      const enc_params = []
       for (const param_name of Object.keys(options)) {
         const param = encoders[selected_encoder][param_name].data
         if (options[param_name].length > 0) {
           if (param.oneword) {
-            params.push(`${param_name}=${options[param_name]}`)
+            enc_params.push(`${param_name}=${options[param_name]}`)
           } else if (param.type == "flag") {
-            params.push(param_name)
+            enc_params.push(param_name)
           } else {
-            params.push(param_name)
-            params.push(options[param_name])
+            enc_params.push(param_name)
+            enc_params.push(options[param_name])
           }
         } else {
-          params.push(param_name)
+          enc_params.push(param_name)
         }
       }
 
-      params.push(...overrides)
-      params.push(...[...opt_extra_encoder_params.value.matchAll(re_args)].flat())
+      enc_params.push(...overrides)
+      enc_params.push(...[...opt_extra_encoder_params.value.matchAll(re_args)].flat())
 
       const files = []
       for (const c of files_list.children) {
@@ -81,21 +81,22 @@ hooks.load_encoders = {
         }
       }
 
-      const extra_params = {}
-      extra_params.split = {
-        min_frames: opt_split_min_frames.value,
-        max_frames: opt_split_max_frames.value
+      const params = {
+        encoder_params: enc_params,
+        split_min_frames: opt_split_min_frames.value,
+        split_max_frames: opt_split_max_frames.value,
+        priority: opt_extra_priority.value,
+        name: opt_extra_name.value,
+        on_complete: opt_extra_on_complete.value,
+        on_complete_params: [...opt_extra_on_complete_params.value.matchAll(re_args)].flat(),
+        ffmpeg_params: [...opt_extra_ffmpeg_params.value.matchAll(re_args)].flat(),
+        start_after_split: opt_extra_start_after_split.checked,
+        encoder: selected_encoder
       }
-      extra_params.priority = opt_extra_priority.value
-      extra_params.name = opt_extra_name.value
-      extra_params.on_complete = opt_extra_on_complete.value
-      extra_params.on_complete_params = [...opt_extra_on_complete_params.value.matchAll(re_args)].flat()
-      extra_params.ffmpeg_params = [...opt_extra_ffmpeg_params.value.matchAll(re_args)].flat()
 
       const confirm_modal = new Modal({
         title: "Create Project"
       })
-      confirm_modal.show()
 
       confirm_modal.get_body().style.textAlign = "center"
 
@@ -103,12 +104,7 @@ hooks.load_encoders = {
       confirm_modal.confirm.textContent = "Confirm"
       confirm_modal.confirm.focus()
       confirm_modal.confirm.addEventListener("click", () => {
-        this.pushEvent("add_project", {
-          encoder: selected_encoder,
-          files: files,
-          encoder_params: params,
-          extra_params: extra_params
-        }, (reply, _ref) => {
+        this.pushEvent("add_project", { files: files, params: params }, (reply, _ref) => {
           confirm_modal.close()
           if (!reply.success) {
             const err_modal = new Modal({
@@ -118,7 +114,6 @@ hooks.load_encoders = {
             reason_t.textContent = "Reason:"
             const reason = create_element(err_modal, "div")
             reason.textContent = reply.reason
-            err_modal.show()
           }
         })
       })
@@ -208,9 +203,8 @@ hooks.settings_encoder_params_save = {
       const params = [...settings_encoder_params.textContent.matchAll(re_args)].flat()
 
       const confirm_modal = new Modal({
-        title: "Restart encode"
+        title: "Reset encode"
       })
-      confirm_modal.show()
 
       confirm_modal.get_body().style.textAlign = "center"
 
@@ -223,7 +217,7 @@ hooks.settings_encoder_params_save = {
       confirm_modal.confirm.textContent = "Confirm"
       confirm_modal.confirm.focus()
       confirm_modal.confirm.addEventListener("click", () => {
-        this.pushEvent("restart_project", {
+        this.pushEvent("reset_project", {
           id: this.el.dataset.id,
           encoder_params: params
         }, (reply, _ref) => {
@@ -236,7 +230,6 @@ hooks.settings_encoder_params_save = {
             reason_t.textContent = "Reason:"
             const reason = create_element(err_modal, "div")
             reason.textContent = reply.reason
-            err_modal.show()
           }
         })
       })
@@ -263,5 +256,7 @@ let liveSocket = new LiveSocket("/live", Socket, {
     _csrf_token: csrfToken
   }
 })
+
+document.liveSocket = liveSocket
 
 liveSocket.connect()

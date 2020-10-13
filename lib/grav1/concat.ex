@@ -122,9 +122,11 @@ defmodule Grav1.Concat do
     case concat_mkvmerge(project, segments, output) do
       ^output ->
         :ok
+
       {:ok, tmp} ->
         File.rename(tmp, output)
         :ok
+
       err ->
         err
     end
@@ -149,10 +151,12 @@ defmodule Grav1.Concat do
       tail
       |> Enum.reduce({args, [], cmd_size}, fn segment, acc ->
         {args, remaining, size} = acc
+
         if size > 32767 do
           {args, remaining ++ [segment], size}
         else
           new_size = size + String.length(segment) + 2
+
           if new_size > 32767 do
             {args, remaining ++ [segment], new_size}
           else

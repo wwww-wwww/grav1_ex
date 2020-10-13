@@ -55,34 +55,8 @@ defmodule Grav1Web.ProjectsLive do
     {:noreply, socket}
   end
 
-  def handle_event(
-        "add_project",
-        %{
-          "files" => files,
-          "encoder" => encoder,
-          "encoder_params" => encoder_params,
-          "extra_params" => %{
-            "split" => %{"min_frames" => min_frames, "max_frames" => max_frames},
-            "name" => name,
-            "priority" => priority,
-            "on_complete" => on_complete,
-            "on_complete_params" => on_complete_params,
-            "ffmpeg_params" => ffmpeg_params
-          }
-        },
-        socket
-      ) do
-    case Projects.add_project(files, %{
-           encoder: encoder,
-           encoder_params: encoder_params,
-           ffmpeg_params: ffmpeg_params,
-           split_min_frames: min_frames,
-           split_max_frames: max_frames,
-           name: name,
-           priority: priority,
-           on_complete: on_complete,
-           on_complete_params: on_complete_params
-         }) do
+  def handle_event("add_project", %{"files" => files, "params" => params}, socket) do
+    case Projects.add_project(files, params) do
       {:error, reason} ->
         {:reply, %{success: false, reason: reason}, socket}
 
@@ -103,41 +77,50 @@ defmodule Grav1Web.ProjectsLive do
     end)
   end
 
-  def handle_event("view_project_segments", %{"id" => id}, socket) do
-    view_project_page(socket, id, fn project ->
+  def handle_event("view_project_segments", _, socket) do
+    view_project_page(socket, socket.assigns.page.assigns.project.id, fn project ->
       {Grav1Web.ProjectSegmentsComponent, [segments: get_segments(project)]}
     end)
   end
 
-  def handle_event("view_project_log", %{"id" => id}, socket) do
-    view_project_page(socket, id, fn project ->
+  def handle_event("view_project_log", _, socket) do
+    view_project_page(socket, socket.assigns.page.assigns.project.id, fn project ->
       {Grav1Web.ProjectLogComponent, [log: project.log]}
     end)
   end
 
-  def handle_event("view_project_settings", %{"id" => id}, socket) do
-    view_project_page(socket, id, fn project ->
+  def handle_event("view_project_settings", _, socket) do
+    view_project_page(socket, socket.assigns.page.assigns.project.id, fn project ->
       {Grav1Web.ProjectSettingsComponent, [project: project]}
     end)
   end
 
   def handle_event(
         "run_complete_action",
-        %{"id" => id, "action" => action, "params" => params},
+        %{"action" => action, "params" => params},
         socket
       ) do
-    Grav1.Actions.add(Projects.get_project(id), action, params)
+    Grav1.Actions.add(socket.assigns.page.assigns.project, action, params)
     {:reply, %{success: true}, socket}
   end
 
-  def handle_event(
-        "restart_project",
-        %{"id" => id, "encoder_params" => params},
-        socket
-      ) do
+  def handle_event("start_project", _, socket) do
+    Projects.start_project(socket.assigns.page.assigns.project)
+    {:noreply, socket}
+  end
+
+  def handle_event("stop_project", _, socket) do
+    Projects.stop_project(socket.assigns.page.assigns.project)
+    {:noreply, socket}
+  end
+
+  def handle_event("reset_project", %{"encoder_params" => params}, socket) do
+    project = socket.assigns.page.assigns.project
+    id = project.id
+
     changeset =
-      Repo.get(Project, id)
-      |> Project.changeset(%{state: :ready, encoder_params: params})
+      project
+      |> Project.changeset(%{state: :idle, encoder_params: params})
 
     segments_query =
       from s in Grav1.Segment, where: s.project_id == ^id, update: [set: [filesize: 0]]
@@ -188,9 +171,17 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   # update only project
-  def handle_info(%{topic: @topic, event: "update_project", payload: %{project: project}}, socket) do
+  def handle_info(
+        %{topic: @topic, event: "update_project", payload: %{project: project}},
+        socket
+      ) do
     send_update(Grav1Web.ProjectComponent,
       id: "#{Grav1Web.ProjectComponent}:#{project.id}",
+      project: project
+    )
+
+    send_update(Grav1Web.ProjectSettingsComponent,
+      id: "#{Grav1Web.ProjectSettingsComponent}:#{project.id}",
       project: project
     )
 

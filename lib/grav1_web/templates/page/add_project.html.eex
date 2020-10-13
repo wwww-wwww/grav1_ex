@@ -1,0 +1,92 @@
+<div style="overflow-y: auto" phx-update="ignore" id="_add_project_e" phx-hook="load_encoders">
+  <% encoder_params = @encoder_params %>
+  <% encoders = @encoder_params |> Map.keys() %>
+
+  <div id="encoders" style="display: none"><%= @encoder_params_json %></div>
+
+  <label for="select_encoder">encoder</label>
+  <select id="select_encoder">
+    <%= for encoder <- encoders do %>
+    <option><%= encoder %></option>
+    <% end %>
+  </select>
+
+  <div>
+    <div>Files</div>
+    <div id="files_list">
+      <button id="files_list_add" class="material-icons">add</button>
+    </div>
+  </div>
+
+  <div id="encoder_params">
+    <%= for encoder <- encoders do %>
+      <div id="params_<%= encoder %>" class="hidden">
+        <h2><%= encoder %> params</h2>
+        <%= for {cat_name, params} <- encoder_params[encoder] do %>
+          <div>
+            <h3><%= cat_name %></h3>
+            <div>
+              <%= for param <- params do %>
+                <div>
+                  <label for="opt_<%= encoder %>_<%= param.name %>"><%= param.name %></label>
+                  <%= render_encoder_param(encoder, param) %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div>
+    <h2>Split Settings</h2>
+    <div>
+      <label for="opt_split_min_frames">Min Frames</label>
+      <input id="opt_split_min_frames" type="number" value="24" min="1">
+    </div>
+    <div>
+      <label for="opt_split_max_frames">Max Frames</label>
+      <input id="opt_split_max_frames" type="number" value="240" min="-1">
+    </div>
+  </div>
+
+  <div>
+    <h2>Extra Settings</h2>
+    <div>
+      <label for="opt_extra_priority">Priority</label>
+      <input id="opt_extra_priority" type="number" value="0">
+    </div>
+    <div>
+      <label for="opt_extra_name">Name</label>
+      <input id="opt_extra_name">
+    </div>
+    <div>
+      <label for="opt_extra_on_complete">On complete</label>
+      <select id="opt_extra_on_complete">
+        <option value="">Do nothing</option>
+        <%= for action <- Application.fetch_env!(:on_complete_actions, :actions) do %>
+          <option><%= action %></option>
+        <% end %>
+      </select>
+    </div>
+    <div>
+      <label for="opt_extra_on_complete_params">On complete params</label>
+      <input id="opt_extra_on_complete_params">
+    </div>
+    <div>
+      <label for="opt_extra_encoder_params">Encoder params</label>
+      <input id="opt_extra_encoder_params">
+    </div>
+    <div>
+      <label for="opt_extra_ffmpeg_params">FFmpeg params</label>
+      <input id="opt_extra_ffmpeg_params">
+    </div>
+    <div>
+      <label for="opt_extra_start_after_split">Start after split</label>
+      <input type="checkbox" id="opt_extra_start_after_split" checked>
+    </div>
+  </div>
+
+  <%= submit("add", id: "btn_add_project") %>
+</div>

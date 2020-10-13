@@ -15,13 +15,19 @@ defmodule Grav1.Projects do
         segments =
           project.segments
           |> Enum.reduce(%{}, fn segment, segments ->
-            Map.put(segments, segment.id, %{segment | project: %{project | segments: []}})
+            Map.put(segments, segment.id, %{segment | project: %{project | segments: %{}}})
           end)
 
-        incomplete_segments = for {k, v} <- segments, v.filesize == 0, into: %{}, do: {k, v}
+        new_segments =
+          if project.state == :ready do
+            incomplete_segments = for {k, v} <- segments, v.filesize == 0, into: %{}, do: {k, v}
+            Map.merge(acc2, incomplete_segments)
+          else
+            acc2
+          end
 
         new_project = %{project | segments: segments}
-        {Map.put(acc, project.id, new_project), Map.merge(acc2, incomplete_segments)}
+        {Map.put(acc, project.id, new_project), new_segments}
       end)
 
     GenServer.start_link(__MODULE__, %__MODULE__{projects: projects, segments: segments},
@@ -151,19 +157,24 @@ defmodule Grav1.Projects do
         Map.put(segments, segment.id, %{segment | project: %{project | segments: []}})
       end)
 
-    complete_segments = for {k, v} <- segments, v.filesize != 0, into: %{}, do: {k, v}
-    incomplete_segments = for {k, v} <- segments, v.filesize == 0, into: %{}, do: {k, v}
+    new_segments =
+      if project.state == :ready do
+        complete_segments = for {k, v} <- segments, v.filesize != 0, into: %{}, do: {k, v}
+        incomplete_segments = for {k, v} <- segments, v.filesize == 0, into: %{}, do: {k, v}
+
+        complete_segment_keys = Map.keys(complete_segments)
+
+        in_segments =
+          for {k, v} <- state.segments, v.id not in complete_segment_keys, into: %{}, do: {k, v}
+
+        Map.merge(in_segments, incomplete_segments)
+      else
+        segments_keys = Map.keys(segments)
+        for {k, v} <- state.segments, v.id not in segments_keys, into: %{}, do: {k, v}
+      end
 
     new_project = %{project | segments: segments}
-
     new_projects = Map.put(state.projects, project.id, new_project)
-
-    complete_segment_keys = Map.keys(complete_segments)
-
-    new_segments =
-      for {k, v} <- state.segments, v.id not in complete_segment_keys, into: %{}, do: {k, v}
-
-    new_segments = Map.merge(new_segments, incomplete_segments)
 
     new_state = %{state | projects: new_projects, segments: new_segments}
 
@@ -259,6 +270,36 @@ defmodule Grav1.Projects do
     {id, _} = Integer.parse(to_string(id))
 
     new_project = GenServer.call(__MODULE__, {:reload_project, id})
+    load_project(new_project)
+
+    new_project
+  end
+
+  def start_project(project) do
+    update_project(
+      project,
+      %{
+        state: :ready
+      },
+      true
+    )
+
+    new_project = GenServer.call(__MODULE__, {:reload_project, project.id})
+    load_project(new_project)
+
+    new_project
+  end
+
+  def stop_project(project) do
+    update_project(
+      project,
+      %{
+        state: :idle
+      },
+      true
+    )
+
+    new_project = GenServer.call(__MODULE__, {:reload_project, project.id})
     load_project(new_project)
 
     new_project
@@ -374,11 +415,12 @@ defmodule Grav1.Projects do
   end
 
   def load_project(project) do
-    case project do
-      %{state: :idle} ->
-        ProjectsExecutor.add_action(:split, project)
-
-      %{state: :ready} ->
+    if project.state == :idle and
+         (project.segments == %Ecto.Association.NotLoaded{} or
+            map_size(project.segments) == 0) do
+      ProjectsExecutor.add_action(:split, project)
+    else
+      if project.state in [:ready, :idle] do
         completed_segments =
           project.segments
           |> Enum.filter(&(elem(&1, 1).filesize != 0))
@@ -392,17 +434,14 @@ defmodule Grav1.Projects do
           progress_den: project.input_frames
         })
 
-        Projects.log(project, "loaded")
-
         if length(completed_segments) == map_size(project.segments) do
           ProjectsExecutor.add_action(:concat, project)
         end
 
-      %{state: :completed} ->
-        Projects.log(project, "loaded")
+        Grav1Web.ProjectsLive.update_project(project)
+      end
 
-      _ ->
-        IO.inspect(project)
+      Projects.log(project, "loaded")
     end
   end
 end
@@ -503,11 +542,13 @@ defmodule Grav1.ProjectsExecutor do
                 Map.put(acc, x.id, x)
               end)
 
+            new_state = if project.start_after_split, do: :ready, else: :idle
+
             Projects.update_project(
               project,
               %{
                 input_frames: input_frames,
-                state: :ready,
+                state: new_state,
                 segments: new_segments,
                 progress_num: 0,
                 progress_den: input_frames
@@ -515,9 +556,10 @@ defmodule Grav1.ProjectsExecutor do
               true
             )
 
-            Projects.add_segments(new_segments)
-
-            Grav1.WorkerAgent.distribute_segments()
+            if project.start_after_split do
+              Projects.add_segments(new_segments)
+              Grav1.WorkerAgent.distribute_segments()
+            end
 
             :ok
 

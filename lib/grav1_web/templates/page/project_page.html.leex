@@ -7,9 +7,9 @@
       <span style="float: right"><%= @project.inserted_at %></span>
     </div>
     <div class="tabs">
-      <%= submit("Segments", phx_click: "view_project_segments", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectSegmentsComponent)) %>
-      <%= submit("Settings", phx_click: "view_project_settings", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectSettingsComponent)) %>
-      <%= submit("Logs", phx_click: "view_project_log", phx_value_id: @project.id, class: tab_selected(@page, Grav1Web.ProjectLogComponent)) %>
+      <%= submit("Segments", phx_click: "view_project_segments", class: tab_selected(@page, Grav1Web.ProjectSegmentsComponent)) %>
+      <%= submit("Settings", phx_click: "view_project_settings", class: tab_selected(@page, Grav1Web.ProjectSettingsComponent)) %>
+      <%= submit("Logs", phx_click: "view_project_log", class: tab_selected(@page, Grav1Web.ProjectLogComponent)) %>
     </div>
   </div>
   <div phx-update="replace" style="height: 100%; overflow-y: hidden; display: flex;">

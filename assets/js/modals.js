@@ -1,5 +1,5 @@
 class Modal {
-  constructor({root=null, can_close=true, title=null}={}) {
+  constructor({root=null, can_close=true, title=null, show=true}={}) {
     this.root = root || document.querySelector("body")
     this.tabs = []
     this.selected_tab = null
@@ -35,6 +35,10 @@ class Modal {
 
     if (title) {
       this.add_title(title)
+    }
+
+    if (show) {
+      this.show()
     }
   }
 

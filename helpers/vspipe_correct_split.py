@@ -3,7 +3,7 @@ import sys, subprocess, re
 def write_vs_script(src):
   src = src.replace("\\","\\\\")
   script = f"""from vapoursynth import core
-core.ffms2.Source("{src}").set_output()"""
+core.lsmas.LWLibavSource("{src}").set_output()"""
 
   open("vs.vpy", "w+").write(script)
 

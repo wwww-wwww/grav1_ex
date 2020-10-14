@@ -51,7 +51,8 @@ defmodule Grav1.MixProject do
       {:bcrypt_elixir, "~> 2.0"},
       {:guardian, "~> 2.0"},
       {:guardian_phoenix, "~> 2.0"},
-      {:comeonin, "~> 5.1"}
+      {:comeonin, "~> 5.1"},
+      {:erlport, git: "https://github.com/wwww-wwww/erlport"}
     ]
   end
 

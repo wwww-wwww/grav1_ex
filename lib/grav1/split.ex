@@ -198,69 +198,87 @@ defmodule Grav1.Split do
   end
 
   defp verify_split(input, path_split, splits, callback) do
-    splits
-    |> Enum.with_index(1)
-    |> Enum.reduce(0, fn {segment, i}, total_frames ->
-      %{file: file, start: start, length: length} = segment
-
-      callback.({:progress, :verify_split}, {i, length(splits)})
-
-      path_segment = Path.join(path_split, file)
-
-      num_frames = get_frames(path_segment)
-
-      misalignment = total_frames != start
-      bad_framecount = num_frames != length
-
-      cond do
-        misalignment ->
-          callback.(
-            :log,
-            "misalignment at #{inspect(segment)} expected: #{start}, got: #{total_frames}"
-          )
-
-        bad_framecount ->
-          callback.(
-            :log,
-            "bad framecount #{inspect(segment)} expected: #{length}, got: #{num_frames}"
-          )
-
-        true ->
-          :ok
+    port =
+      if Application.fetch_env!(:versions, :vapoursynth) != nil do
+        try do
+          Grav1.Python.create_port()
+        rescue
+          _ -> nil
+        end
+      else
+        nil
       end
 
-      # if not using vs_ffms2
-      {num_frames, bad_framecount_slow} =
-        if Application.fetch_env!(:versions, :vapoursynth) == nil do
-          case get_frames(path_segment, false) do
-            ^num_frames ->
-              {num_frames, false}
+    resp =
+      splits
+      |> Enum.with_index(1)
+      |> Enum.reduce(0, fn {segment, i}, total_frames ->
+        %{file: file, start: start, length: length} = segment
 
-            num_frames_slow ->
-              callback.(
-                :log,
-                "bad framecount #{segment} expected: #{num_frames}, got: #{num_frames_slow}"
-              )
+        callback.({:progress, :verify_split}, {i, length(splits)})
 
-              {num_frames_slow, true}
-          end
-        else
-          {num_frames, false}
+        path_segment = Path.join(path_split, file)
+
+        {vs, num_frames} = get_frames_vs(port, path_segment)
+
+        misalignment = total_frames != start
+        bad_framecount = num_frames != length
+
+        cond do
+          misalignment ->
+            callback.(
+              :log,
+              "misalignment at #{inspect(segment)} expected: #{start}, got: #{total_frames}"
+            )
+
+          bad_framecount ->
+            callback.(
+              :log,
+              "bad framecount #{inspect(segment)} expected: #{length}, got: #{num_frames}"
+            )
+
+          true ->
+            :ok
         end
 
-      if misalignment or bad_framecount or bad_framecount_slow do
-        path_old = Path.join(path_split, "old")
-        File.mkdir_p(path_old)
-        File.rename(path_segment, Path.join(path_old, file))
+        # if not using vs
+        {num_frames, bad_framecount_slow} =
+          if vs != :ok do
+            case get_frames(path_segment, false) do
+              ^num_frames ->
+                {num_frames, false}
 
-        correct_split(input, path_segment, start, length, fn x ->
-          callback.({:progress, :correcting}, {x, length})
-        end)
-      end
+              num_frames_slow ->
+                callback.(
+                  :log,
+                  "bad framecount #{segment} expected: #{num_frames}, got: #{num_frames_slow}"
+                )
 
-      callback.({:progress, :verify}, {i, length(splits)})
-      total_frames + num_frames
-    end)
+                {num_frames_slow, true}
+            end
+          else
+            {num_frames, false}
+          end
+
+        if misalignment or bad_framecount or bad_framecount_slow do
+          path_old = Path.join(path_split, "old")
+          File.mkdir_p(path_old)
+          File.rename(path_segment, Path.join(path_old, file))
+
+          correct_split(input, path_segment, start, length, fn x ->
+            callback.({:progress, :correcting}, {x, length})
+          end)
+        end
+
+        callback.({:progress, :verify}, {i, length(splits)})
+        total_frames + num_frames
+      end)
+
+    if port != nil do
+      :python.stop(port)
+    end
+
+    resp
   end
 
   defp correct_split(input, output, start, length, callback) do
@@ -365,21 +383,26 @@ defmodule Grav1.Split do
   end
 
   defp get_frames_vs(input, fast, callback) do
-    args = ["-u", "helpers/vs_frames.py", input]
+    try do
+      port = Grav1.Python.create_port()
 
-    case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
-      {resp, 0} ->
-        case Regex.run(~r/frames: *([0-9]+)/, resp) do
-          [_, total_frames_s] ->
-            {total_frames, _} = Integer.parse(total_frames_s)
-            total_frames
+      try do
+        elem(get_frames_vs(port, input), 1)
+      rescue
+        _ -> get_frames_ffmpeg(input, fast, callback)
+      after
+        :python.stop(port)
+      end
+    rescue
+      _ -> get_frames_ffmpeg(input, fast, callback)
+    end
+  end
 
-          _ ->
-            get_frames_ffmpeg(input, fast, callback)
-        end
-
-      _ ->
-        get_frames_ffmpeg(input, fast, callback)
+  defp get_frames_vs(port, input) do
+    try do
+      {:ok, :python.call(port, :vs_frames, :get_frames, [input])}
+    rescue
+      _ -> {:error, get_frames(input)}
     end
   end
 
@@ -413,18 +436,18 @@ defmodule Grav1.Split do
     {frames, total_frames} =
       case Path.extname(String.downcase(input)) do
         ".mkv" -> get_keyframes_ebml(input, callback)
-        _ -> {:nothing, :nothing}
+        _ -> {:undefined, :undefined}
       end
 
     case {frames, total_frames} do
-      {:nothing, _} ->
+      {:undefined, _} ->
         if Application.fetch_env!(:versions, :vapoursynth) != nil do
           get_keyframes_vs(input, callback)
         else
           get_keyframes_ffmpeg(input, callback)
         end
 
-      {frames, :nothing} ->
+      {frames, :undefined} ->
         callback.(:log, "getting total number of frames")
         {frames, get_frames(input, true, callback)}
 
@@ -435,65 +458,36 @@ defmodule Grav1.Split do
 
   defp get_keyframes_ebml(input, callback) do
     callback.(:log, "getting keyframes from ebml")
+    try do
+      port = Grav1.Python.create_port()
 
-    args = ["-u", "helpers/ebml_keyframes.py", input]
-
-    case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
-      {resp, 0} ->
-        try do
-          [_, keyframes_s] = Regex.run(~r/([0-9,]+)/, resp)
-
-          keyframes =
-            keyframes_s
-            |> String.split(",")
-            |> Enum.map(&(Integer.parse(&1) |> elem(0)))
-
-          case Regex.run(~r/total frames: ([0-9]+)/, resp) do
-            [_, total_frames_s] ->
-              {total_frames, _} = Integer.parse(total_frames_s)
-              {keyframes, total_frames}
-
-            _ ->
-              {keyframes, :nothing}
-          end
-        rescue
-          _ ->
-            callback.(:log, resp)
-            {:nothing, :nothing}
-        end
-
-      resp ->
-        callback.(:log, inspect(resp))
-        {:nothing, :nothing}
+      try do
+        :python.call(port, :ebml_keyframes, :get_keyframes, [input])
+      rescue
+        _ -> {:undefined, :undefined}
+      after
+        :python.stop(port)
+      end
+    rescue
+      _ -> {:undefined, :undefined}
     end
   end
 
   defp get_keyframes_vs(input, callback) do
     callback.(:log, "getting keyframes using vs")
 
-    args = ["-u", "helpers/vs_keyframes.py", input]
+    try do
+      port = Grav1.Python.create_port()
 
-    case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
-      {resp, 0} ->
-        try do
-          [_, total_frames_s] = Regex.run(~r/total frames: ([0-9]+)/, resp)
-          [_, keyframes_s] = Regex.run(~r/([0-9,]+)/, resp)
-
-          {total_frames, _} = Integer.parse(total_frames_s)
-
-          keyframes =
-            keyframes_s
-            |> String.split(",")
-            |> Enum.map(&(Integer.parse(&1) |> elem(0)))
-
-          {keyframes, total_frames}
-        rescue
-          _ ->
-            get_keyframes_ffmpeg(input, callback)
-        end
-
-      _ ->
-        get_keyframes_ffmpeg(input, callback)
+      try do
+        :python.call(port, :vs_frames, :get_keyframes, [input])
+      rescue
+        _ -> get_keyframes_ffmpeg(input, callback)
+      after
+        :python.stop(port)
+      end
+    rescue
+      _ -> get_keyframes_ffmpeg(input, callback)
     end
   end
 
@@ -547,7 +541,7 @@ defmodule Grav1.Split do
         {keyframes, frames}
 
       nil ->
-        {keyframes, :nothing}
+        {keyframes, :undefined}
     end
   end
 
@@ -851,25 +845,27 @@ defmodule Grav1.Split do
     end
   end
 
-  def kf_max_dist(segments, max_dist) do
+  defp kf_max_dist(segments, max_dist) do
     if length(segments) > 1 and max_dist != nil and max_dist > 0 do
       segments
       |> Enum.reduce([], fn segment, acc ->
         if segment.frames > max_dist do
           {frames, _, _} =
             1..segment.frames
-            |> Enum.reduce_while({[], segment.start, segment.frames}, fn n,
-                                                                         {acc2, start, frames} ->
+            |> Enum.reduce_while({[], segment.start, segment.frames}, fn _, acc2 ->
+              {new_frames, start, frames} = acc2
+
               cond do
                 frames < max_dist ->
-                  {:halt, {acc2 ++ [{start, frames}], 0, 0}}
+                  {:halt, {new_frames ++ [{start, frames}], 0, 0}}
 
                 frames - max_dist > max_dist ->
-                  {:cont, {acc2 ++ [{start, max_dist}], start + max_dist, frames - max_dist}}
+                  {:cont,
+                   {new_frames ++ [{start, max_dist}], start + max_dist, frames - max_dist}}
 
                 true ->
                   len = trunc(frames / 2)
-                  {:cont, {acc2 ++ [{start, len}], start + len, frames - len}}
+                  {:cont, {new_frames ++ [{start, len}], start + len, frames - len}}
               end
             end)
 
@@ -907,14 +903,13 @@ defmodule Grav1.Split do
     end
   end
 
-  def partition_keyframes(original_keyframes, aom_keyframes, total_frames) do
+  defp partition_keyframes(original_keyframes, aom_keyframes, total_frames) do
     original_keyframes = original_keyframes ++ [total_frames]
 
     {frames, segments, _} =
       aom_keyframes
       |> Enum.zip(tl(aom_keyframes))
-      |> Enum.with_index()
-      |> Enum.reduce({[], [], 0}, fn {{frame, next_frame}, i}, {frames, segments, last_end} ->
+      |> Enum.reduce({[], [], 0}, fn {frame, next_frame}, {frames, segments, last_end} ->
         length = next_frame - frame
 
         {new_frames, split_n, start} =

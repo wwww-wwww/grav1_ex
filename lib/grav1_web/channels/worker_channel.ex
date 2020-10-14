@@ -8,9 +8,7 @@ defmodule Grav1Web.WorkerChannel do
   def join("worker", %{"versions" => versions, "state" => state, "id" => id}, socket) do
     bad_versions =
       versions
-      |> Enum.filter(fn {encoder, version} ->
-        Application.fetch_env!(:versions, String.to_atom(encoder)) != version
-      end)
+      |> Enum.filter(&check_version(&1))
 
     if length(bad_versions) > 0 do
       {:error, %{reason: "bad versions: " <> inspect(bad_versions)}}
@@ -24,9 +22,7 @@ defmodule Grav1Web.WorkerChannel do
   def join("worker", %{"versions" => versions, "state" => state}, socket) do
     bad_versions =
       versions
-      |> Enum.filter(fn {encoder, version} ->
-        Application.fetch_env!(:versions, String.to_atom(encoder)) != version
-      end)
+      |> Enum.filter(&check_version(&1))
 
     if length(bad_versions) > 0 do
       {:error, %{reason: "bad versions: " <> inspect(bad_versions)}}
@@ -34,6 +30,19 @@ defmodule Grav1Web.WorkerChannel do
       send(self(), {:after_join, state})
       :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
       {:ok, socket.assigns.socket_id, socket}
+    end
+  end
+
+  defp check_version({encoder, version}) do
+    case Application.fetch_env(:versions, String.to_atom(encoder)) do
+      :error ->
+        true
+
+      {:ok, ^version} ->
+        true
+
+      _ ->
+        false
     end
   end
 

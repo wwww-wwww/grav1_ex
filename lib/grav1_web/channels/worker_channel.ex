@@ -8,7 +8,7 @@ defmodule Grav1Web.WorkerChannel do
   def join("worker", %{"versions" => versions, "state" => state, "id" => id}, socket) do
     bad_versions =
       versions
-      |> Enum.filter(&check_version(&1))
+      |> Enum.filter(&(not check_version(&1)))
 
     if length(bad_versions) > 0 do
       {:error, %{reason: "bad versions: " <> inspect(bad_versions)}}
@@ -22,7 +22,7 @@ defmodule Grav1Web.WorkerChannel do
   def join("worker", %{"versions" => versions, "state" => state}, socket) do
     bad_versions =
       versions
-      |> Enum.filter(&check_version(&1))
+      |> Enum.filter(&(not check_version(&1)))
 
     if length(bad_versions) > 0 do
       {:error, %{reason: "bad versions: " <> inspect(bad_versions)}}

@@ -75,7 +75,6 @@ defmodule Grav1.Split do
       |> kf_min_dist(min_frames, total_frames)
       |> ensure_zero()
       |> ensure_total_frames(total_frames)
-      |> kf_max_dist(min_frames, max_frames, source_keyframes)
 
     callback.(:log, inspect(aom_keyframes))
 
@@ -100,7 +99,7 @@ defmodule Grav1.Split do
               |> String.pad_leading(5, "0")
 
             new_split = %{file: "#{split_name}.mkv", start: frame, length: length}
-            new_segment = %{n: i, file: "#{split_name}.mkv", start: 0, frames: length}
+            new_segment = %{file: "#{split_name}.mkv", start: 0, frames: length}
 
             {frames ++ [frame], splits ++ [new_split], segments ++ [new_segment]}
           end)
@@ -111,6 +110,8 @@ defmodule Grav1.Split do
       end
 
     callback.(:log, "#{length(splits)} splits, #{length(segments)} segments")
+
+    segments = kf_max_dist(segments, max_frames)
 
     case split_video(input, split_args, frames, path_split, total_frames, callback) do
       ^total_frames ->
@@ -357,18 +358,18 @@ defmodule Grav1.Split do
 
   defp get_frames(input, fast \\ true, callback \\ nil) do
     if fast and Application.fetch_env!(:versions, :vapoursynth) != nil do
-      get_frames_ffms2(input, fast, callback)
+      get_frames_vs(input, fast, callback)
     else
       get_frames_ffmpeg(input, fast, callback)
     end
   end
 
-  defp get_frames_ffms2(input, fast, callback) do
+  defp get_frames_vs(input, fast, callback) do
     args = ["-u", "helpers/vs_frames.py", input]
 
     case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
       {resp, 0} ->
-        case Regex.run(~r/([0-9]+)/, resp) do
+        case Regex.run(~r/frames: *([0-9]+)/, resp) do
           [_, total_frames_s] ->
             {total_frames, _} = Integer.parse(total_frames_s)
             total_frames
@@ -418,7 +419,7 @@ defmodule Grav1.Split do
     case {frames, total_frames} do
       {:nothing, _} ->
         if Application.fetch_env!(:versions, :vapoursynth) != nil do
-          get_keyframes_vs_ffms2(input, callback)
+          get_keyframes_vs(input, callback)
         else
           get_keyframes_ffmpeg(input, callback)
         end
@@ -467,8 +468,8 @@ defmodule Grav1.Split do
     end
   end
 
-  defp get_keyframes_vs_ffms2(input, callback) do
-    callback.(:log, "getting keyframes using vs ffms2")
+  defp get_keyframes_vs(input, callback) do
+    callback.(:log, "getting keyframes using vs")
 
     args = ["-u", "helpers/vs_keyframes.py", input]
 
@@ -850,64 +851,44 @@ defmodule Grav1.Split do
     end
   end
 
-  defp kf_max_dist(aom_keyframes, min_dist, max_dist, original_keyframes, tolerance \\ 5) do
-    if length(aom_keyframes) > 1 and max_dist != nil and max_dist > 0 do
-      aom_keyframes
-      |> Enum.zip(tl(aom_keyframes))
-      |> Enum.reduce([Enum.at(aom_keyframes, 0)], fn {frame, next_frame}, acc ->
-        {_, _, keyframes} =
-          frame..next_frame
-          |> Enum.reduce_while({frame, next_frame - frame, []}, fn _, frame_acc ->
-            {frame_inner, length, keyframes} = frame_acc
+  def kf_max_dist(segments, max_dist) do
+    if length(segments) > 1 and max_dist != nil and max_dist > 0 do
+      segments
+      |> Enum.reduce([], fn segment, acc ->
+        if segment.frames > max_dist do
+          {frames, _, _} =
+            1..segment.frames
+            |> Enum.reduce_while({[], segment.start, segment.frames}, fn n,
+                                                                         {acc2, start, frames} ->
+              cond do
+                frames < max_dist ->
+                  {:halt, {acc2 ++ [{start, frames}], 0, 0}}
 
-            cond do
-              length <= max_dist ->
-                {:halt, {frame_inner, length, keyframes}}
+                frames - max_dist > max_dist ->
+                  {:cont, {acc2 ++ [{start, max_dist}], start + max_dist, frames - max_dist}}
 
-              length - max_dist >= max_dist ->
-                candidate_kfs =
-                  original_keyframes
-                  |> Enum.reduce([], fn candidate_kf, acc ->
-                    dist = abs(frame_inner + max_dist - candidate_kf)
-                    if dist < tolerance, do: acc ++ [{candidate_kf, dist}], else: acc
-                  end)
-                  |> Enum.sort(fn {_, dist1}, {_, dist2} -> dist2 > dist1 end)
+                true ->
+                  len = trunc(frames / 2)
+                  {:cont, {acc2 ++ [{start, len}], start + len, frames - len}}
+              end
+            end)
 
-                new_frame =
-                  case candidate_kfs do
-                    [{kf, _} | _] -> kf
-                    _ -> frame_inner + max_dist
-                  end
+          new_segments =
+            frames
+            |> Enum.map(fn {start, frames} ->
+              %{file: segment.file, frames: frames, start: start}
+            end)
 
-                {:cont, {new_frame, next_frame - new_frame, keyframes ++ [new_frame]}}
-
-              floor(length / 2) > min_dist ->
-                candidate_kfs =
-                  original_keyframes
-                  |> Enum.reduce([], fn candidate_kf, acc ->
-                    dist = abs(frame_inner + floor(length / 2) - candidate_kf)
-                    if dist < tolerance, do: acc ++ [{candidate_kf, dist}], else: acc
-                  end)
-                  |> Enum.sort(fn {_, dist1}, {_, dist2} -> dist2 > dist1 end)
-
-                new_frame =
-                  case candidate_kfs do
-                    [{kf, _} | _] -> kf
-                    _ -> floor(frame_inner + length / 2)
-                  end
-
-                {:cont, {new_frame, next_frame - new_frame, keyframes ++ [new_frame]}}
-
-              true ->
-                {:halt, {frame_inner, length, keyframes}}
-            end
-          end)
-
-        acc ++ keyframes ++ [next_frame]
+          acc ++ new_segments
+        else
+          acc ++ [segment]
+        end
       end)
     else
-      aom_keyframes
+      segments
     end
+    |> Enum.with_index()
+    |> Enum.map(&Map.put(elem(&1, 0), :n, elem(&1, 1)))
   end
 
   defp ensure_zero(aom_keyframes) do
@@ -957,7 +938,7 @@ defmodule Grav1.Split do
           |> to_string()
           |> String.pad_leading(5, "0")
 
-        new_segment = %{n: i, file: "#{split_name}.mkv", start: start, frames: length}
+        new_segment = %{file: "#{split_name}.mkv", start: start, frames: length}
 
         {new_frames, segments ++ [new_segment], frame + length}
       end)

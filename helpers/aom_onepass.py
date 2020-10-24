@@ -6,6 +6,7 @@ def get_aom_keyframes(ffmpeg_path, onepass_path, src, width, height):
     "-i", src,
     "-map", "0:v:0",
     "-vsync", "0",
+    "-pix_fmt", "yuv420p",
     "-f", "yuv4mpegpipe"]
 
   if width > 0 and height > 0:

@@ -1,5 +1,5 @@
 defmodule Grav1Web.SignInLive do
-  use Phoenix.LiveView
+  use Grav1Web, :live_view
 
   def render(assigns) do
     Grav1Web.UserView.render("sign_in.html", assigns)
@@ -11,7 +11,7 @@ defmodule Grav1Web.SignInLive do
 end
 
 defmodule Grav1Web.SignUpLive do
-  use Phoenix.LiveView
+  use Grav1Web, :live_view
 
   alias Grav1.User
 
@@ -26,7 +26,7 @@ defmodule Grav1Web.SignUpLive do
 end
 
 defmodule Grav1Web.UserLive do
-  use Phoenix.LiveView
+  use Grav1Web, :live_view
 
   @topic "client_workers_live:"
 

@@ -1,33 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8"/>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Grav1 · Phoenix Framework</title>
-    <link rel="stylesheet" href='<%= Routes.static_path(@conn, "/css/app.css") %>'/>
-    <script defer type="text/javascript" src='<%= Routes.static_path(@conn, "/js/app.js") %>'></script>
-    <%= csrf_meta_tag() %>
-  </head>
-  <body>
-    <header>
-      <nav role="navigation">
-        <%= link("Home", to: Routes.page_path(@conn, :index), class: if(title(@conn, assigns) == :index, do: "header-active")) %>
-        <%= live_redirect("Projects", to: Routes.live_path(@conn, Grav1Web.ProjectsLive), class: if(title(@conn, assigns) == :projects, do: "header-active")) %>
-        <%= live_redirect("Workers", to: Routes.live_path(@conn, Grav1Web.WorkersLive), class: if(title(@conn, assigns) == :workers, do: "header-active")) %>
-        <%= if logged_in?(@conn) do %>
-          <%= live_redirect("Profile", to: Routes.live_path(@conn, Grav1Web.UserLive), class: if(title(@conn, assigns) == :show_user, do: "header-active")) %>
-          <%= link("Sign Out", to: Routes.user_path(@conn, :sign_out)) %>
-        <% else %>
-          <%= live_redirect("Sign Up", to: Routes.live_path(@conn, Grav1Web.SignUpLive), class: if(title(@conn, assigns) == :sign_up, do: "header-active")) %>
-          <%= live_redirect("Sign In", to: Routes.live_path(@conn, Grav1Web.SignInLive), class: if(title(@conn, assigns) == :sign_in, do: "header-active")) %>
-        <% end %>
-      </nav>
-    </header>
-    <main role="main" class="container">
-      <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
-      <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
-      <%= @inner_content %>
-    </main>
-  </body>
-</html>
+<header>
+  <nav role="navigation">
+    <%= nav_link(@conn, assigns, "Home", &Routes.page_path/2, :index) %>
+    <%= nav_link(@conn, assigns, "Projects", Grav1Web.ProjectsLive) %>
+    <%= nav_link(@conn, assigns, "Workers", Grav1Web.WorkersLive) %>
+    <%= nav_link(@conn, assigns, "Clients", Grav1Web.ClientsLive) %>
+    <%= if logged_in?(@conn) do %>
+      <%= nav_link(@conn, assigns, "Profile", Grav1Web.UserLive) %>
+      <%= nav_link(@conn, assigns, "Sign Out", &Routes.user_path/2, :sign_out) %>
+    <% else %>
+      <%= nav_link(@conn, assigns, "Sign Up", Grav1Web.SignUpLive) %>
+      <%= nav_link(@conn, assigns, "Sign In", Grav1Web.SignInLive) %>
+    <% end %>
+  </nav>
+</header>
+<main role="main" class="container">
+  <div>
+    <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
+    <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
+    <%= @inner_content %>
+  </div>
+</main>

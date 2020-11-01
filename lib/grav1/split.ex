@@ -458,6 +458,7 @@ defmodule Grav1.Split do
 
   defp get_keyframes_ebml(input, callback) do
     callback.(:log, "getting keyframes from ebml")
+
     try do
       port = Grav1.Python.create_port()
 

@@ -5,7 +5,6 @@ defmodule Grav1Web do
 
       import Plug.Conn
       import Grav1Web.Gettext
-      import Phoenix.LiveView.Controller
       alias Grav1Web.Router.Helpers, as: Routes
     end
   end
@@ -21,6 +20,23 @@ defmodule Grav1Web do
         only: [get_flash: 1, get_flash: 2, view_module: 1, view_template: 1, action_name: 1]
 
       # Include shared imports and aliases for views
+      unquote(view_helpers())
+    end
+  end
+
+  def live_view do
+    quote do
+      use Phoenix.LiveView,
+        layout: {Grav1Web.LayoutView, "live.html"}
+
+      unquote(view_helpers())
+    end
+  end
+
+  def live_component do
+    quote do
+      use Phoenix.LiveComponent
+
       unquote(view_helpers())
     end
   end

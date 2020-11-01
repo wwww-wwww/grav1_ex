@@ -1,47 +1,17 @@
+<div><span>Capacity: </span><span><%= @max_workers - length(@workers) %>/<%= @max_workers %></span></div>
 <table>
   <tr>
-    <th>connected</th>
-    <th>user</th>
-    <th>socket_id</th>
-    <th>name</th>
-    <th>platform</th>
-    <th>job_queue</th>
-    <th>queue_size</th>
-    <th>max_workers</th>
-    <th>upload_queue</th>
-    <th>downloading</th>
-    <th>uploading</th>
+    <th>segment</th>
+    <th>pass</th>
+    <th>progress</th>
   </tr>
-  <%= for {user, clients} <- @clients do %>
-    <%= for {_, client} <- clients do %>
-      <tr>
-        <td><%= client.connected %></td>
-        <td><%= client.user %></td>
-        <td><%= client.socket_id %></td>
-        <td><%= client.name %></td>
-        <td><%= client.platform %></td>
-        <td><%= Enum.join(client.job_queue, ", ") %></td>
-        <td><%= client.queue_size %></td>
-        <td><%= client.max_workers %></td>
-        <td><%= Enum.join(client.upload_queue, ", ") %></td>
-        <td><%= client.downloading %></td>
-        <td><%= Enum.join(client.uploading, ", ") %></td>
-      </tr>
-      <tr>
-        <td colspan="10">
-          <table>
-            <%= for worker <- client.workers do %>
-              <tr>
-                <td>
-                  <%= worker.segment %>
-                </td>
-                <td>pass <%= worker.pass %></td>
-                <td><%= worker.progress_num %> / <%= worker.progress_den %></td>
-              </tr>
-            <% end %>
-          </table>
-        </td>
-      </tr>
-    <% end %>
+  <%= for worker <- @workers do %>
+    <tr>
+      <td>
+        <%= worker.segment %>
+      </td>
+      <td>pass <%= worker.pass %></td>
+      <td><%= worker.progress_num %> / <%= worker.progress_den %></td>
+    </tr>
   <% end %>
 </table>

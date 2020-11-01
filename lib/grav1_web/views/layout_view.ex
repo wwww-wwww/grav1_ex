@@ -14,4 +14,18 @@ defmodule Grav1Web.LayoutView do
       true -> nil
     end
   end
+
+  def nav_link(conn, assigns, name, page, id \\ nil) do
+    if id != nil do
+      live_redirect(name,
+        to: page.(conn, id),
+        class: if(title(conn, assigns) == id, do: "header-active")
+      )
+    else
+      live_redirect(name,
+        to: Routes.live_path(conn, page),
+        class: if(title(conn, assigns) == page, do: "header-active")
+      )
+    end
+  end
 end

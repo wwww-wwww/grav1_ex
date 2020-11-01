@@ -4,10 +4,10 @@ defmodule Grav1Web.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
-    plug :fetch_flash
+    plug :fetch_live_flash
+    plug :put_root_layout, {Grav1Web.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug :put_root_layout, {Grav1Web.LayoutView, :app}
   end
 
   pipeline :api do
@@ -34,6 +34,7 @@ defmodule Grav1Web.Router do
     live "/projects/:id", ProjectsLive
 
     live "/workers", WorkersLive
+    live "/clients", ClientsLive
 
     scope "/" do
       pipe_through :logged_out

@@ -1,5 +1,5 @@
 defmodule Grav1Web.ProjectComponent do
-  use Phoenix.LiveComponent
+  use Grav1Web, :live_component
 
   def render(assigns) do
     Grav1Web.PageView.render("project.html", assigns)
@@ -7,7 +7,7 @@ defmodule Grav1Web.ProjectComponent do
 end
 
 defmodule Grav1Web.ProjectPageComponent do
-  use Phoenix.LiveComponent
+  use Grav1Web, :live_component
 
   def render(assigns) do
     Grav1Web.PageView.render("project_page.html", assigns)
@@ -15,7 +15,7 @@ defmodule Grav1Web.ProjectPageComponent do
 end
 
 defmodule Grav1Web.ProjectLogComponent do
-  use Phoenix.LiveComponent
+  use Grav1Web, :live_component
 
   def render(assigns) do
     Grav1Web.PageView.render("project_log.html", assigns)
@@ -23,7 +23,7 @@ defmodule Grav1Web.ProjectLogComponent do
 end
 
 defmodule Grav1Web.ProjectSegmentsComponent do
-  use Phoenix.LiveComponent
+  use Grav1Web, :live_component
 
   def render(assigns) do
     Grav1Web.PageView.render("project_segments.html", assigns)
@@ -35,7 +35,7 @@ defmodule Grav1Web.ProjectSegmentsComponent do
 end
 
 defmodule Grav1Web.ProjectSettingsComponent do
-  use Phoenix.LiveComponent
+  use Grav1Web, :live_component
 
   def render(assigns) do
     Grav1Web.PageView.render("project_settings.html", assigns)

@@ -1,0 +1,27 @@
+<header>
+  <nav role="navigation">
+    <%= nav_link(@socket, assigns, "Home", &Routes.page_path/2, :index) %>
+    <%= nav_link(@socket, assigns, "Projects", Grav1Web.ProjectsLive) %>
+    <%= nav_link(@socket, assigns, "Workers", Grav1Web.WorkersLive) %>
+    <%= nav_link(@socket, assigns, "Clients", Grav1Web.ClientsLive) %>
+    <%= if logged_in?(@socket) do %>
+      <%= nav_link(@socket, assigns, "Profile", Grav1Web.UserLive) %>
+      <%= nav_link(@socket, assigns, "Sign Out", &Routes.user_path/2, :sign_out) %>
+    <% else %>
+      <%= nav_link(@socket, assigns, "Sign Up", Grav1Web.SignUpLive) %>
+      <%= nav_link(@socket, assigns, "Sign In", Grav1Web.SignInLive) %>
+    <% end %>
+  </nav>
+</header>
+<main role="main" class="container">
+  <div>
+    <p class="alert alert-info" role="alert"
+      phx-click="lv:clear-flash"
+      phx-value-key="info"><%= live_flash(@flash, :info) %></p>
+
+    <p class="alert alert-danger" role="alert"
+      phx-click="lv:clear-flash"
+      phx-value-key="error"><%= live_flash(@flash, :error) %></p>
+    <%= @inner_content %>
+  </div>
+</main>

@@ -4,7 +4,7 @@ defmodule Grav1Web.PageController do
   import Phoenix.LiveView.Controller
 
   def index(conn, _params) do
-    render(conn, "index.html", layout: false)
+    render(conn, "index.html")
   end
 
   def sign_up(conn, _) do

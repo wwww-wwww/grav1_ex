@@ -1,5 +1,5 @@
 defmodule Grav1Web.ProjectsLive do
-  use Phoenix.LiveView
+  use Grav1Web, :live_view
 
   @topic "projects_live"
 

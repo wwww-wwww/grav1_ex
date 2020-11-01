@@ -126,7 +126,6 @@ defmodule Grav1.VerificationExecutor do
                   :ok ->
                     File.rename(path, Path.join(new_path, "#{segment.n}.ivf"))
                     Grav1Web.ProjectsLive.update(project)
-                    Grav1Web.ProjectsLive.update_segments(project, [{segment, []}])
                     Grav1.WorkerAgent.cancel_segments()
 
                     incomplete_segments =
@@ -137,32 +136,34 @@ defmodule Grav1.VerificationExecutor do
                       Grav1.ProjectsExecutor.add_action(:concat, project)
                     end
 
-                  {:error, reason} ->
-                    IO.inspect(reason)
+                    {:ok, project, segment}
+
+                  err ->
                     File.rm(path)
+                    err
                 end
 
-              {:error, reason} ->
-                IO.inspect(reason)
+              err ->
                 File.rm(path)
+                err
             end
 
-          {:error, reason} ->
-            IO.inspect(reason)
+          err ->
             File.rm(path)
+            err
         end
 
       {:error, 1, bad_frames} ->
-        IO.inspect("bad framecount #{bad_frames}, expected #{frames}")
         File.rm(path)
+        {:error, "bad framecount #{bad_frames}, expected #{frames}"}
 
       bad_frames when is_integer(bad_frames) ->
-        IO.inspect("bad framecount #{bad_frames}, expected #{frames}")
         File.rm(path)
+        {:error, "bad framecount #{bad_frames}, expected #{frames}"}
 
-      error ->
-        IO.inspect(error)
+      err ->
         File.rm(path)
+        err
     end
   end
 
@@ -187,8 +188,20 @@ defmodule Grav1.VerificationExecutor do
 
   def handle_cast(:loop, state) do
     if (job = GenServer.call(VerificationQueue, :pop)) != :empty do
-      verify(job)
+      resp = verify(job)
       GenServer.call(VerificationQueue, {:remove, job})
+
+      case resp do
+        {:ok, project, segment} ->
+          Grav1Web.ProjectsLive.update_segments(project, [{segment, []}])
+
+        {:error, err} ->
+          IO.inspect(err)
+
+        err ->
+          IO.inspect(err)
+      end
+
       GenServer.cast(__MODULE__, :loop)
     end
 

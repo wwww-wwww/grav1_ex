@@ -29,7 +29,7 @@ defmodule Grav1.Actions do
 
     Projects.log(project, "Running #{action} " <> Enum.join(args, " "))
 
-    case System.cmd(Application.fetch_env!(:grav1, :path_python), args, stderr_to_stdout: true) do
+    case System.cmd(Grav1.get_path(:python), args, stderr_to_stdout: true) do
       {_, 0} ->
         Projects.log(project, action <> " exited with code 0")
 

@@ -27,15 +27,19 @@ defmodule Grav1Web.ApiController do
         conn |> json(%{success: false, reason: "bad key"})
 
       user ->
-        case Projects.add_project(files, params) do
-          :ok ->
-            conn |> json(%{success: true})
+        if user.level >= 100 do
+          case Projects.add_project(files, params) do
+            :ok ->
+              conn |> json(%{success: true})
 
-          {:error, reason} ->
-            conn |> json(%{success: false, reason: reason})
+            {:error, reason} ->
+              conn |> json(%{success: false, reason: reason})
 
-          err ->
-            conn |> json(%{success: false, reason: inspect(err)})
+            err ->
+              conn |> json(%{success: false, reason: inspect(err)})
+          end
+        else
+          conn |> json(%{success: false, reason: "You are not allowed to do this!"})
         end
     end
   end

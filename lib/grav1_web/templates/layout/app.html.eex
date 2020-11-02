@@ -1,3 +1,4 @@
+<div>
 <header>
   <nav role="navigation">
     <%= nav_link(@conn, assigns, "Home", &Routes.page_path/2, :index) %>
@@ -20,3 +21,4 @@
     <%= @inner_content %>
   </div>
 </main>
+</div>

@@ -170,7 +170,7 @@ defmodule Grav1.Split do
       :ok ->
         port =
           Port.open(
-            {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+            {:spawn_executable, Grav1.get_path(:ffmpeg)},
             [:stderr_to_stdout, :exit_status, :line, args: args]
           )
 
@@ -282,7 +282,7 @@ defmodule Grav1.Split do
   end
 
   defp correct_split(input, output, start, length, callback) do
-    if Application.fetch_env!(:grav1, :path_vspipe) != nil do
+    if Grav1.get_path(:vspipe) != nil do
       correct_split_vspipe(input, output, start, length, callback)
     else
       correct_split_ffmpeg(input, output, start, length, callback)
@@ -316,7 +316,7 @@ defmodule Grav1.Split do
 
     port =
       Port.open(
-        {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+        {:spawn_executable, Grav1.get_path(:ffmpeg)},
         [:stderr_to_stdout, :exit_status, :line, args: args]
       )
 
@@ -337,8 +337,8 @@ defmodule Grav1.Split do
     args = [
       "-u",
       "helpers/vspipe_correct_split.py",
-      Application.fetch_env!(:grav1, :path_vspipe),
-      Application.fetch_env!(:grav1, :path_ffmpeg),
+      Grav1.get_path(:vspipe),
+      Grav1.get_path(:ffmpeg),
       input,
       output,
       to_string(start),
@@ -347,7 +347,7 @@ defmodule Grav1.Split do
 
     port =
       Port.open(
-        {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
+        {:spawn_executable, Grav1.get_path(:python)},
         [:exit_status, :line, :binary, args: args]
       )
 
@@ -412,7 +412,7 @@ defmodule Grav1.Split do
 
     port =
       Port.open(
-        {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+        {:spawn_executable, Grav1.get_path(:ffmpeg)},
         [:stderr_to_stdout, :exit_status, :line, args: args]
       )
 
@@ -514,7 +514,7 @@ defmodule Grav1.Split do
 
     port =
       Port.open(
-        {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+        {:spawn_executable, Grav1.get_path(:ffmpeg)},
         [:stderr_to_stdout, :exit_status, :line, args: args]
       )
 
@@ -547,7 +547,7 @@ defmodule Grav1.Split do
   end
 
   defp get_aom_keyframes(input, total_frames, callback) do
-    if Application.fetch_env!(:grav1, :path_aomenc_onepass_kf) != nil do
+    if Grav1.get_path(:aomenc_onepass_kf) != nil do
       get_aom_keyframes_aio(input, total_frames, callback)
     else
       get_aom_keyframes_aomenc(input, total_frames, callback)
@@ -560,14 +560,14 @@ defmodule Grav1.Split do
     args = [
       "-u",
       "helpers/aom_onepass.py",
-      Application.fetch_env!(:grav1, :path_ffmpeg),
-      Application.fetch_env!(:grav1, :path_aomenc_onepass_kf),
+      Grav1.get_path(:ffmpeg),
+      Grav1.get_path(:aomenc_onepass_kf),
       input
     ]
 
     port =
       Port.open(
-        {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
+        {:spawn_executable, Grav1.get_path(:python)},
         [:exit_status, :line, args: args]
       )
 
@@ -606,14 +606,14 @@ defmodule Grav1.Split do
     args = [
       "-u",
       "helpers/aom_firstpass.py",
-      Application.fetch_env!(:grav1, :path_ffmpeg),
-      Application.fetch_env!(:grav1, :path_aomenc),
+      Grav1.get_path(:ffmpeg),
+      Grav1.get_path(:aomenc),
       input
     ]
 
     port =
       Port.open(
-        {:spawn_executable, Application.fetch_env!(:grav1, :path_python)},
+        {:spawn_executable, Grav1.get_path(:python)},
         [:exit_status, :line, args: args]
       )
 

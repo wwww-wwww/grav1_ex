@@ -5,6 +5,11 @@ defmodule Grav1.Application do
 
   use Application
 
+  @encoders [
+    aomenc: {["--help"], ~r/AOMedia Project AV1 Encoder (.+?) /},
+    vpxenc: {["--help"], ~r/WebM Project VP9 Encoder (.+?) /}
+  ]
+
   def start(_type, _args) do
     children = [
       Grav1.Repo,
@@ -23,34 +28,22 @@ defmodule Grav1.Application do
       Grav1.Projects
     ]
 
-    get_version(
-      :ffmpeg,
-      Application.fetch_env!(:grav1, :path_ffmpeg),
-      ["-version"],
-      ~r/ffmpeg version (.+?) /
-    )
+    paths = Application.fetch_env!(:grav1, :paths)
 
-    get_version(
-      :aomenc,
-      Application.fetch_env!(:grav1, :path_aomenc),
-      ["--help"],
-      ~r/AOMedia Project AV1 Encoder (.+?) /
-    )
+    get_version(:ffmpeg, paths[:ffmpeg], ["-version"], ~r/ffmpeg version (.+?) /)
 
-    get_version(
-      :vpxenc,
-      Application.fetch_env!(:grav1, :path_vpxenc),
-      ["--help"],
-      ~r/WebM Project VP9 Encoder (.+?) /
-    )
+    for encoder <- Application.fetch_env!(:grav1, :encoders) do
+      {args, re} = @encoders[encoder]
+      get_version(encoder, paths[encoder], args, re)
+    end
 
-    get_version(:dav1d, Application.fetch_env!(:grav1, :path_dav1d), ["-v"], ~r/([^\r\n]+)/)
-    get_version(:python, Application.fetch_env!(:grav1, :path_python), ["-V"], ~r/([^\r\n]+)/)
-    get_version(:mkvmerge, Application.fetch_env!(:grav1, :path_mkvmerge), ["-V"], ~r/([^\r\n]+)/)
+    get_version(:dav1d, paths[:dav1d], ["-v"], ~r/([^\r\n]+)/)
+    get_version(:python, paths[:python], ["-V"], ~r/([^\r\n]+)/)
+    get_version(:mkvmerge, paths[:mkvmerge], ["-V"], ~r/([^\r\n]+)/)
 
     get_version(
       :vapoursynth,
-      Application.fetch_env!(:grav1, :path_python),
+      paths[:python],
       ["-u", "helpers/vs_version.py"],
       ~r/([^\r\n]+)/
     )

@@ -52,11 +52,11 @@ defmodule Grav1Web.UserLive do
     end)
   end
 
-  def handle_info(%{topic: @topic <> username, payload: %{clients: clients}}, socket) do
+  def handle_info(%{topic: @topic <> _username, payload: %{clients: clients}}, socket) do
     {:noreply, socket |> assign(clients: clients)}
   end
 
-  def handle_params(a, b, socket) do
+  def handle_params(_, _, socket) do
     {:noreply, socket}
   end
 

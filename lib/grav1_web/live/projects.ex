@@ -5,7 +5,7 @@ defmodule Grav1Web.ProjectsLive do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Grav1.{Projects, Project, RateLimit, Repo, Segment, WorkerAgent}
+  alias Grav1.{Projects, Project, RateLimit, Repo, WorkerAgent}
   alias Grav1Web.Endpoint
 
   def render(assigns) do

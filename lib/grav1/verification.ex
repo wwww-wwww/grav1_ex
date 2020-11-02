@@ -61,7 +61,7 @@ defmodule Grav1.VerificationExecutor do
   def get_frames("av1", path) do
     args = ["-i", path, "--muxer", "null", "--framethreads", "1", "--tilethreads", "16"]
 
-    case System.cmd(Application.fetch_env!(:grav1, :path_dav1d), args, stderr_to_stdout: true) do
+    case System.cmd(Grav1.get_path(:dav1d), args, stderr_to_stdout: true) do
       {resp, 0} ->
         case Regex.scan(@re_dav1d, resp) |> List.last() do
           [_, frame_str] ->
@@ -84,7 +84,7 @@ defmodule Grav1.VerificationExecutor do
   def get_frames(_, path) do
     args = ["-hide_banner", "-loglevel", "debug", "-i", path, "-f", "null", "-"]
 
-    case System.cmd(Application.fetch_env!(:grav1, :path_ffmpeg), args, stderr_to_stdout: true) do
+    case System.cmd(Grav1.get_path(:ffmpeg), args, stderr_to_stdout: true) do
       {resp, 0} ->
         case Regex.scan(@re_ffmpeg_frames_d, resp) |> List.last() do
           [_, frame_str] ->

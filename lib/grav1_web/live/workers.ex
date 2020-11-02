@@ -16,7 +16,7 @@ defmodule Grav1Web.WorkersLive do
     {workers, max_workers} =
       clients
       |> Enum.filter(&elem(&1, 1).connected)
-      |> Enum.reduce({[], 0}, fn {i, client}, {workers, num_workers} ->
+      |> Enum.reduce({[], 0}, fn {_, client}, {workers, num_workers} ->
         {workers ++ client.workers, num_workers + client.max_workers}
       end)
 
@@ -33,6 +33,7 @@ defmodule Grav1Web.WorkersLive do
   end
 
   def update(new_clients) do
+    Grav1Web.ClientsLive.update(new_clients)
     Grav1Web.Endpoint.broadcast(@topic, "workers:update", get_workers(new_clients))
   end
 end
@@ -53,9 +54,7 @@ defmodule Grav1Web.ClientsLive do
 
   def group_clients(clients) do
     clients
-    |> Enum.group_by(fn {id, client} ->
-      client.user
-    end)
+    |> Enum.group_by(&elem(&1, 1).user)
   end
 
   def mount(_, _, socket) do

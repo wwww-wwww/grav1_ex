@@ -2,14 +2,17 @@ use Mix.Config
 
 config :grav1,
   ecto_repos: [Grav1.Repo],
-  path_ffmpeg: System.find_executable("ffmpeg"),
-  path_aomenc: System.find_executable("aomenc"),
-  path_vpxenc: System.find_executable("vpxenc"),
-  path_dav1d: System.find_executable("dav1d"),
-  path_vspipe: System.find_executable("vspipe"),
-  path_python: System.find_executable("python"),
-  path_mkvmerge: System.find_executable("mkvmerge"),
-  path_aomenc_onepass_kf: System.find_executable("onepass_keyframes"),
+  encoders: [:aomenc, :vpxenc],
+  paths: [
+    ffmpeg: System.find_executable("ffmpeg"),
+    aomenc: System.find_executable("aomenc"),
+    vpxenc: System.find_executable("vpxenc"),
+    dav1d: System.find_executable("dav1d"),
+    vspipe: System.find_executable("vspipe"),
+    python: System.find_executable("python"),
+    mkvmerge: System.find_executable("mkvmerge"),
+    aomenc_onepass_kf: System.find_executable("onepass_keyframes")
+  ],
   path_projects: "projects",
   path_verification: "verification"
 

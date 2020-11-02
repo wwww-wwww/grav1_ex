@@ -26,7 +26,7 @@ defmodule Grav1.Concat do
     Projects.update_project(project, %{state: :concatenating})
 
     method =
-      if Application.fetch_env!(:grav1, :path_mkvmerge) != nil do
+      if Grav1.get_path(:mkvmerge) != nil do
         :mkvmerge
       else
         :ffmpeg
@@ -78,7 +78,7 @@ defmodule Grav1.Concat do
 
         port =
           Port.open(
-            {:spawn_executable, Application.fetch_env!(:grav1, :path_ffmpeg)},
+            {:spawn_executable, Grav1.get_path(:ffmpeg)},
             [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
           )
 
@@ -135,7 +135,7 @@ defmodule Grav1.Concat do
   def concat_mkvmerge(project, segments, output, flip \\ 0) do
     Projects.log(project, "concatenating using mkvmerge")
 
-    path_mkvmerge = Application.fetch_env!(:grav1, :path_mkvmerge)
+    path_mkvmerge = Grav1.get_path(:mkvmerge)
 
     [first | tail] = segments
 

@@ -8,41 +8,48 @@ defmodule Grav1Web.WorkerChannel do
   def join("worker", %{"versions" => versions, "state" => state, "id" => id}, socket) do
     bad_versions =
       versions
-      |> Enum.filter(&(not check_version(&1)))
+      |> Enum.filter(&check_version(&1))
+      |> Enum.map(&elem(&1, 0))
 
-    if length(bad_versions) > 0 do
-      {:error, %{reason: "bad versions: " <> inspect(bad_versions)}}
-    else
-      send(self(), {:reconnect, id, state})
-      :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
-      {:ok, socket.assigns.socket_id, socket}
+    encoders = Map.keys(versions)
+
+    missing_encoders =
+      Application.fetch_env!(:grav1, :encoders)
+      |> Enum.filter(&(to_string(&1) not in encoders))
+
+    cond do
+      length(missing_encoders) > 0 ->
+        {:error, %{reason: "missing encoders", data: missing_encoders}}
+
+      length(bad_versions) > 0 ->
+        {:error, %{reason: "bad versions", data: bad_versions}}
+
+      true ->
+        if String.length(id) > 0 do
+          send(self(), {:reconnect, id, state})
+        else
+          send(self(), {:after_join, state})
+        end
+
+        :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
+        {:ok, socket.assigns.socket_id, socket}
     end
   end
 
   def join("worker", %{"versions" => versions, "state" => state}, socket) do
-    bad_versions =
-      versions
-      |> Enum.filter(&(not check_version(&1)))
-
-    if length(bad_versions) > 0 do
-      {:error, %{reason: "bad versions: " <> inspect(bad_versions)}}
-    else
-      send(self(), {:after_join, state})
-      :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
-      {:ok, socket.assigns.socket_id, socket}
-    end
+    join("worker", %{"versions" => versions, "state" => state, "id" => ""}, socket)
   end
 
   defp check_version({encoder, version}) do
     case Application.fetch_env(:versions, String.to_atom(encoder)) do
       :error ->
-        true
+        false
 
       {:ok, ^version} ->
-        true
+        false
 
       _ ->
-        encoder not in Application.fetch_env!(:grav1, :encoders)
+        true
     end
   end
 

@@ -3,33 +3,17 @@ defmodule Grav1Web.ProjectsLive do
 
   @topic "projects_live"
 
-  import Ecto.Query, only: [from: 2]
-
-  alias Grav1.{Projects, Project, RateLimit, Repo, WorkerAgent}
+  alias Grav1.{Projects, Project, RateLimit, Repo, WorkerAgent, User}
   alias Grav1Web.Endpoint
 
   def render(assigns) do
     Grav1Web.PageView.render("projects.html", assigns)
   end
 
-  def mount(socket, page \\ nil) do
-    if connected?(socket), do: Grav1Web.Endpoint.subscribe(@topic)
-
-    new_socket =
-      socket
-      |> assign(projects: Projects.get_projects())
-      |> assign(project_changeset: Project.changeset(%Project{}))
-      |> assign(page: page)
-      |> assign(encoder_params: Grav1.Encoder.params())
-      |> assign(encoder_params_json: Grav1.Encoder.params_json())
-
-    {:ok, new_socket, temporary_assigns: [encoder_params: %{}, encoder_params_json: ""]}
-  end
-
-  def mount(%{"id" => id}, _, socket) do
+  def mount(params = %{"id" => id}, session, socket) do
     case Projects.get_project(id) do
       nil ->
-        mount(socket)
+        mount(%{}, session, socket)
 
       project ->
         page =
@@ -43,12 +27,23 @@ defmodule Grav1Web.ProjectsLive do
               )
           )
 
-        mount(socket, page)
+        mount(params, session, socket, page)
     end
   end
 
-  def mount(_, _, socket) do
-    mount(socket)
+  def mount(_, session, socket, page \\ nil) do
+    if connected?(socket), do: Grav1Web.Endpoint.subscribe(@topic)
+
+    socket =
+      socket
+      |> assign(user: Grav1.Guardian.user(session))
+      |> assign(projects: Projects.get_projects())
+      |> assign(project_changeset: Project.changeset(%Project{}))
+      |> assign(page: page)
+      |> assign(encoder_params: Grav1.Encoder.params())
+      |> assign(encoder_params_json: Grav1.Encoder.params_json())
+
+    {:ok, socket, temporary_assigns: [encoder_params: %{}, encoder_params_json: ""]}
   end
 
   def handle_params(_, _, socket) do
@@ -56,12 +51,18 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   def handle_event("add_project", %{"files" => files, "params" => params}, socket) do
-    case Projects.add_project(files, params) do
-      {:error, reason} ->
-        {:reply, %{success: false, reason: reason}, socket}
+    case User.has_permissions(socket) do
+      :yes ->
+        case Projects.add_project(files, params) do
+          {:error, reason} ->
+            {:reply, %{success: false, reason: reason}, socket}
 
-      _ ->
-        {:reply, %{success: true}, socket}
+          _ ->
+            {:reply, %{success: true}, socket}
+        end
+
+      reason ->
+        {:reply, %{success: false, reason: reason}, socket}
     end
   end
 
@@ -100,52 +101,56 @@ defmodule Grav1Web.ProjectsLive do
         %{"action" => action, "params" => params},
         socket
       ) do
-    Grav1.Actions.add(socket.assigns.page.assigns.project, action, params)
-    {:reply, %{success: true}, socket}
+    case User.has_permissions(socket) do
+      :yes ->
+        Grav1.Actions.add(socket.assigns.page.assigns.project, action, params)
+        {:reply, %{success: true}, socket}
+
+      reason ->
+        {:reply, %{success: false, reason: reason}, socket}
+    end
   end
 
   def handle_event("start_project", _, socket) do
-    Projects.start_project(socket.assigns.page.assigns.project)
-    {:noreply, socket}
+    case User.has_permissions(socket) do
+      :yes ->
+        Projects.start_project(socket.assigns.page.assigns.project)
+        {:reply, %{success: true}, socket}
+
+      reason ->
+        {:reply, %{success: false, reason: reason}, socket}
+    end
   end
 
   def handle_event("stop_project", _, socket) do
-    Projects.stop_project(socket.assigns.page.assigns.project)
-    {:noreply, socket}
+    case User.has_permissions(socket) do
+      :yes ->
+        Projects.stop_project(socket.assigns.page.assigns.project)
+        {:reply, %{success: true}, socket}
+
+      reason ->
+        {:reply, %{success: false, reason: reason}, socket}
+    end
   end
 
   def handle_event("reset_project", %{"encoder_params" => params}, socket) do
-    project = socket.assigns.page.assigns.project
-    id = project.id
+    case User.has_permissions(socket) do
+      :yes ->
+        project = socket.assigns.page.assigns.project
 
-    changeset =
-      project
-      |> Project.changeset(%{state: :idle, encoder_params: params})
+        case Projects.reset_project(project, params) do
+          :ok ->
+            {:reply, %{success: true}, socket}
 
-    segments_query =
-      from s in Grav1.Segment, where: s.project_id == ^id, update: [set: [filesize: 0]]
-
-    res =
-      Ecto.Multi.new()
-      |> Ecto.Multi.update(:project, changeset)
-      |> Ecto.Multi.update_all(:segments, segments_query, [])
-      |> Repo.transaction()
-
-    case res do
-      {:ok, _} ->
-        case Projects.reload_project(id) do
-          {:ok, new_project} ->
-            Grav1Web.ProjectsLive.update(new_project, true)
-            WorkerAgent.distribute_segments()
+          {:error, reason} ->
+            {:reply, %{success: false, reason: reason}, socket}
 
           err ->
             {:reply, %{success: false, reason: inspect(err)}, socket}
         end
 
-        {:reply, %{success: true}, socket}
-
-      {:error, err} ->
-        {:reply, %{success: false, reason: inspect(err)}, socket}
+      reason ->
+        {:reply, %{success: false, reason: reason}, socket}
     end
   end
 

@@ -4,6 +4,8 @@ defmodule Grav1.Projects do
   alias Grav1.{Repo, Project, Projects, WorkerAgent, ProjectsExecutor}
   alias Ecto.Multi
 
+  import Ecto.Query, only: [from: 2]
+
   defstruct projects: %{},
             segments: %{}
 
@@ -438,10 +440,38 @@ defmodule Grav1.Projects do
           ProjectsExecutor.add_action(:concat, project)
         end
 
-        Grav1Web.ProjectsLive.update_project(project)
+        Grav1Web.ProjectsLive.update(project)
       end
 
       Projects.log(project, "loaded")
+    end
+  end
+
+  def reset_project(project, params) do
+    id = project.id
+
+    changeset =
+      project
+      |> Project.changeset(%{state: :idle, encoder_params: params})
+
+    segments_query =
+      from s in Grav1.Segment, where: s.project_id == ^id, update: [set: [filesize: 0]]
+
+    res =
+      Ecto.Multi.new()
+      |> Ecto.Multi.update(:project, changeset)
+      |> Ecto.Multi.update_all(:segments, segments_query, [])
+      |> Repo.transaction()
+
+    case res do
+      {:ok, _} ->
+        new_project = Projects.reload_project(id)
+        WorkerAgent.distribute_segments()
+
+        :ok
+
+      err ->
+        err
     end
   end
 end

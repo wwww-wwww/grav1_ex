@@ -84,4 +84,18 @@ defmodule Grav1.User do
         changeset
     end
   end
+
+  def has_permissions(socket) do
+    case Map.get(socket.assigns, :user) do
+      nil ->
+        :signed_out
+
+      %__MODULE__{level: level} ->
+        if level >= 100 do
+          :yes
+        else
+          :no_perms
+        end
+    end
+  end
 end

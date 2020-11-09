@@ -23,9 +23,15 @@ defmodule Grav1Web.WorkersLive do
     %{workers: workers, max_workers: max_workers}
   end
 
-  def mount(_, _, socket) do
+  def mount(_, session, socket) do
     if connected?(socket), do: Grav1Web.Endpoint.subscribe(@topic)
-    {:ok, socket |> assign(get_clients())}
+
+    socket =
+      socket
+      |> assign(get_clients())
+      |> assign(user: Grav1.Guardian.user(session))
+
+    {:ok, socket}
   end
 
   def handle_info(%{topic: @topic, payload: assigns}, socket) do
@@ -57,9 +63,15 @@ defmodule Grav1Web.ClientsLive do
     |> Enum.group_by(&elem(&1, 1).user)
   end
 
-  def mount(_, _, socket) do
+  def mount(_, session, socket) do
     if connected?(socket), do: Grav1Web.Endpoint.subscribe(@topic)
-    {:ok, socket |> assign(clients: get_clients())}
+
+    socket =
+      socket
+      |> assign(user: Grav1.Guardian.user(session))
+      |> assign(clients: get_clients())
+
+    {:ok, socket}
   end
 
   def handle_info(%{topic: @topic, payload: %{clients: clients}}, socket) do

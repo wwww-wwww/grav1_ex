@@ -19,10 +19,21 @@ defmodule Grav1.Guardian do
     end
   end
 
-  def resource_from_claims(claims) do
-    case Grav1.Repo.get(Grav1.User, claims["sub"]) do
+  def resource_from_claims(%{"sub" => sub}) do
+    case Grav1.Repo.get(Grav1.User, sub) do
       nil -> {:error, "no user"}
       user -> {:ok, user}
+    end
+  end
+
+  def resource_from_claims(_) do
+    nil
+  end
+
+  def user(session) do
+    case resource_from_claims(session) do
+      {:ok, user} -> user
+      _ -> nil
     end
   end
 end

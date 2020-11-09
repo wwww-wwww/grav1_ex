@@ -35,14 +35,22 @@ defmodule Grav1Web.UserLive do
   end
 
   def mount(_, session, socket) do
-    case Grav1.Guardian.resource_from_claims(session) do
-      {:ok, user} ->
-        if connected?(socket), do: Grav1Web.Endpoint.subscribe("#{@topic}#{user.username}")
-        {:ok, socket |> assign(user: user) |> assign(clients: get_clients(user.username))}
+    socket =
+      case Grav1.Guardian.resource_from_claims(session) do
+        {:ok, user} ->
+          if connected?(socket), do: Grav1Web.Endpoint.subscribe("#{@topic}#{user.username}")
 
-      _ ->
-        {:ok, socket |> put_flash(:error, "bad resource") |> redirect(to: "/")}
-    end
+          socket
+          |> assign(user: user)
+          |> assign(clients: get_clients(user.username))
+
+        _ ->
+          socket
+          |> put_flash(:error, "bad resource")
+          |> redirect(to: "/")
+      end
+
+    {:ok, socket}
   end
 
   def get_clients(username) do

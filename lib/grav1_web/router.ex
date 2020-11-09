@@ -46,8 +46,6 @@ defmodule Grav1Web.Router do
       post "/sign_up", UserController, :sign_up
     end
 
-    get "/sign_out", UserController, :sign_out
-
     scope "/" do
       pipe_through :logged_in
 
@@ -56,6 +54,12 @@ defmodule Grav1Web.Router do
         post "/generate_apikey", UserController, :generate_apikey
       end
     end
+  end
+
+  scope "/", Grav1Web do
+    pipe_through :browser
+
+    get "/sign_out", UserController, :sign_out
   end
 
   scope "/api", Grav1Web do

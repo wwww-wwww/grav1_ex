@@ -278,13 +278,7 @@ defmodule Grav1.Projects do
   end
 
   def start_project(project) do
-    update_project(
-      project,
-      %{
-        state: :ready
-      },
-      true
-    )
+    update_project(project, %{state: :ready}, true)
 
     new_project = GenServer.call(__MODULE__, {:reload_project, project.id})
     load_project(new_project)
@@ -293,13 +287,7 @@ defmodule Grav1.Projects do
   end
 
   def stop_project(project) do
-    update_project(
-      project,
-      %{
-        state: :idle
-      },
-      true
-    )
+    update_project(project, %{state: :idle}, true)
 
     new_project = GenServer.call(__MODULE__, {:reload_project, project.id})
     load_project(new_project)

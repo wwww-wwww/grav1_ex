@@ -54,4 +54,16 @@
 
 .project_settings {
   margin: 0.5em;
+
+  .editable {
+    background-color: rgba(100, 100, 100, 0.1);
+    padding: 0.25em;
+    border-radius: 3px;
+    cursor: text;
+  }
+
+  .editable.div-editing {
+    background-color: rgba(0, 0, 0, 0);
+    border: 1px solid rgba(100, 100, 100, 0.4);
+  }
 }

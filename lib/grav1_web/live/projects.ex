@@ -115,6 +115,8 @@ defmodule Grav1Web.ProjectsLive do
     case User.has_permissions(socket) do
       :yes ->
         Projects.start_project(socket.assigns.page.assigns.project)
+        |> update_project()
+
         {:reply, %{success: true}, socket}
 
       reason ->
@@ -126,6 +128,8 @@ defmodule Grav1Web.ProjectsLive do
     case User.has_permissions(socket) do
       :yes ->
         Projects.stop_project(socket.assigns.page.assigns.project)
+        |> update_project()
+
         {:reply, %{success: true}, socket}
 
       reason ->
@@ -229,6 +233,12 @@ defmodule Grav1Web.ProjectsLive do
       project ->
         {page, assigns} = assign.(project)
 
+        assigns =
+          [
+            id: "#{page}:#{project.id}",
+            assigns: socket.assigns
+          ] ++ assigns
+
         new_socket =
           socket
           |> push_patch(to: "/projects/#{id}")
@@ -237,7 +247,7 @@ defmodule Grav1Web.ProjectsLive do
               live_component(socket, Grav1Web.ProjectPageComponent,
                 id: "project:#{project.id}",
                 project: project,
-                page: live_component(socket, page, [id: "#{page}:#{project.id}"] ++ assigns)
+                page: live_component(socket, page, assigns)
               )
           )
 

@@ -174,4 +174,8 @@ defmodule Grav1Web.PageView do
 
     result <> unit
   end
+
+  def edit_perms?(user) do
+    user != nil and user.level >= 100
+  end
 end

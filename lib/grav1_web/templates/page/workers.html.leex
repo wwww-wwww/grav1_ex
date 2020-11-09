@@ -1,19 +1,28 @@
-<div><span><%= gettext("Capacity") %>: </span><span><%= @max_workers - length(@workers) %>/<%= @max_workers %></span></div>
-<table>
-  <tr>
-    <th><%= gettext("Segment") %></th>
-    <th><%= gettext("Pass") %></th>
-    <th><%= gettext("Progress") %></th>
-  </tr>
-  <%= for worker <- @workers do %>
+<div class="card">
+<div>
+  <span><%= gettext("Capacity") %>: </span><span><%= @max_workers - length(@workers) %>/<%= @max_workers %></span>
+</div>
+</div>
+
+<div class="card workers">
+<div>
+  <table class="tbl_workers">
     <tr>
-      <td>
-        <%= worker.segment %>
-      </td>
-      <td>pass <%= worker.pass %></td>
-      <td><%= worker.progress_num %> / <%= worker.progress_den %></td>
+      <th><%= gettext("Segment") %></th>
+      <th><%= gettext("Pass") %></th>
+      <th><%= gettext("Progress") %></th>
     </tr>
-  <% end %>
-</table>
+    <%= for worker <- @workers do %>
+      <tr>
+        <td>
+          <%= worker.segment %>
+        </td>
+        <td><%= worker.pass %></td>
+        <td><%= worker.progress_num %> / <%= worker.progress_den %></td>
+      </tr>
+    <% end %>
+  </table>
+</div>
+</div>
 
 <link rel="stylesheet" href='<%= Routes.static_path(@socket, "/css/workers.css") %>'/>

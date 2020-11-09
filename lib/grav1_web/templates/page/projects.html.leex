@@ -37,7 +37,9 @@
 
   <%= @page %>
 
-  <%= render(Grav1Web.PageView, "add_project.html", encoder_params: @encoder_params, encoder_params_json: @encoder_params_json) %>
+  <%= if edit_perms?(@user) do %>
+    <%= render(Grav1Web.PageView, "add_project.html", encoder_params: @encoder_params, encoder_params_json: @encoder_params_json) %>
+  <% end %>
 </div>
 
 <link rel="stylesheet" href='<%= Routes.static_path(@socket, "/css/projects.css") %>'/>

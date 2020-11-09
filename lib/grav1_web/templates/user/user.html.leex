@@ -1,30 +1,30 @@
-<style>
-  div > span:not(:last-child) {
-    margin-right: 0.5em;
-  }
-</style>
+<div class="username"><%= @user.name %></div>
+<hr>
 
-<div><span>name:</span><span><%= @user.name %></span></div>
-<div><span>level:</span><span><%= @user.level %></span></div>
-<div><span>key:</span><span><%= @user.key %></span></div>
+<div class="card">
+<div class="userinfo">
+  <div><span><%= gettext("Level") %>:</span><span><%= @user.level %></span></div>
+  <div><span><%= gettext("Key") %>:</span><span><%= @user.key %></span></div>
+</div>
+</div>
 
+<div class="card">
+<div class="workers">
 <table>
   <tr>
-    <th>connected</th>
-    <th>user</th>
-    <th>socket_id</th>
-    <th>name</th>
-    <th>platform</th>
-    <th>job_queue</th>
-    <th>queue_size</th>
-    <th>upload_queue</th>
-    <th>downloading</th>
-    <th>uploading</th>
+    <th><%= gettext("Connected") %></th>
+    <th><%= gettext("Socket id") %></th>
+    <th><%= gettext("Name") %></th>
+    <th><%= gettext("Platform") %></th>
+    <th><%= gettext("Job Queue") %></th>
+    <th><%= gettext("Queue Size") %></th>
+    <th><%= gettext("Upload Queue") %></th>
+    <th><%= gettext("Downloading") %></th>
+    <th><%= gettext("Uploading") %></th>
   </tr>
   <%= for {_k, client} <- @clients do %>
     <tr>
       <td><%= client.connected %></td>
-      <td><%= client.user %></td>
       <td><%= client.socket_id %></td>
       <td><%= client.name %></td>
       <td><%= client.platform %></td>
@@ -57,3 +57,7 @@
     </tr>
   <% end %>
 </table>
+</div>
+</div>
+
+<link rel="stylesheet" href='<%= Routes.static_path(@socket, "/css/user.css") %>'/>

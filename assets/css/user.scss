@@ -1,0 +1,18 @@
+main>div {
+  padding: 0.5em;
+  flex: 1;
+}
+
+.userinfo {
+  div>span:not(:last-child) {
+    margin-right: 0.5em;
+  }
+}
+
+div.workers {
+  padding: 0;
+}
+
+.username {
+  font-size: 1.4em;
+}

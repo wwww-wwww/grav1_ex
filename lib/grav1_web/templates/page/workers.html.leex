@@ -1,9 +1,9 @@
-<div><span>Capacity: </span><span><%= @max_workers - length(@workers) %>/<%= @max_workers %></span></div>
+<div><span><%= gettext("Capacity") %>: </span><span><%= @max_workers - length(@workers) %>/<%= @max_workers %></span></div>
 <table>
   <tr>
-    <th>segment</th>
-    <th>pass</th>
-    <th>progress</th>
+    <th><%= gettext("Segment") %></th>
+    <th><%= gettext("Pass") %></th>
+    <th><%= gettext("Progress") %></th>
   </tr>
   <%= for worker <- @workers do %>
     <tr>
@@ -15,3 +15,5 @@
     </tr>
   <% end %>
 </table>
+
+<link rel="stylesheet" href='<%= Routes.static_path(@socket, "/css/workers.css") %>'/>

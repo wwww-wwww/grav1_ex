@@ -1,17 +1,22 @@
 <div class="project_settings">
+  <div class="card">
   <div>
     <span>Encoder</span>
     <span><%= @project.encoder %></span>
   </div>
+  </div>
 
+  <div class="card">
   <div>
     <span>Encoder parameters</span>
     <%= content_tag(:div, @project.encoder_params |> Enum.join(" "), [id: "settings_encoder_params", phx_hook: "settings_change_encoder_params"])%>
     <%= submit("Save", id: "settings_encoder_params_save", class: "hidden", phx_hook: "settings_encoder_params_save") %>
     <%= submit("Cancel", id: "settings_encoder_params_cancel", class: "hidden", phx_hook: "settings_encoder_params_cancel") %>
   </div>
+  </div>
 
   <%= if @project.state == :completed do %>
+    <div class="card">
     <div>
       <span>Action</span>
       <div>
@@ -26,23 +31,18 @@
         <%= submit("Run", id: "settings_actions_submit", phx_hook: "settings_actions") %>
       </div>
     </div>
+    </div>
   <% end %>
 
-  <%= if Grav1.Project.can_start(@project) do %>
-    <%= submit("Start project", id: "settings_start_project", phx_click: "start_project") %>
-  <% else %>
-    <%= if @project.state == :ready do %>
-      <%= submit("Stop project", id: "settings_stop_project", phx_click: "stop_project") %>
+  <div class="card">
+  <div>
+    <%= if Grav1.Project.can_start(@project) do %>
+      <%= submit("Start project", id: "settings_start_project", phx_click: "start_project") %>
+    <% else %>
+      <%= if @project.state == :ready do %>
+        <%= submit("Stop project", id: "settings_stop_project", phx_click: "stop_project") %>
+      <% end %>
     <% end %>
-  <% end %>
+  </div>
+  </div>
 </div>
-
-<style>
-  .project_settings > div {
-    margin: 0.25em;
-  }
-
-  .project_settings > div > span {
-    display: block;
-  }
-</style>

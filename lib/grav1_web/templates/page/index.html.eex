@@ -1,5 +1,7 @@
-<div>
-  <div>
+<div class="card">
+<div class="versions">
+  <div class="title"><%= gettext("Versions") %></div>
+  <div class="body">
     <%= for {p, version} <- Application.get_all_env(:versions) do %>
       <div>
         <span><%= p %></span>
@@ -8,3 +10,6 @@
     <% end %>
   </div>
 </div>
+</div>
+
+<link rel="stylesheet" href='<%= Routes.static_path(@conn, "/css/index.css") %>'/>

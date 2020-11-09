@@ -1,12 +1,12 @@
 @font-face {
-  font-family: 'Material Icons';
+  font-family: "Material Icons";
   font-style: normal;
   font-weight: 400;
   src: url("/fonts/materialIcons.ttf") format("truetype");
 }
 
 .material-icons {
-  font-family: 'Material Icons';
+  font-family: "Material Icons";
   font-weight: normal;
   font-style: normal;
   font-size: 1em;
@@ -17,4 +17,17 @@
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
+}
+
+button {
+  border: none;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  cursor: pointer;
+  border-radius: 0.25em;
+  padding: 0.2em 0.5em;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+button:hover {
+  background-color: rgba(230, 230, 230, 0.5);
 }

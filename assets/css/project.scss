@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
 
-  .logs > div {
+  .logs>div {
     word-wrap: break-word;
   }
 
@@ -26,6 +26,7 @@
         padding: 0.2em 0.4em;
         margin: 0;
         border: none;
+        border-radius: 0;
         border-top: 1px solid rgba(0, 0, 0, 0.4);
         border-right: 1px solid rgba(0, 0, 0, 0.4);
         background-color: rgba(200, 200, 200, 0.6);
@@ -33,11 +34,11 @@
 
       .tab:first-child {
         border-left: 1px solid rgba(0, 0, 0, 0.4);
-        //border-top-left-radius: 3px;
+        border-top-left-radius: 3px;
       }
 
       .tab:last-child {
-        //border-top-right-radius: 3px;
+        border-top-right-radius: 3px;
       }
 
       .selected {
@@ -49,4 +50,8 @@
       }
     }
   }
+}
+
+.project_settings {
+  margin: 0.5em;
 }

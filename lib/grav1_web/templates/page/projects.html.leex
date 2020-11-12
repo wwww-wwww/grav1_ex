@@ -18,6 +18,11 @@
       </div>
     </div>
     <div id="list_projects">
+      <%= if edit_perms?(@user) do %>
+        <div phx-update="ignore">
+          <%= render(Grav1Web.PageView, "add_project.html", encoder_params: @encoder_params, encoder_params_json: @encoder_params_json) %>
+        </div>
+      <% end %>
       <%= for {id, project} <- @projects |> Enum.sort_by(& elem(&1, 1).id, :desc) do %>
         <div id="proj_<%= project.id %>" class="project" data-id="<%= project.id %>" phx-hook="view_project">
           <div class="top"><%= render_project_name(project) %></div>
@@ -36,10 +41,6 @@
   </div>
 
   <%= @page %>
-
-  <%= if edit_perms?(@user) do %>
-    <%= render(Grav1Web.PageView, "add_project.html", encoder_params: @encoder_params, encoder_params_json: @encoder_params_json) %>
-  <% end %>
 </div>
 
 <link rel="stylesheet" href='<%= Routes.static_path(@socket, "/css/projects.css") %>'/>

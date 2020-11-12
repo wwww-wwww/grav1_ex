@@ -33,7 +33,7 @@ function bytes_str(bytes) {
   return `${r[0].toFixed(1)}${bytes_map[r[1]]}`
 }
 
-function create_element(root, type, classes="") {
+function create_element(root, type, classes = "") {
   const e = document.createElement(type)
   if (classes.length > 0) {
     for (const class_name of classes.split(" "))
@@ -44,7 +44,7 @@ function create_element(root, type, classes="") {
   return e
 }
 
-function create_field(label, root, element="input", type="", default_value="", min="", max="", step=1) {
+function create_field(label, root, element = "input", type = "", default_value = "", min = "", max = "", step = 1) {
   const field = create_element(root, "div", "modal-row")
   if (label.length > 0) {
     field.label = create_element(field, "label")
@@ -79,4 +79,4 @@ function create_field(label, root, element="input", type="", default_value="", m
   return field
 }
 
-export {get, post, bytes_str, create_element, create_field}
+export { get, post, bytes_str, create_element, create_field }

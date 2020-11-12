@@ -60,7 +60,7 @@ body {
   overflow: hidden;
 }
 
-body>div {
+body>div:not(.window) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -102,33 +102,30 @@ main {
 }
 
 table {
-  border-collapse: collapse;
-}
-
-table th:not(:last-child),
-table td:not(:last-child) {
-  border-right: 1px solid rgba(0, 0, 0, 0.4);
-}
-
-table th {
   font-weight: 400;
-  padding: 0.1em 0.4em;
+  border-collapse: collapse;
+
+  th:not(:last-child),
+  td:not(:last-child) {
+    border-right: 1px solid rgba(0, 0, 0, 0.4);
+  }
+
+  th {
+    font-weight: 400;
+    padding: 0.1em 0.4em;
+  }
+
+  td {
+    padding: 0.1em 0.4em;
+  }
+
+  tr:nth-child(2n) {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
 }
 
-table tr:not(:last-child) {
+table table table tr:not(:last-child) {
   border-bottom: 1px solid rgba(0, 0, 0, 0.4);
-}
-
-table td {
-  padding: 0.1em 0.4em;
-}
-
-table tr:nth-child(2n) {
-  background-color: rgba(0, 0, 0, 0.04);
-}
-
-.card:not(:last-child) {
-  margin-bottom: 0.5em;
 }
 
 .card>div {
@@ -139,5 +136,60 @@ table tr:nth-child(2n) {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
+.card:not(:last-child) {
+  margin-bottom: 0.5em;
+}
+
+.square {
+  width: 1.3em;
+  height: 1.3em;
+  line-height: 1em;
+  padding: 0;
+  font-size: 1.3em;
+  background: none;
+  border: none;
+  background-color: rgba(100, 100, 100, 0);
+  transition: 0.1s background-color;
+  position: relative;
+}
+
+.circle {
+  width: 1.3em;
+  height: 1.3em;
+  line-height: 1em;
+  padding: 0;
+  font-size: 1.3em;
+  background: none;
+  border: none;
+  background-color: rgba(255, 255, 255, 0);
+  border-radius: 1.3em;
+  transition: 0.1s background-color;
+  position: relative;
+}
+
+.circle:active {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.circle::before {
+  top: 0;
+  left: 0;
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.6);
+  border-radius: 1.4em;
+  display: block;
+  opacity: 0;
+}
+
+.circle:hover::before {
+  opacity: 0.5;
+}
+
+.circle:active::before {
+  opacity: 1;
+}
+
 @import "./buttons.css";
-@import "./modals.css";

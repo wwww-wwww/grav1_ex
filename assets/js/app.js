@@ -1,7 +1,7 @@
 import "../css/app.scss"
 
 import { create_element } from "./util"
-import Modal from "./modals"
+import { create_window, Modal } from "./window"
 
 import "phoenix_html"
 
@@ -158,6 +158,19 @@ hooks.load_encoders = {
       files_list.insertBefore(e, files_list_add)
       e.input.focus()
     })
+
+    this.el.parentElement.removeChild(this.el)
+
+    btn_create_add_project.addEventListener("click", () => {
+      const window_add_prj = create_window("Add Project", {})
+      window_add_prj.show()
+      const _body = window_add_prj.get_body()
+      while (_body.firstChild) _body.removeChild(_body.firstChild)
+      window_add_prj.get_body().appendChild(this.el)
+    })
+  },
+  destroyed() {
+    create_window("Add Project", {}).close()
   }
 }
 

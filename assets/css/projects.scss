@@ -96,66 +96,6 @@ main>div {
   margin: 0 0.5em;
 }
 
-.square {
-  width: 1.5em;
-  height: 1.5em;
-  line-height: 1em;
-  padding: 0;
-  font-size: 1.4em;
-  background: none;
-  border: none;
-  background-color: rgba(100, 100, 100, 0);
-  transition: 0.1s background-color;
-  position: relative;
-}
-
-.circle {
-  width: 1.5em;
-  height: 1.5em;
-  line-height: 1em;
-  padding: 0;
-  font-size: 1.4em;
-  background: none;
-  border: none;
-  background-color: rgba(255, 255, 255, 0);
-  border-radius: 1.4em;
-  transition: 0.1s background-color;
-  position: relative;
-}
-
-.circle:active {
-  background-color: rgba(255, 255, 255, 0.4);
-}
-
-.circle::before {
-  top: 0;
-  left: 0;
-  content: "";
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.6);
-  border-radius: 1.4em;
-  display: block;
-  opacity: 0;
-}
-
-.circle:hover::before {
-  opacity: 0.5;
-}
-
-.circle:active::before {
-  opacity: 1;
-}
-
-#list_cover {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.5);
-  z-index: 1;
-}
-
 .body_inner {
   display: flex;
   overflow: hidden;
@@ -195,18 +135,6 @@ main>div {
 
 #input_filter_projects {
   flex: 1;
-}
-
-#page {
-  flex: 1;
-  overflow: hidden;
-}
-
-#page>* {
-  animation: fadein2 0.25s;
-  overflow: auto;
-  width: 100%;
-  height: 100%;
 }
 
 @keyframes fadein {
@@ -250,90 +178,6 @@ button {
   color: red;
 }
 
-#page_info table {
-  border-collapse: collapse;
-}
-
-#page_info table tr:not(:last-child) {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
-}
-
-#page_info table td {
-  padding: 0.1em 0.4em;
-}
-
-#page_info table tr:nth-child(2n) {
-  background-color: rgba(0, 0, 0, 0.04);
-}
-
-#page_info {
-  padding: 0.25em;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-#page_info>div {
-  margin-bottom: 0.25em;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-  display: inline-block;
-  background-color: rgba(255, 255, 255, 0.4);
-}
-
-#page_info>div>*:first-child {
-  padding: 0.2em 0.5em;
-  background-color: rgba(0, 0, 0, 0.05);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
-  display: block;
-}
-
-#page_info>div>div:last-child,
-#page_info>div>span:last-child {
-  padding: 0.25em 0.5em;
-  display: block;
-}
-
-#page_info>div>div span:first-child {
-  margin-right: 0.25em;
-}
-
-#page_info>div>div span:first-child::after {
-  content: ":";
-}
-
-#page_settings {
-  padding: 0.5em;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-#page_settings>div {
-  margin-bottom: 0.5em;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-  display: inline-block;
-  background-color: rgba(255, 255, 255, 0.4);
-}
-
-#page_settings>div>*:first-child:not(:last-child) {
-  padding: 0.2em 0.5em;
-  background-color: rgba(0, 0, 0, 0.05);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
-  display: block;
-}
-
-#page_settings>div>*:last-child {
-  padding: 0.25em 0.5em;
-  display: block;
-}
-
-#page_settings>div>*:first-child:last-child {
-  padding: 0.2em 0.5em;
-  display: block;
-}
-
 .range {
   margin: 0 0.5em 0 0;
   width: 10em;
@@ -341,15 +185,4 @@ button {
 
 .input_number {
   width: 4em;
-}
-
-#connect_splash {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  display: flex;
-}
-
-#connect_info {
-  margin: auto;
 }

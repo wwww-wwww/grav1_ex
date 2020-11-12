@@ -1,4 +1,8 @@
-<div style="overflow-y: auto" phx-update="ignore" id="_add_project_e" phx-hook="load_encoders">
+<div style="display: flex; justify-content: center; margin-bottom: 0.25em;">
+  <button id="btn_create_add_project">Add project</button>
+</div>
+
+<div style="overflow-y: auto" id="_add_project_e" phx-hook="load_encoders">
   <% encoder_params = @encoder_params %>
   <% encoders = @encoder_params |> Map.keys() %>
 

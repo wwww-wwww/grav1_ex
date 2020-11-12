@@ -34,11 +34,11 @@
 
       .tab:first-child {
         border-left: 1px solid rgba(0, 0, 0, 0.4);
-        border-top-left-radius: 3px;
+        border-top-left-radius: 0.25em;
       }
 
       .tab:last-child {
-        border-top-right-radius: 3px;
+        border-top-right-radius: 0.25em;
       }
 
       .selected {
@@ -58,7 +58,7 @@
   .editable {
     background-color: rgba(100, 100, 100, 0.1);
     padding: 0.25em;
-    border-radius: 3px;
+    border-radius: 0.25em;
     cursor: text;
   }
 

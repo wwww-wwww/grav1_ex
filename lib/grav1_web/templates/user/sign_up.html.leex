@@ -1,14 +1,26 @@
-<style>
-	button::after {
-		background-color: rgba(80, 210, 80, 0.6);
-	}
-</style><div class="card">
-	<div class="card-title"><%= gettext("Sign up") %></div>
-	<div class="card-body">
-		<%= form_for(@changeset, Routes.user_path(@socket, :sign_up), [class: "form"], fn f -> %>
-			<%= text_input(f, :username, placeholder: "Username") %>
-			<%= text_input(f, :password, placeholder: "Password", type: "password") %>
-			<%= submit "Sign up" %>
+<div><%= gettext("Sign up") %></div>
+<hr>
+<div class="card">
+	<div>
+		<%= form_for(:user, Routes.user_path(@socket, :sign_up), [class: "form"], fn f -> %>
+			<%= text_input(f, :username, placeholder: gettext("Username")) %>
+			<%= text_input(f, :password, placeholder: gettext("Password"), type: "password") %>
+			<%= text_input(f, :password_confirmation, placeholder: gettext("Confirm password"), type: "password") %>
+			<%= submit(gettext("Sign up")) %>
 		<% end) %>
 	</div>
 </div>
+
+<style>
+	.form>* {
+		display: block;
+	}
+
+	.form>*:not(:last-child) {
+		margin-bottom: 0.25em;
+	}
+
+	main>div {
+		padding: 0.5em;
+	}
+</style>

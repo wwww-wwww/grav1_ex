@@ -21,3 +21,9 @@ msgstr "Sign Out"
 
 msgid "Sign Up"
 msgstr "Sign Up"
+
+msgid "Username"
+msgstr "Username"
+
+msgid "Password"
+msgstr "Password"

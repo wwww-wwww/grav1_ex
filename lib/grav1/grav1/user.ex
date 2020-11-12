@@ -10,6 +10,7 @@ defmodule Grav1.User do
     field :username, :string, size: 32, primary_key: true
     field :name, :string, size: 32
     field :password, :string
+    field :password_confirmation, :string, virtual: true
     field :level, :integer, default: 0
 
     field :key, :string
@@ -23,6 +24,7 @@ defmodule Grav1.User do
     |> cast(attrs, [:username, :password])
     |> validate_required([:username, :password])
     |> validate_changeset
+    |> validate_confirmation(:password)
     |> copy_username
     |> put_key
     |> generate_password_hash

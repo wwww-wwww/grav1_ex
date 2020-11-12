@@ -1,10 +1,25 @@
+<div><%= gettext("Sign in") %></div>
+<hr>
 <div class="card">
-	<div class="card-title"><%= gettext("Sign in") %></div>
-	<div class="card-body">
+	<div>
 		<%= form_for(:user, Routes.user_path(@socket, :sign_in), [class: "form"], fn f -> %>
-			<%= text_input(f, :username, placeholder: "Username") %>
-			<%= text_input(f, :password, placeholder: "Password", type: "password") %>
-			<%= submit "Sign in" %>
+			<%= text_input(f, :username, placeholder: gettext("Username")) %>
+			<%= text_input(f, :password, placeholder: gettext("Password"), type: "password") %>
+			<%= submit(gettext("Sign in")) %>
 		<% end) %>
 	</div>
 </div>
+
+<style>
+	.form>* {
+		display: block;
+	}
+
+	.form>*:not(:last-child) {
+		margin-bottom: 0.25em;
+	}
+
+	main>div {
+		padding: 0.5em;
+	}
+</style>

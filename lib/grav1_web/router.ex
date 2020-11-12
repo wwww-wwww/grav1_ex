@@ -35,6 +35,7 @@ defmodule Grav1Web.Router do
 
     live "/workers", WorkersLive
     live "/clients", ClientsLive
+    live "/users", UsersLive
 
     scope "/" do
       pipe_through :logged_out

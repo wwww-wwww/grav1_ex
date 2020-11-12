@@ -1,0 +1,21 @@
+<div class="card">
+<div>
+  <table>
+    <tr>
+      <th><%= gettext("User") %></th>
+      <th><%= gettext("Frames") %></th>
+    </tr>
+    <%= for user <- @users do %>
+      <tr>
+        <td><%= user.username %></td>
+        <td><%= user.frames %></td>
+      </tr>
+    <% end %>
+  </table>
+</div>
+</div>
+<style>
+main>div {
+  padding: 0.5em;
+}
+</style>

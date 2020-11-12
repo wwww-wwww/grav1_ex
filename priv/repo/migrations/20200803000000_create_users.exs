@@ -8,6 +8,8 @@ defmodule Grav1.Repo.Migrations.CreateUsers do
       add :password, :string
       add :level, :integer, default: 0
 
+      add :frames, :bigint, default: 0
+
       add :key, :string
 
       timestamps()

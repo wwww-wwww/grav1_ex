@@ -45,7 +45,9 @@ end
 defmodule Grav1.VerificationExecutor do
   use GenServer
 
-  alias Grav1.{Repo, Projects, Segment, VerificationQueue}
+  alias Grav1.{Repo, User, Projects, Segment, VerificationQueue}
+
+  import Ecto.Query, only: [from: 2]
 
   @re_dav1d ~r/Decoded [0-9]+\/([0-9]+) frames/
   @re_ffmpeg_frames_d ~r/([0-9]+?) frames successfully decoded/
@@ -107,6 +109,7 @@ defmodule Grav1.VerificationExecutor do
         socket_id: socket_id
       }) do
     frames = segment.frames
+    username = user.username
 
     case get_frames(segment.project.encoder, path) do
       {:error, reason} ->
@@ -125,6 +128,13 @@ defmodule Grav1.VerificationExecutor do
                 case File.mkdir_p(new_path) do
                   :ok ->
                     File.rename(path, Path.join(new_path, "#{segment.n}.ivf"))
+
+                    from(u in User,
+                      update: [inc: [frames: ^frames]],
+                      where: u.username == ^username
+                    )
+                    |> Repo.update_all([])
+
                     Grav1Web.ProjectsLive.update(project)
                     Grav1.WorkerAgent.cancel_segments()
 

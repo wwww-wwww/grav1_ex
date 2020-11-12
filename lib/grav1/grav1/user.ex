@@ -13,6 +13,8 @@ defmodule Grav1.User do
     field :password_confirmation, :string, virtual: true
     field :level, :integer, default: 0
 
+    field :frames, :integer, default: 0
+
     field :key, :string
 
     timestamps()

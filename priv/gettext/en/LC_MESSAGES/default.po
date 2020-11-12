@@ -40,3 +40,9 @@ msgstr "Username"
 
 msgid "Password"
 msgstr "Password"
+
+msgid "Users"
+msgstr "Users"
+
+msgid "Frames"
+msgstr "Frames"

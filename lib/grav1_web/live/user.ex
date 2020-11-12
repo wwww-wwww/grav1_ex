@@ -72,3 +72,30 @@ defmodule Grav1Web.UserLive do
     Grav1Web.Endpoint.broadcast(@topic <> username, "workers:update", %{clients: clients})
   end
 end
+
+defmodule Grav1Web.UsersLive do
+  use Grav1Web, :live_view
+
+  alias Grav1.{Repo, User}
+
+  def render(assigns) do
+    Grav1Web.UserView.render("users.html", assigns)
+  end
+
+  def mount(_, session, socket) do
+    users =
+      Repo.all(User)
+      |> Enum.sort_by(& &1.frames, :desc)
+
+    socket =
+      socket
+      |> assign(user: Grav1.Guardian.user(session))
+      |> assign(users: users)
+
+    {:ok, socket}
+  end
+
+  def handle_params(_, _, socket) do
+    {:noreply, socket}
+  end
+end

@@ -97,7 +97,8 @@ defmodule Grav1.WorkerAgent do
   def disconnect(socket) do
     new_clients =
       Agent.get_and_update(__MODULE__, fn val ->
-        new_clients = update_clients(val.clients, socket.assigns.socket_id, %{connected: false})
+        new_clients =
+          update_clients(val.clients, socket.assigns.socket_id, meta: %{connected: false})
 
         {new_clients, %{val | clients: new_clients}}
       end)
@@ -262,17 +263,17 @@ defmodule Grav1.WorkerAgent do
     Agent.get(__MODULE__, fn val -> val.clients end)
   end
 
-  defp update_clients(clients, id, opts, sending \\ %{}) do
+  defp update_clients(clients, id, opts \\ []) do
     case Map.get(clients, id) do
       nil ->
         clients
 
       client ->
-        client = %{
-          client
-          | state: struct(client.state, opts),
-            sending: Map.merge(client.sending, sending)
-        }
+        client =
+          opts
+          |> Enum.reduce(client, fn {key, vars}, acc ->
+            Map.put(acc, key, Map.merge(Map.get(client, key), vars))
+          end)
 
         new_sending =
           client.sending
@@ -325,19 +326,20 @@ defmodule Grav1.WorkerAgent do
           {val.clients, val}
 
         client ->
-          {val.clients,
-           %{
-             val
-             | clients:
-                 Map.put(val.clients, id, %{client | state: %{client.state | workers: workers}})
-           }}
+          new_clients =
+            {val.clients,
+             %{
+               val
+               | clients:
+                   Map.put(val.clients, id, %{client | state: %{client.state | workers: workers}})
+             }}
       end
     end)
   end
 
-  def update_client(socket_id, opts, sending \\ %{}) do
+  def update_client(socket_id, opts \\ []) do
     Agent.get_and_update(__MODULE__, fn val ->
-      new_clients = update_clients(val.clients, to_string(socket_id), opts, sending)
+      new_clients = update_clients(val.clients, to_string(socket_id), opts)
 
       {new_clients, %{val | clients: new_clients}}
     end)

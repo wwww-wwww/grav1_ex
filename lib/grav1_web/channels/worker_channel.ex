@@ -100,8 +100,8 @@ defmodule Grav1Web.WorkerChannel do
   def handle_in("recv_segment", %{"downloading" => downloading}, socket) do
     WorkerAgent.update_client(
       socket.assigns.socket_id,
-      %{downloading: downloading},
-      %{downloading: nil}
+      state: %{downloading: downloading},
+      sending: %{downloading: nil}
     )
 
     WorkerAgent.distribute_segments()
@@ -130,7 +130,7 @@ defmodule Grav1Web.WorkerChannel do
 
     WorkerAgent.update_client(
       socket.assigns.socket_id,
-      %{
+      state: %{
         job_queue: job_queue,
         upload_queue: upload_queue,
         downloading: downloading,

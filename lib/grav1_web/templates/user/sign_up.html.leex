@@ -1,14 +1,17 @@
 <div><%= gettext("Sign up") %></div>
 <hr>
 <div class="card">
-	<div>
-		<%= form_for(:user, Routes.user_path(@socket, :sign_up), [class: "form"], fn f -> %>
-			<%= text_input(f, :username, placeholder: gettext("Username")) %>
-			<%= text_input(f, :password, placeholder: gettext("Password"), type: "password") %>
-			<%= text_input(f, :password_confirmation, placeholder: gettext("Confirm password"), type: "password") %>
-			<%= submit(gettext("Sign up")) %>
-		<% end) %>
-	</div>
+<div>
+	<%= form_for(:user, Routes.user_path(@socket, :sign_up), [class: "form"], fn f -> %>
+		<%= text_input(f, :username, placeholder: gettext("Username")) %>
+		<%= error_tag(f, :username) %>
+		<%= password_input(f, :password, placeholder: gettext("Password")) %>
+		<%= error_tag(f, :password) %>
+		<%= password_input(f, :password_confirmation, placeholder: gettext("Confirm password")) %>
+		<%= error_tag(f, :password_confirmation) %>
+		<%= submit("Sign up") %>
+	<% end) %>
+</div>
 </div>
 
 <style>

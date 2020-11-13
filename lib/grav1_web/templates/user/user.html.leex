@@ -16,10 +16,11 @@
     <th><%= gettext("Socket id") %></th>
     <th><%= gettext("Name") %></th>
     <th><%= gettext("Platform") %></th>
-    <th><%= gettext("Job Queue") %></th>
+    <th><%= gettext("Max Workers") %></th>
     <th><%= gettext("Queue Size") %></th>
-    <th><%= gettext("Upload Queue") %></th>
+    <th><%= gettext("Job Queue") %></th>
     <th><%= gettext("Downloading") %></th>
+    <th><%= gettext("Upload Queue") %></th>
     <th><%= gettext("Uploading") %></th>
   </tr>
   <%= for {_k, client} <- @clients do %>
@@ -28,10 +29,11 @@
       <td><%= client.meta.socket_id %></td>
       <td><%= client.meta.name %></td>
       <td><%= client.meta.platform %></td>
-      <td><%= Enum.join(client.state.job_queue, ", ") %></td>
+      <td><%= client.state.max_workers %></td>
       <td><%= client.state.queue_size %></td>
-      <td><%= Enum.join(client.state.upload_queue, ", ") %></td>
+      <td><%= Enum.join(client.state.job_queue, ", ") %></td>
       <td><%= client.state.downloading %></td>
+      <td><%= Enum.join(client.state.upload_queue, ", ") %></td>
       <td><%= Enum.join(client.state.uploading, ", ") %></td>
     </tr>
     <tr>

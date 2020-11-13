@@ -56,7 +56,7 @@ defmodule Grav1Web.UserLive do
   def get_clients(username) do
     Grav1.WorkerAgent.get()
     |> Enum.filter(fn {_, client} ->
-      client.user == username
+      client.meta.user == username
     end)
   end
 

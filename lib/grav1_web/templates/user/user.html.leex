@@ -24,20 +24,20 @@
   </tr>
   <%= for {_k, client} <- @clients do %>
     <tr>
-      <td><%= client.connected %></td>
-      <td><%= client.socket_id %></td>
-      <td><%= client.name %></td>
-      <td><%= client.platform %></td>
-      <td><%= Enum.join(client.job_queue, ", ") %></td>
-      <td><%= client.queue_size %></td>
-      <td><%= Enum.join(client.upload_queue, ", ") %></td>
-      <td><%= client.downloading %></td>
-      <td><%= Enum.join(client.uploading, ", ") %></td>
+      <td><%= client.meta.connected %></td>
+      <td><%= client.meta.socket_id %></td>
+      <td><%= client.meta.name %></td>
+      <td><%= client.meta.platform %></td>
+      <td><%= Enum.join(client.state.job_queue, ", ") %></td>
+      <td><%= client.state.queue_size %></td>
+      <td><%= Enum.join(client.state.upload_queue, ", ") %></td>
+      <td><%= client.state.downloading %></td>
+      <td><%= Enum.join(client.state.uploading, ", ") %></td>
     </tr>
     <tr>
       <td colspan="10">
         <table>
-          <%= for worker <- client.workers do %>
+          <%= for worker <- client.state.workers do %>
             <tr>
               <%= if worker.segment != nil do %>
                 <td>

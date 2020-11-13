@@ -15,9 +15,9 @@ defmodule Grav1Web.WorkersLive do
   def get_workers(clients) do
     {workers, max_workers} =
       clients
-      |> Enum.filter(&elem(&1, 1).connected)
+      |> Enum.filter(&elem(&1, 1).meta.connected)
       |> Enum.reduce({[], 0}, fn {_, client}, {workers, num_workers} ->
-        {workers ++ client.workers, num_workers + client.max_workers}
+        {workers ++ client.state.workers, num_workers + client.state.max_workers}
       end)
 
     %{workers: workers, max_workers: max_workers}
@@ -60,7 +60,7 @@ defmodule Grav1Web.ClientsLive do
 
   def group_clients(clients) do
     clients
-    |> Enum.group_by(&elem(&1, 1).user)
+    |> Enum.group_by(&elem(&1, 1).meta.user)
   end
 
   def mount(_, session, socket) do

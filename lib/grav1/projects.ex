@@ -54,7 +54,8 @@ defmodule Grav1.Projects do
     {workers, limit} =
       clients
       |> Enum.reduce({[], 0}, fn {_, client}, {acc_w, acc_l} ->
-        {acc_w ++ client.workers, acc_l + client.max_workers + client.queue_size}
+        {acc_w ++ client.state.workers,
+         acc_l + client.state.max_workers + client.state.queue_size}
       end)
 
     sorted =
@@ -66,10 +67,11 @@ defmodule Grav1.Projects do
       |> Enum.sort_by(
         &length(
           Enum.filter(clients, fn {_, client} ->
-            &1.id == client.downloading or
-              &1.id == client.sending_job or
-              &1.id in client.job_queue or
-              &1.id in client.upload_queue
+            &1.id == client.sending.downloading or
+              &1.id == client.state.downloading or
+              &1.id in client.state.job_queue or
+              &1.id in client.state.upload_queue or
+              &1.id in client.sate.uploading
           end)
         ),
         :asc

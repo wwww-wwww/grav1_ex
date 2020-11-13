@@ -5,7 +5,11 @@ defmodule Grav1Web.WorkerChannel do
   alias Grav1Web.Endpoint
   alias Grav1.WorkerAgent
 
-  def join("worker", %{"versions" => versions, "state" => state, "id" => id}, socket) do
+  def join(
+        "worker",
+        %{"versions" => versions, "state" => state, "meta" => meta, "id" => id},
+        socket
+      ) do
     bad_versions =
       versions
       |> Enum.filter(&check_version(&1))
@@ -26,9 +30,9 @@ defmodule Grav1Web.WorkerChannel do
 
       true ->
         if String.length(id) > 0 do
-          send(self(), {:reconnect, id, state})
+          send(self(), {:reconnect, id, state, meta})
         else
-          send(self(), {:after_join, state})
+          send(self(), {:after_join, state, meta})
         end
 
         :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
@@ -36,8 +40,12 @@ defmodule Grav1Web.WorkerChannel do
     end
   end
 
-  def join("worker", %{"versions" => versions, "state" => state}, socket) do
-    join("worker", %{"versions" => versions, "state" => state, "id" => ""}, socket)
+  def join("worker", %{"versions" => versions, "state" => state, "meta" => meta}, socket) do
+    join(
+      "worker",
+      %{"versions" => versions, "state" => state, "meta" => meta, "id" => ""},
+      socket
+    )
   end
 
   defp check_version({encoder, version}) do
@@ -58,13 +66,13 @@ defmodule Grav1Web.WorkerChannel do
     IO.inspect("client is gone :(")
   end
 
-  def handle_info({:reconnect, id, state}, socket) do
-    WorkerAgent.connect(socket, state, id)
+  def handle_info({:reconnect, id, state, meta}, socket) do
+    WorkerAgent.connect(socket, state, meta, id)
     {:noreply, socket}
   end
 
-  def handle_info({:after_join, state}, socket) do
-    WorkerAgent.connect(socket, state)
+  def handle_info({:after_join, state, meta}, socket) do
+    WorkerAgent.connect(socket, state, meta)
     {:noreply, socket}
   end
 
@@ -85,10 +93,11 @@ defmodule Grav1Web.WorkerChannel do
   end
 
   def handle_in("recv_segment", %{"downloading" => downloading}, socket) do
-    WorkerAgent.update_client(socket.assigns.socket_id, %{
-      downloading: downloading,
-      sending_job: nil
-    })
+    WorkerAgent.update_client(
+      socket.assigns.socket_id,
+      %{downloading: downloading},
+      %{downloading: nil}
+    )
 
     WorkerAgent.distribute_segments()
 
@@ -180,7 +189,7 @@ defmodule Grav1Web.WorkerProgressChannel do
       clients =
         new_clients
         |> Enum.filter(fn {_, client} ->
-          client.user == socket.assigns.user_id
+          client.meta.user == socket.assigns.user_id
         end)
 
       if length(clients) > 0 do

@@ -71,7 +71,7 @@ defmodule Grav1.Projects do
               &1.id == client.state.downloading or
               &1.id in client.state.job_queue or
               &1.id in client.state.upload_queue or
-              &1.id in client.sate.uploading
+              &1.id in client.state.uploading
           end)
         ),
         :asc

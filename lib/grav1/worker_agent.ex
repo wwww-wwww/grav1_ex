@@ -240,7 +240,7 @@ defmodule Grav1.WorkerAgent do
         end)
         |> Enum.concat(
           Enum.filter(
-            client.job_queue ++ [client.sending.downloading, client.state.downloading],
+            client.state.job_queue ++ [client.sending.downloading, client.state.downloading],
             fn segment ->
               segment not in segments and segment != nil
             end
@@ -296,6 +296,14 @@ defmodule Grav1.WorkerAgent do
                       Grav1Web.WorkerChannel.push_segment(id, segment)
                       pair
                   end
+                end
+
+              {:max_workers, n} ->
+                if n == client.state.max_workers do
+                  {:max_workers, nil}
+                else
+                  Grav1Web.WorkerChannel.push_max_workers(id, n)
+                  {:max_workers, n}
                 end
 
               _ ->

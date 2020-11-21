@@ -262,6 +262,46 @@ hooks.settings_encoder_params_cancel = {
   }
 }
 
+hooks.view_user_client = {
+  mounted() {
+    this.el.children[4].addEventListener("click", () => {
+      const modal = new Modal({ title: "Max workers" })
+      modal.get_body().style.textAlign = "center"
+
+      let row = create_element(modal, "div")
+
+      const input_workers = create_element(row, "input")
+      input_workers.type = "number"
+      input_workers.value = this.el.children[4].textContent
+
+      row = create_element(modal, "div")
+      const btn_apply = create_element(row, "input")
+      btn_apply.type = "submit"
+      btn_apply.value = "Apply"
+      btn_apply.addEventListener("click", () => {
+        this.pushEvent("set_workers", {
+          socket_id: this.el.children[1].textContent,
+          max_workers: input_workers.value
+        }, (reply, _ref) => {
+          if (!reply.success) {
+            const err_modal = new Modal({
+              title: "Error"
+            })
+            const reason_t = create_element(err_modal, "div")
+            reason_t.textContent = "Reason:"
+            const reason = create_element(err_modal, "div")
+            reason.textContent = reply.reason
+          } else {
+            modal.close()
+          }
+        })
+      })
+      modal.show()
+      input_workers.focus()
+    })
+  }
+}
+
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 let liveSocket = new LiveSocket("/live", Socket, {
   hooks: hooks,

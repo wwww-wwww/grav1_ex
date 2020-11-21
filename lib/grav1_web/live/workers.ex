@@ -1,15 +1,10 @@
 defmodule Grav1Web.WorkersLive do
   use Grav1Web, :live_view
 
-  @topic "workers_live"
+  @topic "clients_live"
 
   def render(assigns) do
     Grav1Web.PageView.render("workers.html", assigns)
-  end
-
-  def get_clients() do
-    Grav1.WorkerAgent.get()
-    |> get_workers()
   end
 
   def get_workers(clients) do
@@ -28,19 +23,18 @@ defmodule Grav1Web.WorkersLive do
 
     socket =
       socket
-      |> assign(get_clients())
+      |> assign(get_workers(Grav1.WorkerAgent.get()))
       |> assign(user: Grav1.Guardian.user(session))
 
     {:ok, socket}
   end
 
-  def handle_info(%{topic: @topic, payload: assigns}, socket) do
-    {:noreply, socket |> assign(assigns)}
+  def handle_info(%{topic: @topic, payload: clients}, socket) do
+    {:noreply, socket |> assign(get_workers(clients))}
   end
 
   def update(new_clients) do
-    Grav1Web.ClientsLive.update(new_clients)
-    Grav1Web.Endpoint.broadcast(@topic, "workers:update", get_workers(new_clients))
+    Grav1Web.Endpoint.broadcast(@topic, "workers:update", new_clients)
   end
 end
 
@@ -74,11 +68,7 @@ defmodule Grav1Web.ClientsLive do
     {:ok, socket}
   end
 
-  def handle_info(%{topic: @topic, payload: %{clients: clients}}, socket) do
-    {:noreply, socket |> assign(clients: clients)}
-  end
-
-  def update(new_clients) do
-    Grav1Web.Endpoint.broadcast(@topic, "clients:update", %{clients: new_clients |> group_clients})
+  def handle_info(%{topic: @topic, payload: clients}, socket) do
+    {:noreply, socket |> assign(clients: group_clients(clients))}
   end
 end

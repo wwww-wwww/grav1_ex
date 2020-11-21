@@ -95,15 +95,7 @@ defmodule Grav1.WorkerAgent do
   end
 
   def disconnect(socket) do
-    new_clients =
-      Agent.get_and_update(__MODULE__, fn val ->
-        new_clients =
-          update_clients(val.clients, socket.assigns.socket_id, meta: %{connected: false})
-
-        {new_clients, %{val | clients: new_clients}}
-      end)
-
-    Grav1Web.WorkersLive.update(new_clients)
+    update_client(socket.assigns.socket_id, meta: %{connected: false})
   end
 
   def remove(socket_id) do
@@ -205,18 +197,8 @@ defmodule Grav1.WorkerAgent do
         end
       end)
 
-    if clients_segments != nil do
-      if length(clients_segments) > 0 do
-        Grav1Web.WorkersLive.update(new_clients)
-      end
-
-      new_clients
-      |> Enum.group_by(fn {_, client} ->
-        client.meta.user
-      end)
-      |> Enum.each(fn {user, clients} ->
-        Grav1Web.UserLive.update(user, clients)
-      end)
+    if clients_segments != nil and length(clients_segments) > 0 do
+      Grav1Web.WorkersLive.update(new_clients)
     end
   end
 
@@ -263,7 +245,7 @@ defmodule Grav1.WorkerAgent do
     Agent.get(__MODULE__, fn val -> val.clients end)
   end
 
-  defp update_clients(clients, id, opts \\ []) do
+  defp set_clients(clients, id, opts \\ []) do
     case Map.get(clients, id) do
       nil ->
         clients
@@ -337,13 +319,34 @@ defmodule Grav1.WorkerAgent do
     end)
   end
 
-  def update_client(socket_id, opts \\ []) do
+  def get_client(socket_id) do
+    Agent.get(__MODULE__, &(&1.clients |> Map.get(to_string(socket_id))))
+  end
+
+  def get_clients_by_name(username, name) do
+    Agent.get(__MODULE__, fn val ->
+      val.clients
+      |> Enum.filter(fn {_, client} ->
+        client.meta.user == username and client.meta.name == name
+      end)
+    end)
+  end
+
+  def update_clients(socket_ids, opts \\ []) do
     Agent.get_and_update(__MODULE__, fn val ->
-      new_clients = update_clients(val.clients, to_string(socket_id), opts)
+      new_clients =
+        socket_ids
+        |> Enum.reduce(val.clients, fn socket_id, acc ->
+          set_clients(acc, to_string(socket_id), opts)
+        end)
 
       {new_clients, %{val | clients: new_clients}}
     end)
     |> Grav1Web.WorkersLive.update()
+  end
+
+  def update_client(socket_id, opts \\ []) do
+    update_clients([socket_id], opts)
   end
 
   defp new_client(socket, state, meta) do

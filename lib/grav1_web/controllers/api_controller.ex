@@ -1,7 +1,7 @@
 defmodule Grav1Web.ApiController do
   use Grav1Web, :controller
 
-  alias Grav1.{Projects, Repo, User, VerificationExecutor}
+  alias Grav1.{Projects, Repo, User, VerificationExecutor, WorkerAgent}
 
   def get_segment(conn, %{"id" => id}) do
     case Projects.get_segment(id) do
@@ -40,6 +40,28 @@ defmodule Grav1Web.ApiController do
           end
         else
           conn |> json(%{success: false, reason: "You are not allowed to do this!"})
+        end
+    end
+  end
+
+  def set_workers(conn, %{"name" => name, "max_workers" => max_workers, "key" => key}) do
+    {max_workers, _} = Integer.parse(to_string(max_workers))
+
+    case Repo.get_by(User, key: key) do
+      nil ->
+        conn |> json(%{success: false, reason: "bad key"})
+
+      user ->
+        case WorkerAgent.get_clients_by_name(user.username, name) do
+          [] ->
+            conn |> json(%{success: false, reason: "No clients by this name found"})
+
+          clients ->
+            clients
+            |> Enum.map(&elem(&1, 0))
+            |> WorkerAgent.update_clients(sending: %{max_workers: max_workers})
+
+            conn |> json(%{success: true})
         end
     end
   end

@@ -200,10 +200,6 @@ defmodule Grav1Web.WorkerProgressChannel do
         |> Enum.filter(fn {_, client} ->
           client.meta.user == socket.assigns.user_id
         end)
-
-      if length(clients) > 0 do
-        Grav1Web.UserLive.update(socket.assigns.user_id, clients)
-      end
     end
 
     if Grav1.RateLimit.can_execute?("worker_update", 1 / 10) do

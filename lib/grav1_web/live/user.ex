@@ -27,7 +27,9 @@ end
 defmodule Grav1Web.UserLive do
   use Grav1Web, :live_view
 
-  @topic "client_workers_live:"
+  alias Grav1.WorkerAgent
+
+  @topic "clients_live"
 
   def render(assigns) do
     Grav1Web.UserView.render("user.html", assigns)
@@ -37,11 +39,11 @@ defmodule Grav1Web.UserLive do
     socket =
       case Grav1.Guardian.resource_from_claims(session) do
         {:ok, user} ->
-          if connected?(socket), do: Grav1Web.Endpoint.subscribe("#{@topic}#{user.username}")
+          if connected?(socket), do: Grav1Web.Endpoint.subscribe(@topic)
 
           socket
           |> assign(user: user)
-          |> assign(clients: get_clients(user.username))
+          |> assign(clients: get_clients(WorkerAgent.get(), user.username))
 
         _ ->
           socket
@@ -52,23 +54,35 @@ defmodule Grav1Web.UserLive do
     {:ok, socket}
   end
 
-  def get_clients(username) do
-    Grav1.WorkerAgent.get()
-    |> Enum.filter(fn {_, client} ->
+  def get_clients(clients, username) do
+    Enum.filter(clients, fn {_, client} ->
       client.meta.user == username
     end)
   end
 
-  def handle_info(%{topic: @topic <> _username, payload: %{clients: clients}}, socket) do
-    {:noreply, socket |> assign(clients: clients)}
+  def handle_info(%{topic: @topic, payload: clients}, socket) do
+    {:noreply, socket |> assign(clients: get_clients(clients, socket.assigns.user.username))}
+  end
+
+  def handle_event("set_workers", %{"socket_id" => id, "max_workers" => max_workers}, socket) do
+    username = socket.assigns.user.username
+    {max_workers, _} = Integer.parse(to_string(max_workers))
+
+    case WorkerAgent.get_client(id) do
+      nil ->
+        {:reply, %{success: false, reason: "Client doesn't exist"}, socket}
+
+      %{meta: %{user: ^username}} ->
+        WorkerAgent.update_client(id, sending: %{max_workers: max_workers})
+        {:reply, %{success: true}, socket}
+
+      _ ->
+        {:reply, %{success: false, reason: "You are not allowed to do this!"}, socket}
+    end
   end
 
   def handle_params(_, _, socket) do
     {:noreply, socket}
-  end
-
-  def update(username, clients) do
-    Grav1Web.Endpoint.broadcast(@topic <> username, "workers:update", %{clients: clients})
   end
 end
 

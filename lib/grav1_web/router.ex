@@ -71,6 +71,8 @@ defmodule Grav1Web.Router do
     post "/finish_segment", ApiController, :finish_segment
     post "/add_project", ApiController, :add_project
 
+    post "/set_workers", ApiController, :set_workers
+
     get "/segment/:id", ApiController, :get_segment
   end
 

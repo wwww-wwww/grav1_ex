@@ -2,8 +2,9 @@ main>div {
   padding: 0.5em;
 }
 
-.card.workers>div {
-  padding: 0;
+.card.workers table {
+  border-radius: 0.25em;
+  box-shadow: 0em 0em 2px rgba(0, 0, 0, 0.3);
 }
 
 .card.capacity {

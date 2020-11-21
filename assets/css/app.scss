@@ -1,6 +1,12 @@
 @import "../node_modules/nprogress/nprogress.css";
 @import url("https://fonts.googleapis.com/css2?family=Signika&family=Roboto&display=swap");
 
+@media only screen and (max-width: 767px) {
+  body { 
+    font-size: 1.4em; 
+  }
+}
+
 .alert {
   padding: 15px;
   margin-bottom: 20px;
@@ -75,11 +81,13 @@ body>div:not(.window) {
     align-items: stretch;
     font-size: 1.1em;
     background-color: rgba(255, 255, 255, 0.7);
+    overflow-x: auto;
 
     a {
-      display: inline-block;
+      display: block;
       padding: 0.25em;
       text-decoration: none;
+      white-space: nowrap;
       color: rgba(0, 0, 0, 0.7);
     }
 
@@ -99,6 +107,10 @@ main {
   flex: 1;
   overflow-x: hidden;
   overflow-y: auto;
+
+  >div {
+    overflow-x: auto;
+  }
 }
 
 table {
@@ -129,7 +141,7 @@ table table table tr:not(:last-child) {
 }
 
 .card>div {
-  padding: 0.25em;
+  padding: 0.5em;
   display: inline-block;
   border-radius: 0.2em;
   box-shadow: 0 0 0.2em rgba(0, 0, 0, 0.4);
@@ -192,4 +204,4 @@ table table table tr:not(:last-child) {
   opacity: 1;
 }
 
-@import "./buttons.css";
+@import "./buttons.scss";

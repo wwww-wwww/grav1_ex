@@ -9,8 +9,9 @@ main>div {
   }
 }
 
-div.workers {
-  padding: 0;
+.card.workers table {
+  border-radius: 0.25em;
+  box-shadow: 0em 0em 2px rgba(0, 0, 0, 0.3);
 }
 
 .username {

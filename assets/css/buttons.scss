@@ -19,13 +19,34 @@
   direction: ltr;
 }
 
+input {
+  padding: 0.3em 0.5em;
+}
+
+input,
+select,
 button {
-  border: none;
-  border: 1px solid rgba(0, 0, 0, 0.8);
-  cursor: pointer;
+  font-size: 0.8em;
   border-radius: 0.25em;
-  padding: 0.2em 0.5em;
+  border: none;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  box-shadow: 0.1em 0.1em 0.2em rgba(0, 0, 0, 0.2);
   background-color: rgba(255, 255, 255, 0.1);
+}
+
+input:disabled,
+select:disabled,
+button:disabled {
+  background: rgba(150, 150, 150, 0.3);
+}
+
+select {
+  padding: 0.25em;
+}
+
+button {
+  padding: 0.25em 0.5em;
+  cursor: pointer;
 }
 
 button:hover {

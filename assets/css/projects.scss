@@ -112,25 +112,28 @@ main>div {
 .list_projects-controls {
   display: flex;
   flex-direction: column;
-}
 
-.list_projects-controls>.row {
-  margin: 0.25em 0.25em 0 0.25em;
-  display: flex;
-  align-items: center;
-}
+  >div {
+    margin: 0.25em 0.25em 0 0.25em;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
 
-.list_projects-controls>.row:last-child {
-  margin-bottom: 0.25em;
-}
+    >* {
+      flex: 1;
+      margin: 0.25em;
+    }
+  }
 
-.list_projects-controls>.sort {
-  flex-shrink: 0;
-}
+  >div:last-child {
+    margin-bottom: 0.25em;
+  }
 
-.list_projects-controls>.sort>*:not(:last-child) {
-  margin-right: 0.25em;
-  flex: 1;
+  >div:not(:last-child) {
+    >*:not(last-child) {
+      margin: 0.25em 0.25em 0 0.25em;
+    }
+  }
 }
 
 #input_filter_projects {

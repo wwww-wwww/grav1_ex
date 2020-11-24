@@ -1,13 +1,21 @@
 import os, sys, subprocess, re
 
+if hasattr(subprocess, "CREATE_NO_WINDOW"):
+  CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW
+else:
+  CREATE_NO_WINDOW = 0
+
+
 def get_aom_keyframes(ffmpeg_path, onepass_path, src, width, height):
-  ffmpeg = [ffmpeg_path,
+  ffmpeg = [
+    ffmpeg_path,
     "-loglevel", "error",
     "-i", src,
     "-map", "0:v:0",
     "-vsync", "0",
     "-pix_fmt", "yuv420p",
-    "-f", "yuv4mpegpipe"]
+    "-f", "yuv4mpegpipe"
+  ]
 
   if width > 0 and height > 0:
     ffmpeg.extend(["-vf", f"scale={width}:{height}"])
@@ -17,13 +25,13 @@ def get_aom_keyframes(ffmpeg_path, onepass_path, src, width, height):
   ffmpeg_pipe = subprocess.Popen(ffmpeg,
     stdout=subprocess.PIPE,
     stderr=subprocess.STDOUT,
-    creationflags=subprocess.CREATE_NO_WINDOW)
+    creationflags=CREATE_NO_WINDOW)
 
   pipe = subprocess.Popen([onepass_path],
     stdin=ffmpeg_pipe.stdout,
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
-    creationflags=subprocess.CREATE_NO_WINDOW)
+    creationflags=CREATE_NO_WINDOW)
 
   frame = -1
   while True:

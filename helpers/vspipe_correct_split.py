@@ -1,11 +1,18 @@
 import sys, subprocess, re
 
+if hasattr(subprocess, "CREATE_NO_WINDOW"):
+  CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW
+else:
+  CREATE_NO_WINDOW = 0
+
+
 def write_vs_script(src):
-  src = src.replace("\\","\\\\")
+  src = src.replace("\\", "\\\\")
   script = f"""from vapoursynth import core
 core.lsmas.LWLibavSource("{src}").set_output()"""
 
   open("vs.vpy", "w+").write(script)
+
 
 def correct_split(path_vspipe, path_ffmpeg, path_in, path_out, start, length):
   write_vs_script(path_in)
@@ -27,14 +34,14 @@ def correct_split(path_vspipe, path_ffmpeg, path_in, path_out, start, length):
   pipe1 = subprocess.Popen(vspipe_cmd,
     stdout=subprocess.PIPE,
     stderr=subprocess.STDOUT,
-    creationflags=subprocess.CREATE_NO_WINDOW)
+    creationflags=CREATE_NO_WINDOW)
 
   pipe2 = subprocess.Popen(ffmpeg_cmd,
     stdin=pipe1.stdout,
     stdout=subprocess.PIPE,
     stderr=subprocess.STDOUT,
     universal_newlines=True,
-    creationflags=subprocess.CREATE_NO_WINDOW)
+    creationflags=CREATE_NO_WINDOW)
 
   frame = -1
   while True:

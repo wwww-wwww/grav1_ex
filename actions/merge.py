@@ -17,6 +17,6 @@ if __name__ == "__main__":
   ]
 
   if hasattr(subprocess, "CREATE_NO_WINDOW"):
-    subprocess.run(ffmpeg, creationflags=CREATE_NO_WINDOW)
+    subprocess.run(ffmpeg, creationflags=subprocess.CREATE_NO_WINDOW)
   else:
     subprocess.run(ffmpeg)

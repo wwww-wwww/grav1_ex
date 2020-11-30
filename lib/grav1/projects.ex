@@ -317,6 +317,38 @@ defmodule Grav1.Projects do
     GenServer.call(__MODULE__, {:add_segments, segments})
   end
 
+  defp ensure_supported_encoder(input) do
+    case input do
+      {:error, message} ->
+        {:error, message}
+
+      opts ->
+        if String.to_atom(opts["encoder"]) in Application.fetch_env!(:grav1, :encoders) do
+          opts
+        else
+          {:error,
+           "Encoder not supported. Supported encoders: " <>
+             inspect(Application.fetch_env!(:grav1, :encoders))}
+        end
+    end
+  end
+
+  defp ensure_supported_action(input) do
+    case input do
+      {:error, message} ->
+        {:error, message}
+
+      opts ->
+        if opts["on_complete"] in Application.fetch_env!(:on_complete_actions, :actions) do
+          opts
+        else
+          {:error,
+           "Action not supported. Supported actions: " <>
+             inspect(Application.fetch_env!(:on_complete_actions, :actions))}
+        end
+    end
+  end
+
   defp ensure_not_empty(input) do
     case input do
       {:error, message} -> {:error, message}
@@ -352,6 +384,52 @@ defmodule Grav1.Projects do
     WorkerAgent.distribute_segments()
   end
 
+  defp add_project_p(files, opts) do
+    projects =
+      Enum.reduce(files, [], fn filename, acc ->
+        acc ++
+          [
+            Project.changeset(%Project{input: filename}, opts)
+          ]
+      end)
+
+    case projects |> Enum.at(0) do
+      %{valid?: false, errors: errors} ->
+        new_errors =
+          errors
+          |> Enum.reduce([], fn {x, {error, _}}, acc ->
+            acc ++ ["#{x} #{error}"]
+          end)
+
+        {:error, new_errors}
+
+      _ ->
+        q =
+          projects
+          |> Enum.with_index()
+          |> Enum.reduce(Multi.new(), fn {project, i}, acc ->
+            acc |> Multi.insert(to_string(i), project)
+          end)
+
+        case Repo.transaction(q) do
+          {:ok, transactions} ->
+            transactions
+            |> Enum.reduce(%{}, fn {_, project}, acc ->
+              Map.put(acc, project.id, %{project | segments: %{}})
+            end)
+            |> add_projects()
+
+            Grav1Web.ProjectsLive.update()
+            :ok
+
+          {:error, failed_operation, failed_value, _successes} ->
+            IO.inspect(failed_operation)
+            IO.inspect(failed_value)
+            {:error, [failed_operation, failed_value]}
+        end
+    end
+  end
+
   def add_project(files, opts) do
     case files
          |> ensure_not_empty
@@ -360,48 +438,14 @@ defmodule Grav1.Projects do
         {:error, message}
 
       _ ->
-        projects =
-          Enum.reduce(files, [], fn filename, acc ->
-            acc ++
-              [
-                Project.changeset(%Project{input: filename}, opts)
-              ]
-          end)
-
-        case projects |> Enum.at(0) do
-          %{valid?: false, errors: errors} ->
-            new_errors =
-              errors
-              |> Enum.reduce([], fn {x, {error, _}}, acc ->
-                acc ++ ["#{x} #{error}"]
-              end)
-
-            {:error, new_errors}
+        case opts
+             |> ensure_supported_encoder
+             |> ensure_supported_action do
+          {:error, message} ->
+            {:error, message}
 
           _ ->
-            q =
-              projects
-              |> Enum.with_index()
-              |> Enum.reduce(Multi.new(), fn {project, i}, acc ->
-                acc |> Multi.insert(to_string(i), project)
-              end)
-
-            case Repo.transaction(q) do
-              {:ok, transactions} ->
-                transactions
-                |> Enum.reduce(%{}, fn {_, project}, acc ->
-                  Map.put(acc, project.id, %{project | segments: %{}})
-                end)
-                |> add_projects()
-
-                Grav1Web.ProjectsLive.update()
-                :ok
-
-              {:error, failed_operation, failed_value, _successes} ->
-                IO.inspect(failed_operation)
-                IO.inspect(failed_value)
-                {:error, [failed_operation, failed_value]}
-            end
+            add_project_p(files, opts)
         end
     end
   end

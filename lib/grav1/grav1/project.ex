@@ -54,7 +54,9 @@ defmodule Grav1.Project do
       :split_max_frames,
       :grain_tables,
       :state,
-      :input_frames
+      :input_frames,
+      :on_complete,
+      :on_complete_params
     ])
     |> validate_required([:input, :encoder, :encoder_params, :ffmpeg_params])
   end

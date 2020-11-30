@@ -14,7 +14,7 @@
     <% end %>
   </nav>
 </header>
-<main role="main" class="container">
+<main role="main" class="container <%= title(@socket, assigns) |> inspect() |> String.replace(".", "-") %>">
   <div>
     <p class="alert alert-info" role="alert"
       phx-click="lv:clear-flash"

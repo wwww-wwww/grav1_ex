@@ -1,12 +1,16 @@
-main>div {
-  padding: 0.5em;
-}
+.Grav1Web-WorkersLive,
+.Grav1Web-ClientsLive,
+.Grav1Web-UsersLive {
+  >div {
+    padding: 0.5em;
+  }
 
-.card.workers table {
-  border-radius: 0.25em;
-  box-shadow: 0em 0em 2px rgba(0, 0, 0, 0.3);
-}
+  .card.workers table {
+    border-radius: 0.25em;
+    box-shadow: 0em 0em 2px rgba(0, 0, 0, 0.3);
+  }
 
-.card.capacity {
-  margin-bottom: 0.5em;
+  .card.capacity {
+    margin-bottom: 0.5em;
+  }
 }

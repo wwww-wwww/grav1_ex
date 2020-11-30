@@ -1,69 +1,73 @@
-.page_project {
-  display: flex;
-  flex-direction: column;
+.Grav1Web-ProjectsLive {
+  .page_project {
+    display: flex;
+    flex-direction: column;
 
-  .logs>div {
-    word-wrap: break-word;
-  }
-
-  .header {
-    padding: 0.3em 0.3em 0 0.3em;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
-
-    .title {
-      margin-bottom: 0.4em;
+    .logs>div {
+      word-wrap: break-word;
     }
 
-    .details {
-      font-size: 0.8em;
-    }
+    .header {
+      padding: 0.3em 0.3em 0 0.3em;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.4);
 
-    .tabs {
-      margin-top: 0.5em;
+      .title {
+        margin-bottom: 0.4em;
+      }
 
-      .tab {
+      .details {
         font-size: 0.8em;
-        padding: 0.2em 0.4em;
-        margin: 0;
-        border: none;
-        border-radius: 0;
-        border-top: 1px solid rgba(0, 0, 0, 0.4);
-        border-right: 1px solid rgba(0, 0, 0, 0.4);
-        background-color: rgba(200, 200, 200, 0.6);
       }
 
-      .tab:first-child {
-        border-left: 1px solid rgba(0, 0, 0, 0.4);
-        border-top-left-radius: 0.25em;
-      }
+      .tabs {
+        margin-top: 0.5em;
 
-      .tab:last-child {
-        border-top-right-radius: 0.25em;
-      }
+        .tab {
+          font-size: 0.8em;
+          padding: 0.2em 0.4em;
+          margin: 0;
+          border: none;
+          border-radius: 0;
+          border-top: 1px solid rgba(0, 0, 0, 0.4);
+          border-right: 1px solid rgba(0, 0, 0, 0.4);
+          background-color: rgba(200, 200, 200, 0.6);
+        }
 
-      .selected {
-        background-color: rgba(255, 255, 255, 0.6);
-      }
+        .tab:first-child {
+          border-left: 1px solid rgba(0, 0, 0, 0.4);
+          border-top-left-radius: 0.25em;
+        }
 
-      .tab:hover {
-        background-color: rgba(220, 220, 220, 0.6);
+        .tab:last-child {
+          border-top-right-radius: 0.25em;
+        }
+
+        .selected {
+          background-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .tab:hover {
+          background-color: rgba(220, 220, 220, 0.6);
+        }
       }
+    }
+  }
+
+  .project_settings {
+    margin: 0.5em;
+
+    .editable {
+      background-color: rgba(100, 100, 100, 0.1);
+      padding: 0.25em;
+      border-radius: 0.25em;
+      cursor: text;
+    }
+
+    .editable.div-editing {
+      background-color: rgba(0, 0, 0, 0);
+      border: 1px solid rgba(100, 100, 100, 0.4);
     }
   }
 }
 
-.project_settings {
-  margin: 0.5em;
-
-  .editable {
-    background-color: rgba(100, 100, 100, 0.1);
-    padding: 0.25em;
-    border-radius: 0.25em;
-    cursor: text;
-  }
-
-  .editable.div-editing {
-    background-color: rgba(0, 0, 0, 0);
-    border: 1px solid rgba(100, 100, 100, 0.4);
-  }
-}
+@import "./segments.scss";

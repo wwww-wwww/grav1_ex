@@ -15,7 +15,7 @@
     <% end %>
   </nav>
 </header>
-<main role="main" class="container">
+<main role="main" class="container <%= title(@conn, assigns) |> inspect() |> String.replace(":", "-") %>">
   <div>
     <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
     <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>

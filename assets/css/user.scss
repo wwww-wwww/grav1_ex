@@ -1,24 +1,26 @@
-main>div {
-  padding: 0.5em;
-  flex: 1;
-}
-
-.userinfo {
-  div>span:not(:last-child) {
-    margin-right: 0.5em;
+.Grav1Web-UserLive {
+  >div {
+    padding: 0.5em;
+    flex: 1;
   }
-}
 
-.card.workers table {
-  border-radius: 0.25em;
-  box-shadow: 0em 0em 2px rgba(0, 0, 0, 0.3);
-}
+  .userinfo {
+    div>span:not(:last-child) {
+      margin-right: 0.5em;
+    }
+  }
 
-.username {
-  font-size: 1.4em;
-}
+  .card.workers table {
+    border-radius: 0.25em;
+    box-shadow: 0em 0em 2px rgba(0, 0, 0, 0.3);
+  }
 
-.col_max_workers {
-  cursor: pointer;
-  background-color: rgba(120, 120, 120, 0.1);
+  .username {
+    font-size: 1.4em;
+  }
+
+  .col_max_workers {
+    cursor: pointer;
+    background-color: rgba(120, 120, 120, 0.1);
+  }
 }

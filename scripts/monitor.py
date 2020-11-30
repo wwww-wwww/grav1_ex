@@ -31,7 +31,7 @@ session = requests.Session()
 
 
 def proc(path):
-  if os.path.splitext(path)[1] not in exts: return
+  if os.path.splitext(path)[1].lower() not in exts: return
   while True:
     try:
       open(path).close()

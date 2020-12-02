@@ -194,14 +194,6 @@ defmodule Grav1Web.WorkerProgressChannel do
 
     new_clients = Grav1.WorkerAgent.update_workers(socket.assigns.socket_id, new_workers)
 
-    if Grav1.RateLimit.can_execute?("worker_update:#{socket.assigns.user_id}", 1 / 10) do
-      clients =
-        new_clients
-        |> Enum.filter(fn {_, client} ->
-          client.meta.user == socket.assigns.user_id
-        end)
-    end
-
     if Grav1.RateLimit.can_execute?("worker_update", 1 / 10) do
       Grav1Web.WorkersLive.update(new_clients)
     end

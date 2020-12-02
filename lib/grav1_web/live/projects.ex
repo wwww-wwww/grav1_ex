@@ -168,6 +168,11 @@ defmodule Grav1Web.ProjectsLive do
       project: project
     )
 
+    send_update(Grav1Web.ProjectSettingsComponent,
+      id: "#{Grav1Web.ProjectSettingsComponent}:#{project.id}",
+      project: project
+    )
+
     {:noreply, socket |> assign(projects: Projects.get_projects())}
   end
 

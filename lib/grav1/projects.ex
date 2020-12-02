@@ -101,7 +101,7 @@ defmodule Grav1.Projects do
   end
 
   def handle_call({:finish_segment, segment, filesize}, _, state) do
-    case Map.get(state.projects, segment.project.id) do
+    case Map.get(state.projects, segment.project_id) do
       nil ->
         {:reply, {:error, "cant find project"}, state}
 
@@ -158,7 +158,7 @@ defmodule Grav1.Projects do
     segments =
       project.segments
       |> Enum.reduce(%{}, fn segment, segments ->
-        Map.put(segments, segment.id, %{segment | project: %{project | segments: []}})
+        Map.put(segments, segment.id, %{segment | project: %{project | segments: %{}}})
       end)
 
     new_segments =
@@ -231,8 +231,25 @@ defmodule Grav1.Projects do
           Repo.update(Project.changeset(project, opts))
         end
 
+        new_segments =
+          state.segments
+          |> Enum.map(fn {sid, segment} ->
+            if segment.project_id == id do
+              {sid, %{segment | project: new_project}}
+            else
+              {sid, segment}
+            end
+          end)
+          |> Map.new()
+
         Grav1Web.ProjectsLive.update(new_project)
-        {:noreply, %{state | projects: Map.put(state.projects, project.id, new_project)}}
+
+        {:noreply,
+         %{
+           state
+           | projects: Map.put(state.projects, project.id, new_project),
+             segments: new_segments
+         }}
     end
   end
 
@@ -307,6 +324,8 @@ defmodule Grav1.Projects do
 
   def update_project(project, opts, save \\ false) do
     GenServer.cast(__MODULE__, {:update, project.id, opts, save})
+
+    log(project, "updated: " <> inspect(opts))
   end
 
   def finish_segment(segment, filesize) do
@@ -499,7 +518,7 @@ defmodule Grav1.Projects do
 
     case res do
       {:ok, _} ->
-        new_project = Projects.reload_project(id)
+        Projects.reload_project(id)
         WorkerAgent.distribute_segments()
 
         :ok

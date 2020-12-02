@@ -19,6 +19,13 @@
   </div>
   </div>
 
+  <div class="card">
+  <div>
+    <span>Priority</span>
+    <%= content_tag(:div, @project.priority)%>
+  </div>
+  </div>
+
   <%= if edit_perms?(@assigns.user) do %>
 
     <%= if @project.state == :completed do %>

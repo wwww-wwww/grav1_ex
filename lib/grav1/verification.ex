@@ -139,7 +139,7 @@ defmodule Grav1.VerificationExecutor do
                     Grav1.WorkerAgent.cancel_segments()
 
                     incomplete_segments =
-                      :maps.fitler(fn _, v -> v.filesize == 0 end, project.segments)
+                      :maps.filter(fn _, v -> v.filesize == 0 end, project.segments)
 
                     if map_size(incomplete_segments) == 0 do
                       Grav1.ProjectsExecutor.add_action(:concat, project)

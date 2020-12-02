@@ -189,7 +189,6 @@ hooks.settings_actions = {
     this.el.addEventListener("click", () => {
       const params = [...on_complete_action_params.value.matchAll(re_args)].flat()
       this.pushEvent("run_complete_action", {
-        id: this.el.dataset.id,
         action: on_complete_actions.value,
         params: params
       })

@@ -158,6 +158,20 @@ defmodule Grav1Web.ProjectsLive do
     end
   end
 
+  def handle_event("set_priority", %{"priority" => priority}, socket) do
+    {priority, _} = Integer.parse(to_string(priority))
+
+    case User.has_permissions(socket) do
+      :yes ->
+        socket.assigns.page.assigns.project
+        |> Projects.update_project(%{priority: priority}, true)
+        {:reply, %{success: true}, socket}
+
+      reason ->
+        {:reply, %{success: false, reason: reason}, socket}
+    end
+  end
+
   # update project list and project
   def handle_info(
         %{topic: @topic, event: "update", payload: %{project: project, projects: true}},

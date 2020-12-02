@@ -231,11 +231,12 @@ hooks.settings_encoder_params_save = {
       confirm_modal.confirm.focus()
       confirm_modal.confirm.addEventListener("click", () => {
         this.pushEvent("reset_project", {
-          id: this.el.dataset.id,
           encoder_params: params
         }, (reply, _ref) => {
           confirm_modal.close()
-          if (!reply.success) {
+          if (reply.success) {
+            settings_encoder_params.original_value = settings_encoder_params.textContent
+          } else {
             const err_modal = new Modal({
               title: "Error"
             })
@@ -258,6 +259,48 @@ hooks.settings_encoder_params_cancel = {
       settings_encoder_params.classList.toggle("div-editing", false)
       settings_encoder_params_save.classList.toggle("hidden", true)
       settings_encoder_params_cancel.classList.toggle("hidden", true)
+    })
+  }
+}
+
+hooks.settings_change_priority = {
+  mounted() {
+    this.el.original_value = this.el.value
+    this.el.addEventListener("change", () => {
+      settings_priority_save.classList.toggle("hidden", this.el.original_value == this.el.value)
+      settings_priority_cancel.classList.toggle("hidden", this.el.original_value == this.el.value)
+    })
+  }
+}
+
+hooks.settings_priority_save = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      this.pushEvent("set_priority", {
+        priority: settings_priority.value
+      }, (reply, _ref) => {
+        if (reply.success) {
+          settings_priority.original_value = settings_priority.value
+        } else {
+          const err_modal = new Modal({
+            title: "Error"
+          })
+          const reason_t = create_element(err_modal, "div")
+          reason_t.textContent = "Reason:"
+          const reason = create_element(err_modal, "div")
+          reason.textContent = reply.reason
+        }
+      })
+    })
+  }
+}
+
+hooks.settings_priority_cancel = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      settings_priority.value = settings_priority.original_value
+      settings_priority_save.classList.toggle("hidden", true)
+      settings_priority_cancel.classList.toggle("hidden", true)
     })
   }
 }

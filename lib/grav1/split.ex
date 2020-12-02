@@ -919,7 +919,7 @@ defmodule Grav1.Split do
           else
             largest =
               original_keyframes
-              |> Enum.filter(fn x -> x < frame end)
+              |> Enum.filter(&(&1 < frame))
               |> Enum.max()
 
             if largest in frames or largest < last_end do

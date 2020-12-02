@@ -107,9 +107,8 @@ defmodule Grav1Web.PageView do
             total_segments = map_size(project.segments)
 
             incomplete_segments =
-              project.segments
-              |> Enum.filter(&(elem(&1, 1).filesize == 0))
-              |> length()
+              :maps.filter(fn _, v -> v.filesize == 0 end, project.segments)
+              |> map_size()
 
             pct =
               (100 * project.progress_num / den)

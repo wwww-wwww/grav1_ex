@@ -65,14 +65,17 @@ defmodule Grav1.Projects do
       |> Enum.sort_by(& &1.project.priority, :asc)
       |> Enum.take(limit)
       |> Enum.sort_by(
-        &length(
-          Enum.filter(clients, fn {_, client} ->
-            &1.id == client.sending.downloading or
-              &1.id == client.state.downloading or
-              &1.id in client.state.job_queue or
-              &1.id in client.state.upload_queue or
-              &1.id in client.state.uploading
-          end)
+        &map_size(
+          :maps.filter(
+            fn _, client ->
+              &1.id == client.sending.downloading or
+                &1.id == client.state.downloading or
+                &1.id in client.state.job_queue or
+                &1.id in client.state.upload_queue or
+                &1.id in client.state.uploading
+            end,
+            clients
+          )
         ),
         :asc
       )
@@ -469,9 +472,7 @@ defmodule Grav1.Projects do
       ProjectsExecutor.add_action(:split, project)
     else
       if project.state in [:ready, :idle] do
-        completed_segments =
-          project.segments
-          |> Enum.filter(&(elem(&1, 1).filesize != 0))
+        completed_segments = :maps.filter(fn _, v -> v.filesize != 0 end, project.segments)
 
         completed_frames =
           completed_segments
@@ -482,7 +483,7 @@ defmodule Grav1.Projects do
           progress_den: project.input_frames
         })
 
-        if length(completed_segments) == map_size(project.segments) do
+        if map_size(completed_segments) == map_size(project.segments) do
           ProjectsExecutor.add_action(:concat, project)
         end
 
@@ -496,9 +497,7 @@ defmodule Grav1.Projects do
   def reset_project(project, params) do
     id = project.id
 
-    changeset =
-      project
-      |> Project.changeset(%{state: :idle, encoder_params: params})
+    changeset = Project.changeset(project, %{state: :idle, encoder_params: params})
 
     segments_query =
       from s in Grav1.Segment, where: s.project_id == ^id, update: [set: [filesize: 0]]

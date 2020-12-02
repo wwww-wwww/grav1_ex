@@ -165,6 +165,7 @@ defmodule Grav1Web.ProjectsLive do
       :yes ->
         socket.assigns.page.assigns.project
         |> Projects.update_project(%{priority: priority}, true)
+
         {:reply, %{success: true}, socket}
 
       reason ->

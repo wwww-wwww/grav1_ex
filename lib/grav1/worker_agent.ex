@@ -118,16 +118,18 @@ defmodule Grav1.WorkerAgent do
 
   defp distribute_segments(val) do
     available_clients =
-      val.clients
-      |> Enum.filter(fn {_, client} ->
-        client.sending.downloading == nil and client.meta.connected and
-          client.state.downloading == nil and client.state.max_workers > 0 and
-          (length(client.state.job_queue) < client.state.queue_size or
-             (length(client.state.workers) < client.state.max_workers and
-                length(client.state.job_queue) == 0))
-      end)
+      :maps.filter(
+        fn _, client ->
+          client.sending.downloading == nil and client.meta.connected and
+            client.state.downloading == nil and client.state.max_workers > 0 and
+            (length(client.state.job_queue) < client.state.queue_size or
+               (length(client.state.workers) < client.state.max_workers and
+                  length(client.state.job_queue) == 0))
+        end,
+        val.clients
+      )
 
-    if length(available_clients) > 0 do
+    if map_size(available_clients) > 0 do
       verifying_segments =
         Grav1.VerificationExecutor.get_queue()
         |> Enum.map(fn job ->
@@ -210,7 +212,7 @@ defmodule Grav1.WorkerAgent do
     Agent.get(__MODULE__, fn val ->
       val.clients
     end)
-    |> Enum.filter(&elem(&1, 1).meta.connected)
+    |> (fn x -> :maps.filter(fn _, v -> v.meta.connected end, x) end).()
     |> Enum.reduce([], fn {socket_id, client}, acc ->
       workers_segments =
         client.state.workers
@@ -309,12 +311,10 @@ defmodule Grav1.WorkerAgent do
 
         client ->
           new_clients =
-            {val.clients,
-             %{
-               val
-               | clients:
-                   Map.put(val.clients, id, %{client | state: %{client.state | workers: workers}})
-             }}
+            val.clients
+            |> Map.put(id, %{client | state: %{client.state | workers: workers}})
+
+          {new_clients, %{val | clients: new_clients}}
       end
     end)
   end
@@ -325,10 +325,13 @@ defmodule Grav1.WorkerAgent do
 
   def get_clients_by_name(username, name) do
     Agent.get(__MODULE__, fn val ->
-      val.clients
-      |> Enum.filter(fn {_, client} ->
-        client.meta.user == username and client.meta.name == name
-      end)
+      :maps.filter(
+        fn _, client ->
+          client.meta.user == username and
+            client.meta.name == name
+        end,
+        val.clients
+      )
     end)
   end
 

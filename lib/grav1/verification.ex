@@ -45,7 +45,7 @@ end
 defmodule Grav1.VerificationExecutor do
   use GenServer
 
-  alias Grav1.{Repo, User, Projects, Segment, VerificationQueue}
+  alias Grav1.{Repo, User, Projects, VerificationQueue}
 
   import Ecto.Query, only: [from: 2]
 
@@ -112,8 +112,8 @@ defmodule Grav1.VerificationExecutor do
     username = user.username
 
     case get_frames(segment.project.encoder, path) do
-      {:error, reason} ->
-        IO.inspect(reason)
+      {:error, err} ->
+        err
 
       ^frames ->
         case File.stat(path) do
@@ -139,10 +139,9 @@ defmodule Grav1.VerificationExecutor do
                     Grav1.WorkerAgent.cancel_segments()
 
                     incomplete_segments =
-                      project.segments
-                      |> Enum.filter(&(elem(&1, 1).filesize == 0))
+                      :maps.fitler(fn _, v -> v.filesize == 0 end, project.segments)
 
-                    if length(incomplete_segments) == 0 do
+                    if map_size(incomplete_segments) == 0 do
                       Grav1.ProjectsExecutor.add_action(:concat, project)
                     end
 
@@ -206,10 +205,10 @@ defmodule Grav1.VerificationExecutor do
           Grav1Web.ProjectsLive.update_segments(project, [{segment, []}])
 
         {:error, err} ->
-          IO.inspect(err)
+          Projects.log(job.segment.project, inspect(err))
 
         err ->
-          IO.inspect(err)
+          Projects.log(job.segment.project, inspect(err))
       end
 
       GenServer.cast(__MODULE__, :loop)

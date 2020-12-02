@@ -46,7 +46,10 @@ defmodule Grav1.User do
   end
 
   def generate_key() do
-    key = :crypto.strong_rand_bytes(@key_length) |> Base.encode64() |> binary_part(0, @key_length)
+    key =
+      :crypto.strong_rand_bytes(@key_length)
+      |> Base.encode64()
+      |> binary_part(0, @key_length)
 
     case Repo.get_by(Grav1.User, key: key) do
       nil ->

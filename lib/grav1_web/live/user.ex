@@ -55,9 +55,7 @@ defmodule Grav1Web.UserLive do
   end
 
   def get_clients(clients, username) do
-    Enum.filter(clients, fn {_, client} ->
-      client.meta.user == username
-    end)
+    :maps.filter(fn _, client -> client.meta.user == username end, clients)
   end
 
   def handle_info(%{topic: @topic, payload: clients}, socket) do

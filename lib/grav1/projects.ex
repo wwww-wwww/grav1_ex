@@ -22,8 +22,8 @@ defmodule Grav1.Projects do
 
         new_segments =
           if project.state == :ready do
-            incomplete_segments = for {k, v} <- segments, v.filesize == 0, into: %{}, do: {k, v}
-            Map.merge(acc2, incomplete_segments)
+            :maps.filter(fn _, v -> v.filesize == 0 end, segments)
+            |> Map.merge(acc2)
           else
             acc2
           end
@@ -161,25 +161,18 @@ defmodule Grav1.Projects do
         Map.put(segments, segment.id, %{segment | project: %{project | segments: %{}}})
       end)
 
+    new_segments = :maps.filter(fn _, v -> v.project_id != id end, state.segments)
+
     new_segments =
       if project.state == :ready do
-        complete_segments = for {k, v} <- segments, v.filesize != 0, into: %{}, do: {k, v}
-        incomplete_segments = for {k, v} <- segments, v.filesize == 0, into: %{}, do: {k, v}
-
-        complete_segment_keys = Map.keys(complete_segments)
-
-        in_segments =
-          for {k, v} <- state.segments, v.id not in complete_segment_keys, into: %{}, do: {k, v}
-
-        Map.merge(in_segments, incomplete_segments)
+        :maps.filter(fn _, v -> v.filesize == 0 end, segments)
+        |> Map.merge(new_segments)
       else
-        segments_keys = Map.keys(segments)
-        for {k, v} <- state.segments, v.id not in segments_keys, into: %{}, do: {k, v}
+        new_segments
       end
 
     new_project = %{project | segments: segments}
     new_projects = Map.put(state.projects, project.id, new_project)
-
     new_state = %{state | projects: new_projects, segments: new_segments}
 
     {:reply, new_project, new_state}

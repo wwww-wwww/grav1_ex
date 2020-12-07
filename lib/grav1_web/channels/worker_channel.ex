@@ -7,7 +7,7 @@ defmodule Grav1Web.WorkerChannel do
 
   def join(
         "worker",
-        %{"versions" => versions, "state" => state, "meta" => meta, "id" => id},
+        %{"versions" => versions, "state" => state, "meta" => meta, "id" => id, "uuid" => uuid},
         socket
       ) do
     bad_versions =
@@ -29,21 +29,22 @@ defmodule Grav1Web.WorkerChannel do
         {:error, %{reason: "bad versions", data: bad_versions}}
 
       true ->
-        if String.length(id) > 0 do
-          send(self(), {:reconnect, id, state, meta})
-        else
-          send(self(), {:after_join, state, meta})
-        end
+        {:ok, client} =
+          if String.length(id) > 0 do
+            WorkerAgent.connect(socket, state, meta, id, uuid)
+          else
+            WorkerAgent.connect(socket, state, meta)
+          end
 
         :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
-        {:ok, socket.assigns.socket_id, socket}
+        {:ok, %{sock_id: socket.assigns.socket_id, uuid: client.meta.uuid}, socket}
     end
   end
 
   def join("worker", %{"versions" => versions, "state" => state, "meta" => meta}, socket) do
     join(
       "worker",
-      %{"versions" => versions, "state" => state, "meta" => meta, "id" => ""},
+      %{"versions" => versions, "state" => state, "meta" => meta, "id" => "", "uuid" => ""},
       socket
     )
   end
@@ -64,16 +65,6 @@ defmodule Grav1Web.WorkerChannel do
   def terminate(_, socket) do
     WorkerAgent.disconnect(socket)
     IO.inspect("client is gone :(")
-  end
-
-  def handle_info({:reconnect, id, state, meta}, socket) do
-    WorkerAgent.connect(socket, state, meta, id)
-    {:noreply, socket}
-  end
-
-  def handle_info({:after_join, state, meta}, socket) do
-    WorkerAgent.connect(socket, state, meta)
-    {:noreply, socket}
   end
 
   def handle_info(%Broadcast{topic: _, event: "push_segment", payload: payload}, socket) do
@@ -198,31 +189,36 @@ defmodule Grav1Web.WorkerProgressChannel do
       Grav1Web.WorkersLive.update(new_clients)
     end
 
-    Grav1.Projects.get_projects()
-    |> Enum.reduce([], fn {_, project}, acc ->
-      changed_segments =
-        project.segments
-        |> Enum.reduce([], fn {_, segment}, acc ->
-          working =
-            new_workers
-            |> Enum.filter(&(segment.id == &1.segment))
+    try do
+      Grav1.Projects.get_projects()
+      |> Enum.reduce([], fn {_, project}, acc ->
+        changed_segments =
+          project.segments
+          |> Enum.reduce([], fn {_, segment}, acc ->
+            working =
+              new_workers
+              |> Enum.filter(&(segment.id == &1.segment))
 
-          if length(working) > 0 do
-            acc ++ [{segment, working}]
-          else
-            acc
-          end
-        end)
+            if length(working) > 0 do
+              acc ++ [{segment, working}]
+            else
+              acc
+            end
+          end)
 
-      if length(changed_segments) > 0 do
-        acc ++ [{project, changed_segments}]
-      else
-        acc
-      end
-    end)
-    |> Enum.each(fn {project, changed_segments} ->
-      Grav1Web.ProjectsLive.update_segments(project, changed_segments)
-    end)
+        if length(changed_segments) > 0 do
+          acc ++ [{project, changed_segments}]
+        else
+          acc
+        end
+      end)
+      |> Enum.each(fn {project, changed_segments} ->
+        Grav1Web.ProjectsLive.update_segments(project, changed_segments)
+      end)
+    catch
+      e ->
+        IO.inspect(e)
+    end
 
     {:noreply, socket}
   end

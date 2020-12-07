@@ -11,7 +11,8 @@ defmodule Grav1.ClientMeta do
             name: "",
             user: "",
             connected: true,
-            platform: nil
+            platform: nil,
+            uuid: ""
 end
 
 defmodule Grav1.ClientState do
@@ -36,6 +37,8 @@ end
 defmodule Grav1.WorkerAgent do
   use Agent
 
+  import Ecto.UUID, only: [generate: 0]
+
   alias Grav1.{Client, Projects, Worker}
 
   defstruct clients: %{}
@@ -47,51 +50,62 @@ defmodule Grav1.WorkerAgent do
   def connect(socket, state, meta) do
     {state, meta} = map_client(state, meta)
 
-    Agent.update(__MODULE__, fn val ->
-      new_clients =
-        Map.put(val.clients, socket.assigns.socket_id, new_client(socket, state, meta))
+    client =
+      Agent.get_and_update(__MODULE__, fn val ->
+        client = new_client(socket, state, meta)
+        new_clients = Map.put(val.clients, socket.assigns.socket_id, client)
 
-      %{val | clients: new_clients}
-    end)
+        {client, %{val | clients: new_clients}}
+      end)
 
     distribute_segments()
+    {:ok, client}
   end
 
   # reconnect
-  def connect(socket, state, meta, socket_id) do
+  def connect(socket, state, meta, socket_id, uuid) do
     {state, meta} = map_client(state, meta)
 
-    Agent.update(__MODULE__, fn val ->
-      new_clients =
-        case Map.get(val.clients, socket_id) do
-          nil ->
-            Map.put(val.clients, socket.assigns.socket_id, new_client(socket, state, meta))
+    new_client =
+      Agent.get_and_update(__MODULE__, fn val ->
+        {new_client, new_clients} =
+          case Map.get(val.clients, socket_id) do
+            nil ->
+              new_client = new_client(socket, state, meta)
+              {new_client, Map.put(val.clients, socket.assigns.socket_id, new_client)}
 
-          client ->
-            if client.meta.user == socket.assigns.user_id do
-              new_client =
-                %{
-                  client
-                  | meta: %{
-                      client.meta
-                      | socket_id: socket.assigns.socket_id,
-                        connected: true
-                    }
+            client ->
+              if client.meta.user == socket.assigns.user_id and
+                   client.meta.uuid == uuid do
+                new_client =
+                  %{
+                    client
+                    | meta: %{
+                        client.meta
+                        | socket_id: socket.assigns.socket_id,
+                          connected: true,
+                          uuid: generate()
+                      }
+                  }
+                  |> struct(state)
+
+                {
+                  new_client,
+                  val.clients
+                  |> Map.delete(socket_id)
+                  |> Map.put(socket.assigns.socket_id, new_client)
                 }
-                |> struct(state)
+              else
+                new_client = new_client(socket, state, meta)
+                {new_client, Map.put(val.clients, socket.assigns.socket_id, new_client)}
+              end
+          end
 
-              val.clients
-              |> Map.delete(socket_id)
-              |> Map.put(socket.assigns.socket_id, new_client)
-            else
-              Map.put(val.clients, socket.assigns.socket_id, new_client(socket, state, meta))
-            end
-        end
-
-      %{val | clients: new_clients}
-    end)
+        {new_client, %{val | clients: new_clients}}
+      end)
 
     distribute_segments()
+    {:ok, new_client}
   end
 
   def disconnect(socket) do
@@ -360,6 +374,7 @@ defmodule Grav1.WorkerAgent do
       |> struct(meta)
       |> Map.put(:user, socket.assigns.user_id)
       |> Map.put(:socket_id, socket.assigns.socket_id)
+      |> Map.put(:uuid, generate())
 
     %Client{state: state, meta: meta}
   end

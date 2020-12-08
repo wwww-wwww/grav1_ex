@@ -354,7 +354,8 @@ defmodule Grav1.Projects do
         {:error, message}
 
       opts ->
-        if opts["on_complete"] in Application.fetch_env!(:on_complete_actions, :actions) do
+        if String.length(opts["on_complete"]) == 0 or
+             opts["on_complete"] in Application.fetch_env!(:on_complete_actions, :actions) do
           opts
         else
           {:error,

@@ -172,11 +172,10 @@ class SimpleTag(object):
 def get_track_frames(mkv, track):
   for tag in mkv.tags:
     for target in tag.targets:
-      if target.name == "TagTrackUID":
-        if target.data == track:
-          for st in tag.simpletags:
-            if st.name.lower() == "number_of_frames":
-              return int(st.string)
+      if target.name == "TagTrackUID" and target.data == track:
+        for st in tag.simpletags:
+          if st.name.lower() == "number_of_frames":
+            return int(st.string)
 
   return None
 

@@ -1,4 +1,4 @@
-import sys, subprocess, re
+import os, sys, subprocess, re
 
 if hasattr(subprocess, "CREATE_NO_WINDOW"):
   CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW
@@ -6,18 +6,11 @@ else:
   CREATE_NO_WINDOW = 0
 
 
-def write_vs_script(src):
-  src = src.replace("\\", "\\\\")
-  script = f"""from vapoursynth import core
-core.lsmas.LWLibavSource("{src}").set_output()"""
-
-  open("vs.vpy", "w+").write(script)
-
-
 def correct_split(path_vspipe, path_ffmpeg, path_in, path_out, start, length):
-  write_vs_script(path_in)
   vspipe_cmd = [
-    path_vspipe, "vs.vpy",
+    path_vspipe,
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), "source.vpy"),
+    "--arg", "file={}".format(path_in),
     "-s", str(start),
     "-e", str(start + length - 1),
     "-y", "-"

@@ -1,5 +1,4 @@
 from vapoursynth import core
-import sys
 
 
 def get_attr(obj, attr, ex=False):
@@ -29,15 +28,4 @@ def get_source_filter(core):
   raise Exception("No source filter found")
 
 
-def get_frames(s):
-  video = get_source_filter(core)(s)
-  return video.num_frames
-
-
-def get_keyframes(s):
-  video = get_source_filter(core)(s)
-  frames = [
-    i for i in range(video.num_frames)
-    if video.get_frame(i).props._PictType.decode() == "I"
-  ]
-  return frames, video.num_frames
+get_source_filter(core)(file).set_output()

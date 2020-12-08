@@ -19,7 +19,10 @@ class Window {
     }
 
     this.top = create_element(this.e, "div", "window-top")
-    this.top.addEventListener("mousedown", e => this.drag_start(e))
+
+    if (!modal) {
+      this.top.addEventListener("mousedown", e => this.drag_start(e))
+    }
 
     this.header = create_element(this.top, "div", "window-header")
 

@@ -431,7 +431,11 @@ defmodule Grav1.Projects do
           {:ok, transactions} ->
             transactions
             |> Enum.reduce(%{}, fn {_, project}, acc ->
-              Map.put(acc, project.id, %{project | segments: %{}})
+              Map.put(acc, project.id, %{
+                project
+                | segments: %{},
+                  start_after_split: opts["start_after_split"]
+              })
             end)
             |> add_projects()
 

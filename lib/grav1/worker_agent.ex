@@ -58,7 +58,6 @@ defmodule Grav1.WorkerAgent do
         {client, %{val | clients: new_clients}}
       end)
 
-    distribute_segments()
     {:ok, client}
   end
 
@@ -104,7 +103,6 @@ defmodule Grav1.WorkerAgent do
         {new_client, %{val | clients: new_clients}}
       end)
 
-    distribute_segments()
     {:ok, new_client}
   end
 

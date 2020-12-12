@@ -37,6 +37,9 @@ defmodule Grav1Web.WorkerChannel do
           end
 
         :ok = Endpoint.subscribe("worker:" <> socket.assigns.socket_id)
+
+        WorkerAgent.distribute_segments()
+
         {:ok, %{sock_id: socket.assigns.socket_id, uuid: client.meta.uuid}, socket}
     end
   end

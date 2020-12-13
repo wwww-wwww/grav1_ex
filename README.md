@@ -1,6 +1,9 @@
 # Grav1
 ## Distributed encoding management server
 
+![projects page](https://user-images.githubusercontent.com/19401176/102001907-ff959780-3cab-11eb-9597-8254bc809f5e.png)
+![clients page](https://user-images.githubusercontent.com/19401176/102001933-48e5e700-3cac-11eb-8724-27e2e51fc738.png)
+
 Client is located [here](https://github.com/wwww-wwww/grav1_ex_client)
 
 ### Requirements

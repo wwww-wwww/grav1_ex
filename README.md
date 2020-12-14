@@ -37,6 +37,13 @@ vapoursynth
   * Start Phoenix endpoint with `mix phx.server`
     * Or enter the interactive shell with `iex -S mix phx.server`
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+Now you can visit [`localhost:4000`](http://localhost:4000) from your browser
+
+## Initial setup:
+
+ * Sign up at [`localhost:4000/sign_up`](http://localhost:4000/sign_up)
+ * Grant yourself permissions by entering `Grav1.Repo.get(Grav1.User, "USERNAME") |> Grav1.User.set_level(100)` into the interactive shell
+
+Now you can add projects at [`localhost:4000/projects`](http://localhost:4000/projects)
 
 Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).

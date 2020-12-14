@@ -105,4 +105,9 @@ defmodule Grav1.User do
         end
     end
   end
+
+  def set_level(user, level) do
+    Ecto.Changeset.change(user, level: level)
+    |> Repo.update()
+  end
 end

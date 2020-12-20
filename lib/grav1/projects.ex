@@ -95,6 +95,10 @@ defmodule Grav1.Projects do
     {:reply, state.segments, state}
   end
 
+  def handle_call(:get_segments_keys, _, state) do
+    {:reply, Map.keys(state.segments), state}
+  end
+
   def handle_call(:get_projects, _, state) do
     {:reply, state.projects, state}
   end
@@ -271,6 +275,10 @@ defmodule Grav1.Projects do
 
   def get_segments() do
     GenServer.call(__MODULE__, :get_segments)
+  end
+
+  def get_segments_keys() do
+    GenServer.call(__MODULE__, :get_segments_keys)
   end
 
   def get_projects() do

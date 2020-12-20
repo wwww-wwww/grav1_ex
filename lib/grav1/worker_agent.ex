@@ -217,9 +217,7 @@ defmodule Grav1.WorkerAgent do
   end
 
   def cancel_segments() do
-    segments =
-      Projects.get_segments()
-      |> Map.keys()
+    segments = Projects.get_segments_keys()
 
     Agent.get(__MODULE__, fn val ->
       val.clients

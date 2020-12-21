@@ -76,36 +76,32 @@ defmodule Grav1.Concat do
 
         Projects.log(project, Enum.join(args, " "))
 
-        port =
-          Port.open(
-            {:spawn_executable, Grav1.get_path(:ffmpeg)},
-            [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
-          )
-
         total_frames = project.input_frames
 
-        resp =
-          Grav1.Split.stream_port(port, 0, fn line, acc ->
-            case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
-              [_, frame_str] ->
-                {frame, _} = Integer.parse(frame_str)
+        Port.open(
+          {:spawn_executable, Grav1.get_path(:ffmpeg)},
+          [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
+        )
+        |> Grav1.Split.stream_port(0, fn line, acc ->
+          case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
+            [_, frame_str] ->
+              {frame, _} = Integer.parse(frame_str)
 
-                if acc != frame,
-                  do:
-                    Projects.update_progress(
-                      project,
-                      :concatenating,
-                      {frame, total_frames}
-                    )
+              if acc != frame,
+                do:
+                  Projects.update_progress(
+                    project,
+                    :concatenating,
+                    {frame, total_frames}
+                  )
 
-                frame
+              frame
 
-              _ ->
-                acc
-            end
-          end)
-
-        case resp do
+            _ ->
+              acc
+          end
+        end)
+        |> case do
           {:ok, ^total_frames, _lines} ->
             :ok
 
@@ -167,36 +163,32 @@ defmodule Grav1.Concat do
 
     Projects.log(project, Enum.join(args, " "))
 
-    port =
-      Port.open(
-        {:spawn_executable, path_mkvmerge},
-        [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
-      )
-
     total_segments = length(args) - 3
 
-    resp =
-      Grav1.Split.stream_port(port, 0, fn line, acc ->
-        case Regex.scan(@re_mkvmerge_frames, line) |> List.last() do
-          [_, group] ->
-            {segment, _} = Integer.parse(group)
+    Port.open(
+      {:spawn_executable, path_mkvmerge},
+      [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
+    )
+    |> Grav1.Split.stream_port(0, fn line, acc ->
+      case Regex.scan(@re_mkvmerge_frames, line) |> List.last() do
+        [_, group] ->
+          {segment, _} = Integer.parse(group)
 
-            if acc != segment,
-              do:
-                Projects.update_progress(
-                  project,
-                  :concatenating,
-                  {segment, total_segments}
-                )
+          if acc != segment,
+            do:
+              Projects.update_progress(
+                project,
+                :concatenating,
+                {segment, total_segments}
+              )
 
-            segment
+          segment
 
-          _ ->
-            acc
-        end
-      end)
-
-    case resp do
+        _ ->
+          acc
+      end
+    end)
+    |> case do
       {:ok, ^total_segments, _lines} ->
         if length(remaining) > 0 do
           new_flip = if flip == 0, do: 1, else: 0

@@ -428,14 +428,13 @@ defmodule Grav1.Projects do
         {:error, new_errors}
 
       _ ->
-        q =
-          projects
-          |> Enum.with_index()
-          |> Enum.reduce(Multi.new(), fn {project, i}, acc ->
-            acc |> Multi.insert(to_string(i), project)
-          end)
-
-        case Repo.transaction(q) do
+        projects
+        |> Enum.with_index()
+        |> Enum.reduce(Multi.new(), fn {project, i}, acc ->
+          acc |> Multi.insert(to_string(i), project)
+        end)
+        |> Repo.transaction()
+        |> case do
           {:ok, transactions} ->
             transactions
             |> Enum.reduce(%{}, fn {_, project}, acc ->
@@ -459,9 +458,10 @@ defmodule Grav1.Projects do
   end
 
   def add_project(files, opts) do
-    case files
-         |> ensure_not_empty
-         |> ensure_exist do
+    files
+    |> ensure_not_empty
+    |> ensure_exist
+    |> case do
       {:error, message} ->
         {:error, message}
 
@@ -515,13 +515,11 @@ defmodule Grav1.Projects do
     segments_query =
       from s in Grav1.Segment, where: s.project_id == ^id, update: [set: [filesize: 0]]
 
-    res =
-      Ecto.Multi.new()
-      |> Ecto.Multi.update(:project, changeset)
-      |> Ecto.Multi.update_all(:segments, segments_query, [])
-      |> Repo.transaction()
-
-    case res do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:project, changeset)
+    |> Ecto.Multi.update_all(:segments, segments_query, [])
+    |> Repo.transaction()
+    |> case do
       {:ok, _} ->
         Projects.reload_project(id)
         WorkerAgent.distribute_segments()
@@ -592,37 +590,37 @@ defmodule Grav1.ProjectsExecutor do
       |> Path.join(to_string(project.id))
       |> Path.join("split")
 
-    case Grav1.Split.split(
-           project.input,
-           path_split,
-           project.split_min_frames,
-           project.split_max_frames,
-           fn type, message ->
-             case type do
-               :log ->
-                 Projects.log(project, message)
+    Grav1.Split.split(
+      project.input,
+      path_split,
+      project.split_min_frames,
+      project.split_max_frames,
+      fn type, message ->
+        case type do
+          :log ->
+            Projects.log(project, message)
 
-               {:progress, action} ->
-                 Projects.update_progress(project, action, message)
-             end
-           end
-         ) do
+          {:progress, action} ->
+            Projects.update_progress(project, action, message)
+        end
+      end
+    )
+    |> case do
       {:ok, segments, input_frames} ->
-        q =
-          segments
-          |> Enum.reduce([], fn segment, acc ->
-            acc ++
-              [
-                Segment.changeset(%Segment{}, segment)
-                |> Ecto.Changeset.put_assoc(:project, project)
-              ]
-          end)
-          |> Enum.with_index()
-          |> Enum.reduce(Multi.new(), fn {segment, i}, acc ->
-            acc |> Multi.insert(to_string(i), segment)
-          end)
-
-        case Repo.transaction(q) do
+        segments
+        |> Enum.reduce([], fn segment, acc ->
+          acc ++
+            [
+              Segment.changeset(%Segment{}, segment)
+              |> Ecto.Changeset.put_assoc(:project, project)
+            ]
+        end)
+        |> Enum.with_index()
+        |> Enum.reduce(Multi.new(), fn {segment, i}, acc ->
+          acc |> Multi.insert(to_string(i), segment)
+        end)
+        |> Repo.transaction()
+        |> case do
           {:ok, transactions} ->
             new_segments =
               transactions

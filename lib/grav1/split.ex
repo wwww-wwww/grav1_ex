@@ -168,14 +168,12 @@ defmodule Grav1.Split do
 
     case File.mkdir_p(path_split) do
       :ok ->
-        port =
+        {:ok, frames, _} =
           Port.open(
             {:spawn_executable, Grav1.get_path(:ffmpeg)},
             [:stderr_to_stdout, :exit_status, :line, args: args]
           )
-
-        {:ok, frames, _} =
-          stream_port(port, 0, fn line, acc ->
+          |> stream_port(0, fn line, acc ->
             case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
               [_, frame_str] ->
                 {frame, _} = Integer.parse(frame_str)
@@ -314,13 +312,11 @@ defmodule Grav1.Split do
       output
     ]
 
-    port =
-      Port.open(
-        {:spawn_executable, Grav1.get_path(:ffmpeg)},
-        [:stderr_to_stdout, :exit_status, :line, args: args]
-      )
-
-    stream_port(port, 0, fn line, acc ->
+    Port.open(
+      {:spawn_executable, Grav1.get_path(:ffmpeg)},
+      [:stderr_to_stdout, :exit_status, :line, args: args]
+    )
+    |> stream_port(0, fn line, acc ->
       case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
         [_, frame_str] ->
           {frame, _} = Integer.parse(frame_str)
@@ -345,27 +341,23 @@ defmodule Grav1.Split do
       to_string(length)
     ]
 
-    port =
-      Port.open(
-        {:spawn_executable, Grav1.get_path(:python)},
-        [:exit_status, :line, :binary, args: args]
-      )
+    Port.open(
+      {:spawn_executable, Grav1.get_path(:python)},
+      [:exit_status, :line, :binary, args: args]
+    )
+    |> stream_port(0, fn line, acc ->
+      case Regex.scan(@re_python_aom, line) |> List.last() do
+        [_, frame_str] ->
+          {frame, _} = Integer.parse(frame_str)
+          if callback != nil and acc != frame, do: callback.(frame)
 
-    resp =
-      stream_port(port, 0, fn line, acc ->
-        case Regex.scan(@re_python_aom, line) |> List.last() do
-          [_, frame_str] ->
-            {frame, _} = Integer.parse(frame_str)
-            if callback != nil and acc != frame, do: callback.(frame)
+          frame
 
-            frame
-
-          _ ->
-            acc
-        end
-      end)
-
-    case resp do
+        _ ->
+          acc
+      end
+    end)
+    |> case do
       {:error, _} ->
         correct_split_ffmpeg(input, output, start, length, callback)
 
@@ -410,14 +402,12 @@ defmodule Grav1.Split do
     fast_args = if fast, do: ["-c", "copy"], else: []
     args = ["-hide_banner", "-i", input, "-map", "0:v:0"] ++ fast_args ++ ["-f", "null", "-"]
 
-    port =
+    {:ok, frames, _} =
       Port.open(
         {:spawn_executable, Grav1.get_path(:ffmpeg)},
         [:stderr_to_stdout, :exit_status, :line, args: args]
       )
-
-    {:ok, frames, _} =
-      stream_port(port, 0, fn line, acc ->
+      |> stream_port(0, fn line, acc ->
         case Regex.scan(@re_ffmpeg_frames, line) |> List.last() do
           [_, frames_str] ->
             {frame, _} = Integer.parse(frames_str)
@@ -433,13 +423,11 @@ defmodule Grav1.Split do
   end
 
   defp get_keyframes(input, callback) do
-    {frames, total_frames} =
-      case Path.extname(String.downcase(input)) do
-        ".mkv" -> get_keyframes_ebml(input, callback)
-        _ -> {:undefined, :undefined}
-      end
-
-    case {frames, total_frames} do
+    case Path.extname(String.downcase(input)) do
+      ".mkv" -> get_keyframes_ebml(input, callback)
+      _ -> {:undefined, :undefined}
+    end
+    |> case do
       {:undefined, _} ->
         if Application.fetch_env!(:versions, :vapoursynth) != nil do
           get_keyframes_vs(input, callback)
@@ -512,14 +500,12 @@ defmodule Grav1.Split do
       "-"
     ]
 
-    port =
+    {:ok, keyframes, lines} =
       Port.open(
         {:spawn_executable, Grav1.get_path(:ffmpeg)},
         [:stderr_to_stdout, :exit_status, :line, args: args]
       )
-
-    {:ok, keyframes, lines} =
-      stream_port(port, [], fn line, acc ->
+      |> stream_port([], fn line, acc ->
         case Regex.scan(@re_ffmpeg_keyframe, line) |> List.last() do
           [_, frame_str, key, pict_type] ->
             {frame, _} = Integer.parse(frame_str)
@@ -565,31 +551,27 @@ defmodule Grav1.Split do
       input
     ]
 
-    port =
-      Port.open(
-        {:spawn_executable, Grav1.get_path(:python)},
-        [:exit_status, :line, args: args]
-      )
+    Port.open(
+      {:spawn_executable, Grav1.get_path(:python)},
+      [:exit_status, :line, args: args]
+    )
+    |> stream_port({[], 0}, fn line, {keyframes, frames} ->
+      case Regex.scan(@re_aom_onepass, line) |> List.last() do
+        [_, frame_str, is_keyframe] ->
+          {frame, _} = Integer.parse(frame_str)
+          callback.({:progress, :aom_keyframes}, {frame, total_frames})
 
-    resp =
-      stream_port(port, {[], 0}, fn line, {keyframes, frames} ->
-        case Regex.scan(@re_aom_onepass, line) |> List.last() do
-          [_, frame_str, is_keyframe] ->
-            {frame, _} = Integer.parse(frame_str)
-            callback.({:progress, :aom_keyframes}, {frame, total_frames})
+          if is_keyframe == "1" or is_keyframe == 1 do
+            {keyframes ++ [frame], frame}
+          else
+            {keyframes, frame}
+          end
 
-            if is_keyframe == "1" or is_keyframe == 1 do
-              {keyframes ++ [frame], frame}
-            else
-              {keyframes, frame}
-            end
-
-          _ ->
-            {keyframes, frames}
-        end
-      end)
-
-    case resp do
+        _ ->
+          {keyframes, frames}
+      end
+    end)
+    |> case do
       {:ok, {keyframes, frames}, _lines} when frames + 21 >= total_frames ->
         callback.(:log, inspect(keyframes))
         keyframes
@@ -611,33 +593,24 @@ defmodule Grav1.Split do
       input
     ]
 
-    port =
-      Port.open(
-        {:spawn_executable, Grav1.get_path(:python)},
-        [:exit_status, :line, args: args]
-      )
+    Port.open(
+      {:spawn_executable, Grav1.get_path(:python)},
+      [:exit_status, :line, args: args]
+    )
+    |> stream_port(0, fn line, acc ->
+      case Regex.scan(@re_python_aom, line) |> List.last() do
+        [_, frame_str] ->
+          {frame, _} = Integer.parse(frame_str)
+          callback.({:progress, :aom_keyframes}, {frame, total_frames})
+          frame
 
-    {:ok, result, _lines} =
-      stream_port(port, 0, fn line, acc ->
-        case Regex.scan(@re_python_aom, line) |> List.last() do
-          [_, frame_str] ->
-            {frame, _} = Integer.parse(frame_str)
-            callback.({:progress, :aom_keyframes}, {frame, total_frames})
-            frame
-
-          _ ->
-            acc
-        end
-      end)
-
-    case result do
-      {:error, _} ->
-        :error
-
-      _ ->
-        filename = "fpf.log"
-
-        case File.open(filename, [:binary, :read]) do
+        _ ->
+          acc
+      end
+    end)
+    |> case do
+      {:ok, _, _} ->
+        case File.open("fpf.log", [:binary, :read]) do
           {:error, _} ->
             :error
 
@@ -674,6 +647,9 @@ defmodule Grav1.Split do
             callback.(:log, inspect(kf))
             kf
         end
+
+      _ ->
+        :error
     end
   end
 
@@ -793,53 +769,51 @@ defmodule Grav1.Split do
         aom_keyframes
         |> Enum.zip(tl(aom_keyframes))
 
-      {_, scenes} =
-        aom_scenes
-        |> Enum.zip(tl(aom_scenes) ++ [{nil, nil}])
-        |> Enum.with_index()
-        |> Enum.reduce({0, []}, fn x, {acc, scenes} ->
-          {{{frame, next_frame}, {next_scene_frame, next_scene_next_frame}}, i} = x
+      aom_scenes
+      |> Enum.zip(tl(aom_scenes) ++ [{nil, nil}])
+      |> Enum.with_index()
+      |> Enum.reduce({0, []}, fn x, {acc, scenes} ->
+        {{{frame, next_frame}, {next_scene_frame, next_scene_next_frame}}, i} = x
 
-          length = next_frame - frame
+        length = next_frame - frame
 
-          scene_frame = frame - acc
-          scene_length = length + acc
+        scene_frame = frame - acc
+        scene_length = length + acc
 
-          cond do
-            scene_length >= min_frames ->
-              {0, scenes ++ [{scene_frame, scene_length}]}
+        cond do
+          scene_length >= min_frames ->
+            {0, scenes ++ [{scene_frame, scene_length}]}
 
-            length(scenes) == 0 ->
-              {scene_length, scenes}
+          length(scenes) == 0 ->
+            {scene_length, scenes}
 
-            true ->
-              {prev_frame, prev_length} = List.last(scenes)
+          true ->
+            {prev_frame, prev_length} = List.last(scenes)
 
-              if i < length(aom_scenes) - 1 do
-                if prev_length < min_frames do
-                  {acc,
-                   (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++
-                     [{prev_frame, prev_length + scene_length}]}
-                else
-                  next_scene_length = next_scene_next_frame - next_scene_frame
-
-                  if next_scene_length + scene_length < prev_length + scene_length do
-                    {scene_length, scenes}
-                  else
-                    {acc,
-                     (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++
-                       [{prev_frame, prev_length + scene_length}]}
-                  end
-                end
-              else
+            if i < length(aom_scenes) - 1 do
+              if prev_length < min_frames do
                 {acc,
                  (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++
                    [{prev_frame, prev_length + scene_length}]}
-              end
-          end
-        end)
+              else
+                next_scene_length = next_scene_next_frame - next_scene_frame
 
-      scenes
+                if next_scene_length + scene_length < prev_length + scene_length do
+                  {scene_length, scenes}
+                else
+                  {acc,
+                   (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++
+                     [{prev_frame, prev_length + scene_length}]}
+                end
+              end
+            else
+              {acc,
+               (scenes |> Enum.reverse() |> tl() |> Enum.reverse()) ++
+                 [{prev_frame, prev_length + scene_length}]}
+            end
+        end
+      end)
+      |> elem(1)
       |> Enum.map(fn {frame, _} -> frame end)
     else
       aom_keyframes
@@ -851,7 +825,7 @@ defmodule Grav1.Split do
       segments
       |> Enum.reduce([], fn segment, acc ->
         if segment.frames > max_dist do
-          {frames, _, _} =
+          new_segments =
             1..segment.frames
             |> Enum.reduce_while({[], segment.start, segment.frames}, fn _, acc2 ->
               {new_frames, start, frames} = acc2
@@ -869,9 +843,7 @@ defmodule Grav1.Split do
                   {:cont, {new_frames ++ [{start, len}], start + len, frames - len}}
               end
             end)
-
-          new_segments =
-            frames
+            |> elem(0)
             |> Enum.map(fn {start, frames} ->
               %{file: segment.file, frames: frames, start: start}
             end)

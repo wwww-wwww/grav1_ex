@@ -67,8 +67,7 @@ defmodule Grav1.VerificationExecutor do
       {resp, 0} ->
         case Regex.scan(@re_dav1d, resp) |> List.last() do
           [_, frame_str] ->
-            {frame, _} = Integer.parse(frame_str)
-            frame
+            Integer.parse(frame_str)
 
           _ ->
             {:error, resp}
@@ -90,8 +89,7 @@ defmodule Grav1.VerificationExecutor do
       {resp, 0} ->
         case Regex.scan(@re_ffmpeg_frames_d, resp) |> List.last() do
           [_, frame_str] ->
-            {frame, _} = Integer.parse(frame_str)
-            frame
+            Integer.parse(frame_str)
 
           _ ->
             {:error, resp}
@@ -115,18 +113,17 @@ defmodule Grav1.VerificationExecutor do
       {:error, err} ->
         err
 
-      ^frames ->
+      {^frames, _} ->
         case File.stat(path) do
           {:ok, %{size: size}} ->
             case Projects.finish_segment(segment, size) do
               {:ok, project} ->
-                new_path =
-                  Application.fetch_env!(:grav1, :path_projects)
-                  |> Path.join(to_string(segment.project.id))
-                  |> Path.join("encode")
-
-                case File.mkdir_p(new_path) do
-                  :ok ->
+                Application.fetch_env!(:grav1, :path_projects)
+                |> Path.join(to_string(segment.project.id))
+                |> Path.join("encode")
+                |> (&{File.mkdir_p(&1), &1}).()
+                |> case do
+                  {:ok, new_path} ->
                     File.rename(path, Path.join(new_path, "#{segment.n}.ivf"))
 
                     from(u in User,
@@ -136,12 +133,12 @@ defmodule Grav1.VerificationExecutor do
                     |> Repo.update_all([])
 
                     Grav1Web.ProjectsLive.update(project)
-                    Grav1.WorkerAgent.cancel_segments()
+                    Grav1.WorkerAgent.cancel_segments(Projects.get_segments_keys())
 
-                    incomplete_segments =
-                      :maps.filter(fn _, v -> v.filesize == 0 end, project.segments)
-
-                    if map_size(incomplete_segments) == 0 do
+                    :maps.filter(fn _, v -> v.filesize == 0 end, project.segments)
+                    |> map_size()
+                    |> Kernel.==(0)
+                    |> if do
                       Grav1.ProjectsExecutor.add_action(:concat, project)
                     end
 
@@ -197,10 +194,7 @@ defmodule Grav1.VerificationExecutor do
 
   def handle_cast(:loop, state) do
     if (job = GenServer.call(VerificationQueue, :pop)) != :empty do
-      resp = verify(job)
-      GenServer.call(VerificationQueue, {:remove, job})
-
-      case resp do
+      case verify(job) do
         {:ok, project, segment} ->
           Grav1Web.ProjectsLive.update_segments(project, [{segment, []}])
 
@@ -211,6 +205,7 @@ defmodule Grav1.VerificationExecutor do
           Projects.log(job.segment.project, inspect(err))
       end
 
+      GenServer.call(VerificationQueue, {:remove, job})
       GenServer.cast(__MODULE__, :loop)
     end
 

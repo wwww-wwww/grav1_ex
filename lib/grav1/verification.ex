@@ -194,7 +194,11 @@ defmodule Grav1.VerificationExecutor do
 
   def handle_cast(:loop, state) do
     if (job = GenServer.call(VerificationQueue, :pop)) != :empty do
-      case verify(job) do
+      resp = verify(job)
+
+      GenServer.call(VerificationQueue, {:remove, job})
+
+      case resp do
         {:ok, project, segment} ->
           Grav1Web.ProjectsLive.update_segments(project, [{segment, []}])
 
@@ -205,7 +209,6 @@ defmodule Grav1.VerificationExecutor do
           Projects.log(job.segment.project, inspect(err))
       end
 
-      GenServer.call(VerificationQueue, {:remove, job})
       GenServer.cast(__MODULE__, :loop)
     end
 

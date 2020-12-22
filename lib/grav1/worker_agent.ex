@@ -223,27 +223,20 @@ defmodule Grav1.WorkerAgent do
           job.segment.id
         end)
 
-      segments =
-        clients
-        |> Projects.get_segments(verifying_segments)
+      segments = Projects.get_segments(clients, verifying_segments)
 
       {clients_segments, _} =
         Enum.reduce(available_clients, {[], segments}, fn {key, client}, {acc, segments} ->
-          client_segments =
-            client.state.workers
-            |> Enum.map(& &1.segment)
-
-          filtered_segments =
-            segments
-            |> Enum.filter(fn segment ->
-              segment.id != client.state.downloading and
-                segment.id not in client.state.job_queue and
-                segment.id not in client.state.upload_queue and
-                segment.id not in client.state.uploading and
-                segment.id not in client_segments
-            end)
-
-          case List.first(filtered_segments) do
+          segments
+          |> Enum.filter(fn segment ->
+            segment.id != client.state.downloading and
+              segment.id not in client.state.job_queue and
+              segment.id not in client.state.upload_queue and
+              segment.id not in client.state.uploading and
+              segment.id not in Enum.map(client.state.workers, & &1.segment)
+          end)
+          |> List.first()
+          |> case do
             nil ->
               {acc, segments}
 
@@ -281,34 +274,29 @@ defmodule Grav1.WorkerAgent do
     end
   end
 
-  def cancel_segments() do
-    segments = Projects.get_segments_keys()
-
+  def cancel_segments(segments) do
     get()
-    |> (fn x -> :maps.filter(fn _, v -> v.meta.connected end, x) end).()
+    |> (&:maps.filter(fn _, v -> v.meta.connected end, &1)).()
     |> Enum.reduce([], fn {socket_id, client}, acc ->
-      workers_segments =
-        client.state.workers
-        |> Enum.reduce([], fn worker, acc ->
-          if worker.segment not in segments do
-            acc ++ [worker.segment]
-          else
-            acc
+      client.state.workers
+      |> Enum.reduce([], fn worker, acc ->
+        if worker.segment not in segments do
+          acc ++ [worker.segment]
+        else
+          acc
+        end
+      end)
+      |> Enum.concat(
+        Enum.filter(
+          client.state.job_queue ++ [client.sending.downloading, client.state.downloading],
+          fn segment ->
+            segment not in segments and segment != nil
           end
-        end)
-        |> Enum.concat(
-          Enum.filter(
-            client.state.job_queue ++ [client.sending.downloading, client.state.downloading],
-            fn segment ->
-              segment not in segments and segment != nil
-            end
-          )
         )
-
-      if length(workers_segments) > 0 do
-        acc ++ [{socket_id, workers_segments}]
-      else
-        acc
+      )
+      |> case do
+        [] -> acc
+        workers_segments -> acc ++ [{socket_id, workers_segments}]
       end
     end)
     |> Enum.each(fn {socket_id, segments} ->

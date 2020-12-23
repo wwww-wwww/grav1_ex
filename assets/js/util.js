@@ -1,25 +1,3 @@
-function get(url, cb, fail) {
-  const r = new XMLHttpRequest()
-  r.open("GET", url)
-  r.onload = e => {
-    cb(r.responseText)
-  }
-  r.onerror = e => {
-    fail(e)
-  }
-  r.send(null)
-}
-
-function post(url, data, cb) {
-  const r = new XMLHttpRequest()
-  r.open("POST", url)
-  r.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
-  r.onload = e => {
-    cb(r.responseText)
-  }
-  r.send(JSON.stringify(data))
-}
-
 const bytes_map = ["B", "K", "M", "G"]
 
 function n_bytes(bytes) {
@@ -79,4 +57,4 @@ function create_field(label, root, element = "input", type = "", default_value =
   return field
 }
 
-export { get, post, bytes_str, create_element, create_field }
+export { bytes_str, create_element, create_field }

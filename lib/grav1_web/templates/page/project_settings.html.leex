@@ -1,8 +1,21 @@
 <div class="project_settings">
   <div class="card">
   <div>
+    <span>Name</span>
+    <%= if edit_perms?(@assigns.user) do %>
+      <%= content_tag(:div, @project.name, [class: "editable", id: "settings_name", phx_hook: "settings_change_name"]) %>
+      <%= submit("Save", id: "settings_name_save", class: "hidden", phx_hook: "settings_name_save") %>
+      <%= submit("Cancel", id: "settings_name_cancel", class: "hidden", phx_hook: "settings_name_cancel") %>
+    <% else %>
+      <%= content_tag(:div, @project.name) %>
+    <% end %>
+  </div>
+  </div>
+
+  <div class="card">
+  <div>
     <span>Encoder</span>
-    <span><%= @project.encoder %></span>
+    <div><%= @project.encoder %></div>
   </div>
   </div>
 
@@ -14,7 +27,7 @@
       <%= submit("Save", id: "settings_encoder_params_save", class: "hidden", phx_hook: "settings_encoder_params_save") %>
       <%= submit("Cancel", id: "settings_encoder_params_cancel", class: "hidden", phx_hook: "settings_encoder_params_cancel") %>
     <% else %>
-      <%= content_tag(:div, @project.encoder_params |> Enum.join(" "))%>
+      <%= content_tag(:div, @project.encoder_params |> Enum.join(" ")) %>
     <% end %>
   </div>
   </div>
@@ -22,13 +35,15 @@
   <div class="card">
   <div>
     <span>Priority</span>
+    <div>
     <%= if edit_perms?(@assigns.user) do %>
       <%= content_tag(:input, "", [value: @project.priority, type: "number", id: "settings_priority", phx_hook: "settings_change_priority"]) %>
       <%= submit("Save", id: "settings_priority_save", class: "hidden", phx_hook: "settings_priority_save") %>
       <%= submit("Cancel", id: "settings_priority_cancel", class: "hidden", phx_hook: "settings_priority_cancel") %>
     <% else %>
-      <%= content_tag(:div, @project.priority)%>
+      <%= @project.priority %>
     <% end %>
+    </div>
   </div>
   </div>
 

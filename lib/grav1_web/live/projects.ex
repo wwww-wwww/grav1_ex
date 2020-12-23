@@ -173,6 +173,23 @@ defmodule Grav1Web.ProjectsLive do
     end
   end
 
+  def handle_event("set_name", %{"name" => name}, socket) do
+    case User.has_permissions(socket) do
+      :yes ->
+        socket.assigns.page.assigns.project
+        |> Projects.update_project(%{name: name}, true)
+
+        {:reply, %{success: true}, socket}
+
+      reason ->
+        {:reply, %{success: false, reason: reason}, socket}
+    end
+  end
+
+  def handle_event(event, payload, socket) do
+    {:reply, %{success: false, reason: "bad event/payload</br>#{event}</br>#{inspect(payload)}"}, socket}
+  end
+
   # update project list and project
   def handle_info(
         %{topic: @topic, event: "update", payload: %{project: project, projects: true}},

@@ -113,7 +113,7 @@ hooks.load_encoders = {
             const reason_t = create_element(err_modal, "div")
             reason_t.textContent = "Reason:"
             const reason = create_element(err_modal, "div")
-            reason.textContent = reply.reason
+            reason.innerHTML = reply.reason
           }
         })
       })
@@ -242,7 +242,7 @@ hooks.settings_encoder_params_save = {
             const reason_t = create_element(err_modal, "div")
             reason_t.textContent = "Reason:"
             const reason = create_element(err_modal, "div")
-            reason.textContent = reply.reason
+            reason.innerHTML = reply.reason
           }
         })
       })
@@ -287,7 +287,7 @@ hooks.settings_priority_save = {
           const reason_t = create_element(err_modal, "div")
           reason_t.textContent = "Reason:"
           const reason = create_element(err_modal, "div")
-          reason.textContent = reply.reason
+          reason.innerHTML = reply.reason
         }
       })
     })
@@ -300,6 +300,53 @@ hooks.settings_priority_cancel = {
       settings_priority.value = settings_priority.original_value
       settings_priority_save.classList.toggle("hidden", true)
       settings_priority_cancel.classList.toggle("hidden", true)
+    })
+  }
+}
+
+hooks.settings_change_name = {
+  mounted() {
+    this.el.original_value = this.el.textContent
+    this.el.addEventListener("click", () => {
+      this.el.contentEditable = true
+      this.el.classList.toggle("div-editing", true)
+      this.el.focus()
+      settings_name_save.classList.toggle("hidden", false)
+      settings_name_cancel.classList.toggle("hidden", false)
+    })
+  }
+}
+
+hooks.settings_name_save = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      this.pushEvent("set_name", {
+        name: settings_name.textContent
+      }, (reply, _ref) => {
+        if (reply.success) {
+          settings_name.original_value = settings_name.textContent
+        } else {
+          const err_modal = new Modal({
+            title: "Error"
+          })
+          const reason_t = create_element(err_modal, "div")
+          reason_t.textContent = "Reason:"
+          const reason = create_element(err_modal, "div")
+          reason.innerHTML = reply.reason
+        }
+      })
+    })
+  }
+}
+
+hooks.settings_name_cancel = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      settings_name.textContent = settings_name.original_value
+      settings_name.contentEditable = false
+      settings_name.classList.toggle("div-editing", false)
+      settings_name_save.classList.toggle("hidden", true)
+      settings_name_cancel.classList.toggle("hidden", true)
     })
   }
 }
@@ -332,7 +379,7 @@ hooks.view_user_client = {
             const reason_t = create_element(err_modal, "div")
             reason_t.textContent = "Reason:"
             const reason = create_element(err_modal, "div")
-            reason.textContent = reply.reason
+            reason.innerHTML = reply.reason
           } else {
             modal.close()
           }

@@ -187,7 +187,11 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   def handle_event(event, payload, socket) do
-    {:reply, %{success: false, reason: "bad event/payload</br>#{event}</br>#{inspect(payload)}"}, socket}
+    {:reply,
+     %{
+       success: false,
+       reason: "bad event/payload</br>#{event}</br>#{inspect(payload)}"
+     }, socket}
   end
 
   # update project list and project

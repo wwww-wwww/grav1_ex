@@ -49,6 +49,8 @@ defmodule Grav1Web.ClientsLive do
 
   def get_clients() do
     Grav1.WorkerAgent.get()
+    |> Enum.map(&{elem(Integer.parse(elem(&1, 0)), 0), elem(&1, 1)})
+    |> Enum.sort()
     |> group_clients()
   end
 

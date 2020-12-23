@@ -44,11 +44,13 @@ select {
   padding: 0.25em;
 }
 
-button {
+button,
+input[type=submit] {
   padding: 0.25em 0.5em;
   cursor: pointer;
 }
 
-button:hover {
+button:hover,
+input[type=submit]:hover {
   background-color: rgba(230, 230, 230, 0.5);
 }

@@ -212,6 +212,11 @@
     }
   }
 
+  #encoder_params>div>div>div>div.hidden,
+  .extra_cat>div.hidden {
+    display: none;
+  }
+
   #files_list>div {
     display: flex;
     align-items: center;

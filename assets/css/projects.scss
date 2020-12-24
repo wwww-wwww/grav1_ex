@@ -192,4 +192,35 @@
   }
 }
 
+#_add_project_e {
+  input[type=number] {
+    width: 5em;
+  }
+
+  input:last-child {
+    float: right
+  }
+
+  #encoder_params>div>div>div>div,
+  .extra_cat>div {
+    display: flex;
+    align-items: center;
+    padding-right: 0.1em;
+
+    >label {
+      flex: 1;
+    }
+  }
+
+  #files_list>div {
+    display: flex;
+    align-items: center;
+    padding-right: 0.1em;
+
+    input {
+      flex: 1;
+    }
+  }
+}
+
 @import "./project.scss";

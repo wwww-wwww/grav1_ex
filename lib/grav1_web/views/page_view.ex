@@ -23,13 +23,8 @@ defmodule Grav1Web.PageView do
           class: "param"
         )
 
-      %{type: :flag, default: default} ->
-        Tag.tag(:input,
-          id: "opt_#{encoder}_#{param.name}",
-          type: :checkbox,
-          value: default,
-          class: "param"
-        )
+      %{type: :flag} ->
+        ""
 
       %{type: :option, options: options} ->
         Form.select(nil, "#{param.name}", options,

@@ -27,15 +27,20 @@ hooks.load_encoders = {
       const options = {}
       const overrides = []
       for (const param_name of Object.keys(encoders[selected_encoder])) {
-        const param = encoders[selected_encoder][param_name].data
+        const param = encoders[selected_encoder][param_name]
+        const data = param.data
         const e = document.getElementById(`opt_${selected_encoder}_${param_name}`)
-        if (param.requires) {
-          const req_e = document.getElementById(`opt_${selected_encoder}_${param.requires}`)
-          if (!param.requires_values.includes(req_e.value)) continue
+        if (param.optional) {
+          const enabled = document.getElementById(`chk_${selected_encoder}_${param_name}`)
+          if (!enabled.checked) continue;
         }
-        if (param.overrides) {
-          if (param.overrides[e.value]) {
-            overrides.push(...param.overrides[e.value])
+        if (data.requires) {
+          const req_e = document.getElementById(`opt_${selected_encoder}_${data.requires}`)
+          if (!data.requires_values.includes(req_e.value)) continue
+        }
+        if (data.overrides) {
+          if (data.overrides[e.value]) {
+            overrides.push(...data.overrides[e.value])
           }
         }
         if (param_name == "Resolution") {
@@ -44,7 +49,7 @@ hooks.load_encoders = {
             options["--width"] = res_dims[0]
             options["--height"] = res_dims[1]
           }
-        } else if (param.type == "flag") {
+        } else if (data.type == "flag") {
           if (e.checked) options[param_name] = true
         } else {
           options[param_name] = e.value
@@ -94,6 +99,8 @@ hooks.load_encoders = {
         encoder: selected_encoder
       }
 
+      console.log(params)
+
       const confirm_modal = new Modal({
         title: "Create Project"
       })
@@ -121,11 +128,22 @@ hooks.load_encoders = {
 
     for (const encoder_name of Object.keys(encoders)) {
       for (const param_name of Object.keys(encoders[encoder_name])) {
-        const param = encoders[encoder_name][param_name].data
+        const param = encoders[encoder_name][param_name]
+        const data = param.data
         const e = document.getElementById(`opt_${encoder_name}_${param_name}`)
-        if (param.requires) {
-          const req_e = document.getElementById(`opt_${encoder_name}_${param.requires}`)
-          const onchange = () => e.parentElement.classList.toggle("hidden", !param.requires_values.includes(req_e.value))
+
+        if (param.optional) {
+          const enabled = document.getElementById(`chk_${encoder_name}_${param_name}`)
+          e.style.display = enabled.checked ? "" : "none"
+
+          enabled.addEventListener("change", () => {
+            e.style.display = enabled.checked ? "" : "none"
+          })
+        }
+
+        if (data.requires) {
+          const req_e = document.getElementById(`opt_${encoder_name}_${data.requires}`)
+          const onchange = () => e.parentElement.classList.toggle("hidden", !data.requires_values.includes(req_e.value))
           req_e.addEventListener("change", onchange)
           onchange()
         }

@@ -72,7 +72,9 @@ defmodule Grav1.WorkerAgent do
         client ->
           if client.meta.user == socket.assigns.user_id and
                client.meta.uuid == uuid do
-            Process.cancel_timer(client.meta.timeout)
+            if client.meta.timeout != nil do
+              Process.cancel_timer(client.meta.timeout)
+            end
 
             new_client =
               %{

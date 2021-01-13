@@ -96,6 +96,7 @@ hooks.load_encoders = {
         on_complete_params: [...opt_extra_on_complete_params.value.matchAll(re_args)].flat(),
         ffmpeg_params: [...opt_extra_ffmpeg_params.value.matchAll(re_args)].flat(),
         start_after_split: opt_extra_start_after_split.checked,
+        copy_timestamps: opt_extra_copy_timestamps.checked,
         encoder: selected_encoder
       }
 

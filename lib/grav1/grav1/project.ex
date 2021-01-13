@@ -34,6 +34,7 @@ defmodule Grav1.Project do
     field :log, {:array, :string}, default: [], virtual: true
 
     field :start_after_split, :boolean, default: true
+    field :copy_timestamps, :boolean, default: true
 
     has_many :segments, Grav1.Segment
 
@@ -56,7 +57,9 @@ defmodule Grav1.Project do
       :state,
       :input_frames,
       :on_complete,
-      :on_complete_params
+      :on_complete_params,
+      :start_after_split,
+      :copy_timestamps
     ])
     |> validate_required([:input, :encoder, :encoder_params, :ffmpeg_params])
   end

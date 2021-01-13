@@ -102,6 +102,10 @@
       <input id="opt_extra_ffmpeg_params">
     </div>
     <div>
+      <label for="opt_extra_copy_timestamps">Copy timestamps</label>
+      <input type="checkbox" id="opt_extra_copy_timestamps" checked>
+    </div>
+    <div>
       <label for="opt_extra_start_after_split">Start after split</label>
       <input type="checkbox" id="opt_extra_start_after_split" checked>
     </div>

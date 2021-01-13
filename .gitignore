@@ -39,3 +39,4 @@ assets/package-lock.json
 *.mkv
 
 fpf.log
+*.pyc

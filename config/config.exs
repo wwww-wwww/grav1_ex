@@ -11,6 +11,7 @@ config :grav1,
     vspipe: System.find_executable("vspipe"),
     python: System.find_executable("python"),
     mkvmerge: System.find_executable("mkvmerge"),
+    mkvextract: System.find_executable("mkvextract"),
     aomenc_onepass_kf: System.find_executable("onepass_keyframes")
   ],
   path_projects: "projects",

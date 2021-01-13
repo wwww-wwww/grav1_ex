@@ -40,6 +40,7 @@ defmodule Grav1.Application do
     get_version(:dav1d, paths[:dav1d], ["-v"], ~r/([^\r\n]+)/)
     get_version(:python, paths[:python], ["-V"], ~r/([^\r\n]+)/)
     get_version(:mkvmerge, paths[:mkvmerge], ["-V"], ~r/([^\r\n]+)/)
+    get_version(:mkvextract, paths[:mkvextract], ["-V"], ~r/([^\r\n]+)/)
 
     get_version(
       :vapoursynth,

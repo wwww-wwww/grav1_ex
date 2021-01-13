@@ -25,14 +25,7 @@ defmodule Grav1.Concat do
 
     Projects.update_project(project, %{state: :concatenating})
 
-    method =
-      if Grav1.get_path(:mkvmerge) != nil do
-        :mkvmerge
-      else
-        :ffmpeg
-      end
-
-    case concat(method, project, segments, output) do
+    case concat(project, segments, output) do
       :ok ->
         if project.on_complete != nil do
           Grav1.Actions.add(project, project.on_complete, project.on_complete_params)
@@ -45,6 +38,51 @@ defmodule Grav1.Concat do
 
       message ->
         Projects.log(project, inspect(message))
+    end
+  end
+
+  def concat(project, segments, output) do
+    Grav1.get_path(:mkvmerge)
+    |> case do
+      nil -> :ffmpeg
+      _ -> :mkvmerge
+    end
+    |> concat(project, segments, "#{output}.tmp.mkv")
+    |> case do
+      {:ok, tmp} ->
+        if project.copy_timestamps and Grav1.get_path(:mkvextract) do
+          copy_timestamps(project, tmp, output)
+        else
+          File.rename(tmp, output)
+          :ok
+        end
+
+      message ->
+        message
+    end
+  end
+
+  def copy_timestamps(project, from, to) do
+    timestamps_file = "0:#{from}.timestamps.txt"
+
+    extract = [project.input, "timestamps_v2", timestamps_file]
+
+    case System.cmd(Grav1.get_path(:mkvextract), extract, stderr_to_stdout: true) do
+      {_, 0} ->
+        Projects.log(project, "Extracted timestamps")
+        merge = ["--timestamps", timestamps_file, from, "-o", to]
+
+        case System.cmd(Grav1.get_path(:mkvmerge), merge, stderr_to_stdout: true) do
+          {_, 0} ->
+            Projects.log(project, "Merged timestamps")
+            File.rm(from)
+
+          {resp, 1} ->
+            {:error, resp}
+        end
+
+      {resp, 1} ->
+        {:error, resp}
     end
   end
 
@@ -103,7 +141,7 @@ defmodule Grav1.Concat do
         end)
         |> case do
           {:ok, ^total_frames, _lines} ->
-            :ok
+            {:ok, output}
 
           {:error, _acc, lines} ->
             {:error, Enum.join(lines, "\n")}
@@ -114,21 +152,7 @@ defmodule Grav1.Concat do
     end
   end
 
-  def concat(:mkvmerge, project, segments, output) do
-    case concat_mkvmerge(project, segments, output) do
-      ^output ->
-        :ok
-
-      {:ok, tmp} ->
-        File.rename(tmp, output)
-        :ok
-
-      err ->
-        err
-    end
-  end
-
-  def concat_mkvmerge(project, segments, output, flip \\ 0) do
+  def concat(:mkvmerge, project, segments, output, flip \\ 0) do
     Projects.log(project, "concatenating using mkvmerge")
 
     path_mkvmerge = Grav1.get_path(:mkvmerge)
@@ -192,7 +216,7 @@ defmodule Grav1.Concat do
       {:ok, ^total_segments, _lines} ->
         if length(remaining) > 0 do
           new_flip = if flip == 0, do: 1, else: 0
-          concat_mkvmerge(project, ["#{output}.#{flip}.mkv"] ++ remaining, output, new_flip)
+          concat(:mkvmerge, project, ["#{output}.#{flip}.mkv"] ++ remaining, output, new_flip)
         else
           {:ok, "#{output}.#{flip}.mkv"}
         end

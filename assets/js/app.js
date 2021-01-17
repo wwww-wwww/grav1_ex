@@ -193,11 +193,12 @@ hooks.load_encoders = {
   }
 }
 
-hooks.view_project = {
+hooks.select_project = {
   mounted() {
-    this.el.addEventListener("click", () => {
-      this.pushEvent("view_project", {
-        id: this.el.dataset.id
+    this.el.addEventListener("click", e => {
+      this.pushEvent("select_project", {
+        id: this.el.dataset.id,
+        multi: e.ctrlKey
       })
     })
   }
@@ -215,6 +216,16 @@ hooks.settings_actions = {
   }
 }
 
+hooks.settings_delete = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      this.pushEvent("delete_project", {
+
+      })
+    })
+  }
+}
+
 hooks.settings_change_encoder_params = {
   mounted() {
     this.el.original_value = this.el.textContent
@@ -222,8 +233,8 @@ hooks.settings_change_encoder_params = {
       this.el.contentEditable = true
       this.el.classList.toggle("div-editing", true)
       this.el.focus()
-      settings_encoder_params_save.classList.toggle("hidden", false)
-      settings_encoder_params_cancel.classList.toggle("hidden", false)
+      document.getElementById(`${this.el.id}_save`).classList.toggle("hidden", false)
+      document.getElementById(`${this.el.id}_cancel`).classList.toggle("hidden", false)
     })
   }
 }
@@ -231,6 +242,7 @@ hooks.settings_change_encoder_params = {
 hooks.settings_encoder_params_save = {
   mounted() {
     this.el.addEventListener("click", () => {
+      const settings_encoder_params = document.getElementById(this.el.getAttribute("source"))
       const params = [...settings_encoder_params.textContent.matchAll(re_args)].flat()
 
       const confirm_modal = new Modal({
@@ -249,12 +261,11 @@ hooks.settings_encoder_params_save = {
       confirm_modal.confirm.focus()
       confirm_modal.confirm.addEventListener("click", () => {
         this.pushEvent("reset_project", {
+          from: settings_encoder_params.getAttribute("original-value"),
           encoder_params: params
         }, (reply, _ref) => {
           confirm_modal.close()
-          if (reply.success) {
-            settings_encoder_params.original_value = settings_encoder_params.textContent
-          } else {
+          if (!reply.success) {
             const err_modal = new Modal({
               title: "Error"
             })
@@ -272,21 +283,22 @@ hooks.settings_encoder_params_save = {
 hooks.settings_encoder_params_cancel = {
   mounted() {
     this.el.addEventListener("click", () => {
-      settings_encoder_params.textContent = settings_encoder_params.original_value
+      const settings_encoder_params = document.getElementById(this.el.getAttribute("source"))
+      settings_encoder_params.textContent = settings_encoder_params.getAttribute("original-value")
       settings_encoder_params.contentEditable = false
       settings_encoder_params.classList.toggle("div-editing", false)
-      settings_encoder_params_save.classList.toggle("hidden", true)
-      settings_encoder_params_cancel.classList.toggle("hidden", true)
+      document.getElementById(`${settings_encoder_params.id}_save`).classList.toggle("hidden", true)
+      this.el.classList.toggle("hidden", true)
     })
   }
 }
 
 hooks.settings_change_priority = {
   mounted() {
-    this.el.original_value = this.el.value
     this.el.addEventListener("change", () => {
-      settings_priority_save.classList.toggle("hidden", this.el.original_value == this.el.value)
-      settings_priority_cancel.classList.toggle("hidden", this.el.original_value == this.el.value)
+      const original_value = this.el.getAttribute("original-value")
+      document.getElementById(`${this.el.id}_save`).classList.toggle("hidden", original_value == this.el.value)
+      document.getElementById(`${this.el.id}_cancel`).classList.toggle("hidden", original_value == this.el.value)
     })
   }
 }
@@ -294,12 +306,13 @@ hooks.settings_change_priority = {
 hooks.settings_priority_save = {
   mounted() {
     this.el.addEventListener("click", () => {
+      const settings_priority = document.getElementById(this.el.getAttribute("source"))
+      const original_value = settings_priority.getAttribute("original-value")
       this.pushEvent("set_priority", {
+        from: original_value,
         priority: settings_priority.value
       }, (reply, _ref) => {
-        if (reply.success) {
-          settings_priority.original_value = settings_priority.value
-        } else {
+        if (!reply.success) {
           const err_modal = new Modal({
             title: "Error"
           })
@@ -316,9 +329,11 @@ hooks.settings_priority_save = {
 hooks.settings_priority_cancel = {
   mounted() {
     this.el.addEventListener("click", () => {
-      settings_priority.value = settings_priority.original_value
-      settings_priority_save.classList.toggle("hidden", true)
-      settings_priority_cancel.classList.toggle("hidden", true)
+      const settings_priority = document.getElementById(this.el.getAttribute("source"))
+      const original_value = settings_priority.getAttribute("original-value")
+      settings_priority.value = original_value
+      document.getElementById(`${settings_priority.id}_save`).classList.toggle("hidden", true)
+      this.el.classList.toggle("hidden", true)
     })
   }
 }
@@ -330,8 +345,8 @@ hooks.settings_change_name = {
       this.el.contentEditable = true
       this.el.classList.toggle("div-editing", true)
       this.el.focus()
-      settings_name_save.classList.toggle("hidden", false)
-      settings_name_cancel.classList.toggle("hidden", false)
+      document.getElementById(`${this.el.id}_save`).classList.toggle("hidden", false)
+      document.getElementById(`${this.el.id}_cancel`).classList.toggle("hidden", false)
     })
   }
 }
@@ -339,6 +354,7 @@ hooks.settings_change_name = {
 hooks.settings_name_save = {
   mounted() {
     this.el.addEventListener("click", () => {
+      const settings_name = document.getElementById(this.el.getAttribute("source"))
       this.pushEvent("set_name", {
         name: settings_name.textContent
       }, (reply, _ref) => {
@@ -361,11 +377,12 @@ hooks.settings_name_save = {
 hooks.settings_name_cancel = {
   mounted() {
     this.el.addEventListener("click", () => {
+      const settings_name = document.getElementById(this.el.getAttribute("source"))
       settings_name.textContent = settings_name.original_value
       settings_name.contentEditable = false
       settings_name.classList.toggle("div-editing", false)
-      settings_name_save.classList.toggle("hidden", true)
-      settings_name_cancel.classList.toggle("hidden", true)
+      document.getElementById(`${settings_name.id}_save`).classList.toggle("hidden", true)
+      this.el.classList.toggle("hidden", true)
     })
   }
 }

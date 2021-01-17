@@ -1,18 +1,26 @@
 <div class="page_project">
   <div class="header">
-    <div class="title"><%= @project.input %></div>
-    <div class="details">
-      <span><%= @project.id %></span>
-      <span><%= @project.encoder %></span>
-      <span style="float: right"><%= @project.inserted_at %></span>
-    </div>
+    <%= for project <- @projects do %>
+      <div class="title"><%= project.input %></div>
+      <div class="details">
+        <span><%= project.id %></span>
+        <span><%= project.encoder %></span>
+        <span style="float: right"><%= project.inserted_at %></span>
+      </div>
+    <% end %>
     <div class="tabs">
-      <%= submit("Segments", phx_click: "view_project_segments", class: tab_selected(@page, Grav1Web.ProjectSegmentsComponent)) %>
-      <%= submit("Settings", phx_click: "view_project_settings", class: tab_selected(@page, Grav1Web.ProjectSettingsComponent)) %>
-      <%= submit("Logs", phx_click: "view_project_log", class: tab_selected(@page, Grav1Web.ProjectLogComponent)) %>
+      <%= submit("Segments", phx_click: "view_project_segments", class: tab_selected(@page, :segments)) %>
+      <%= submit("Settings", phx_click: "view_project_settings", class: tab_selected(@page, :settings)) %>
+      <%= submit("Logs", phx_click: "view_project_log", class: tab_selected(@page, :logs)) %>
     </div>
   </div>
-  <div phx-update="replace" style="height: 100%; overflow-y: hidden; display: flex;">
-    <%= @page %>
+  <div id="projects_page" style="height: 100%; overflow-y: auto; display: flex;">
+    <%= if is_multi_page(@page, @projects) do %>
+      <%= render_component(@socket, @assigns, @page, @projects) %>
+    <% else %>
+      <%= for project <- @projects do %>
+        <%= render_component(@socket, @assigns, @page, project) %>
+      <% end %>
+    <% end %>
   </div>
 </div>

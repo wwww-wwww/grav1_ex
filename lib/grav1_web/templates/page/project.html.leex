@@ -1,4 +1,4 @@
-<div id="proj_<%= @project.id %>" class="project" data-id="<%= @project.id %>" phx-hook="view_project">
+<div id="proj_<%= @project.id %>" class="project<%= if @selected, do: " selected" %>" data-id="<%= @project.id %>" phx-hook="select_project">
   <div class="top"><%= render_project_name(@project) %></div>
   <div class="bottom">
     <%= render_project_progressbar(@project) %>

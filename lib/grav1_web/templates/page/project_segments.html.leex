@@ -1,7 +1,7 @@
-<div class="segments_outer">
-  <div id="segments_list" class="segments" phx-update="<%= @update_action %>">
+<div id="<%= @id %>" class="segments_outer">
+  <div id="<%= @id %>:segments" class="segments" phx-update="<%= @update_action %>">
     <%= for segment <- @segments do %>
-      <div id="<%= segment.id %>" class="segment">
+      <div id="segment:<%= segment.id %>" class="segment">
         <%= if segment.filesize == 0 do %>
           <%= if segment.verifying do %>
             <div class="progress verifying"></div>

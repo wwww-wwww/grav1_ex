@@ -32,6 +32,7 @@ defmodule Grav1Web.Router do
     get "/", PageController, :index
     live "/projects", ProjectsLive
     live "/projects/:id", ProjectsLive
+    live "/projects/:id/:page", ProjectsLive
 
     live "/workers", WorkersLive
     live "/clients", ClientsLive

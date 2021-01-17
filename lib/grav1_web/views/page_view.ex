@@ -125,8 +125,58 @@ defmodule Grav1Web.PageView do
     end
   end
 
-  def tab_selected(page, component) do
-    if page.component == component do
+  def is_multi_page(page, projects) do
+    if length(projects) > 1 do
+      page in [:settings]
+    else
+      false
+    end
+  end
+
+  def project_page(:segments, project) do
+    {Grav1Web.ProjectSegmentsComponent, [segments: Grav1Web.ProjectsLive.get_segments(project)]}
+  end
+
+  def project_page(:settings, projects) do
+    if is_list(projects) do
+      {Grav1Web.ProjectSettingsMultiComponent, [projects: projects]}
+    else
+      {Grav1Web.ProjectSettingsComponent, [project: projects]}
+    end
+  end
+
+  def project_page(:logs, project) do
+    {Grav1Web.ProjectLogComponent, [log: project.log]}
+  end
+
+  def render_component(socket, assigns, page, project) do
+    {page, page_assigns} = project_page(page, project)
+
+    if not is_nil(page) do
+      if is_list(project) do
+        live_component(
+          socket,
+          page,
+          [id: "#{page}", assigns: assigns] ++ page_assigns
+        )
+      else
+        live_component(
+          socket,
+          page,
+          [id: "#{page}:#{project.id}", assigns: assigns] ++ page_assigns
+        )
+      end
+    else
+      ""
+    end
+  end
+
+  def project_selected(selected_projects, project) do
+    project.id in Enum.map(selected_projects, & &1.id)
+  end
+
+  def tab_selected(page, tab) do
+    if page == tab do
       "tab selected"
     else
       "tab"

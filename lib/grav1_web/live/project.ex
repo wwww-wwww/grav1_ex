@@ -41,3 +41,11 @@ defmodule Grav1Web.ProjectSettingsComponent do
     Grav1Web.PageView.render("project_settings.html", assigns)
   end
 end
+
+defmodule Grav1Web.ProjectSettingsMultiComponent do
+  use Grav1Web, :live_component
+
+  def render(assigns) do
+    Grav1Web.PageView.render("project_settings_multi.html", assigns)
+  end
+end

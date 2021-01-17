@@ -219,38 +219,43 @@ defmodule Grav1.Projects do
     end
   end
 
-  def handle_cast({:update, id, opts, save}, state) do
-    case Map.get(state.projects, id) do
-      nil ->
-        {:noreply, state}
+  def handle_cast({:update, ids, opts, save}, state) do
+    {new_projects, new_state} =
+      Enum.reduce(ids, {[], state}, fn id, {projects, acc} ->
+        case Map.get(state.projects, id) do
+          nil ->
+            {projects, acc}
 
-      project ->
-        new_project = Map.merge(project, opts)
+          project ->
+            new_project = Map.merge(project, opts)
 
-        if save do
-          Repo.update(Project.changeset(project, opts))
-        end
-
-        new_segments =
-          state.segments
-          |> Enum.map(fn {sid, segment} ->
-            if segment.project_id == id do
-              {sid, %{segment | project: new_project}}
-            else
-              {sid, segment}
+            if save do
+              Repo.update(Project.changeset(project, opts))
             end
-          end)
-          |> Map.new()
 
-        Grav1Web.ProjectsLive.update(new_project)
+            new_segments =
+              acc.segments
+              |> Enum.map(fn {sid, segment} ->
+                if segment.project_id == id do
+                  {sid, %{segment | project: new_project}}
+                else
+                  {sid, segment}
+                end
+              end)
+              |> Map.new()
 
-        {:noreply,
-         %{
-           state
-           | projects: Map.put(state.projects, project.id, new_project),
-             segments: new_segments
-         }}
-    end
+            {projects ++ [new_project],
+             %{
+               acc
+               | projects: Map.put(acc.projects, project.id, new_project),
+                 segments: new_segments
+             }}
+        end
+      end)
+
+    Grav1Web.ProjectsLive.update_projects(new_projects)
+
+    {:noreply, new_state}
   end
 
   def handle_info(:startup, state) do
@@ -291,31 +296,36 @@ defmodule Grav1.Projects do
     GenServer.call(__MODULE__, {:get_project, id})
   end
 
+  def reload_projects(ids) do
+    Enum.map(ids, fn id ->
+      GenServer.call(__MODULE__, {:reload_project, id})
+      |> load_project(false)
+    end)
+    |> Grav1Web.ProjectsLive.update_projects(true)
+  end
+
   def reload_project(id) do
-    {id, _} = Integer.parse(to_string(id))
+    reload_projects([id]) |> Enum.at(0)
+  end
 
-    new_project = GenServer.call(__MODULE__, {:reload_project, id})
-    load_project(new_project)
-
-    new_project
+  def start_projects(projects) do
+    Enum.map(projects, & &1.id)
+    |> update_projects(%{state: :ready}, true)
+    |> reload_projects()
   end
 
   def start_project(project) do
-    update_project(project, %{state: :ready}, true)
+    start_projects([project]) |> Enum.at(0)
+  end
 
-    new_project = GenServer.call(__MODULE__, {:reload_project, project.id})
-    load_project(new_project)
-
-    new_project
+  def stop_projects(projects) do
+    Enum.map(projects, & &1.id)
+    |> update_projects(%{state: :idle}, true)
+    |> reload_projects()
   end
 
   def stop_project(project) do
-    update_project(project, %{state: :idle}, true)
-
-    new_project = GenServer.call(__MODULE__, {:reload_project, project.id})
-    load_project(new_project)
-
-    new_project
+    stop_projects([project]) |> Enum.at(0)
   end
 
   def log(project, message) do
@@ -326,8 +336,13 @@ defmodule Grav1.Projects do
     GenServer.cast(__MODULE__, {:update_progress, project.id, status, message})
   end
 
+  def update_projects(projects, opts, save \\ false) do
+    GenServer.cast(__MODULE__, {:update, projects, opts, save})
+    projects
+  end
+
   def update_project(project, opts, save \\ false) do
-    GenServer.cast(__MODULE__, {:update, project.id, opts, save})
+    update_projects([project.id], opts, save)
 
     log(project, "updated: " <> inspect(opts))
   end
@@ -477,7 +492,7 @@ defmodule Grav1.Projects do
     end
   end
 
-  def load_project(project) do
+  def load_project(project, update \\ true) do
     if project.state == :idle and
          (project.segments == %Ecto.Association.NotLoaded{} or
             map_size(project.segments) == 0) do
@@ -499,28 +514,34 @@ defmodule Grav1.Projects do
           ProjectsExecutor.add_action(:concat, project)
         end
 
-        Grav1Web.ProjectsLive.update(project)
+        if update do
+          Grav1Web.ProjectsLive.update(project)
+        end
       end
 
-      Projects.log(project, "loaded")
+      log(project, "loaded")
     end
+
+    project
   end
 
-  def reset_project(project, params) do
-    id = project.id
+  def reset_projects(projects, params) do
+    Enum.reduce(projects, Ecto.Multi.new(), fn project, acc ->
+      id = project.id
 
-    changeset = Project.changeset(project, %{state: :idle, encoder_params: params})
+      changeset = Project.changeset(project, %{state: :idle, encoder_params: params})
 
-    segments_query =
-      from s in Grav1.Segment, where: s.project_id == ^id, update: [set: [filesize: 0]]
+      segments_query =
+        from s in Grav1.Segment, where: s.project_id == ^id, update: [set: [filesize: 0]]
 
-    Ecto.Multi.new()
-    |> Ecto.Multi.update(:project, changeset)
-    |> Ecto.Multi.update_all(:segments, segments_query, [])
+      acc
+      |> Ecto.Multi.update("project:#{project.id}", changeset)
+      |> Ecto.Multi.update_all("segments:#{project.id}", segments_query, [])
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, _} ->
-        Projects.reload_project(id)
+        reload_projects(Enum.map(projects, & &1.id))
         WorkerAgent.distribute_segments()
 
         :ok
@@ -528,6 +549,10 @@ defmodule Grav1.Projects do
       err ->
         err
     end
+  end
+
+  def reset_project(project, params) do
+    reset_projects([project], params)
   end
 end
 

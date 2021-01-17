@@ -3,8 +3,13 @@
     display: flex;
     flex-direction: column;
 
-    .logs>div {
-      word-wrap: break-word;
+    .logs {
+      overflow-y: auto;
+      padding: 0.2em;
+
+      >div {
+        word-wrap: break-word;
+      }
     }
 
     .header {

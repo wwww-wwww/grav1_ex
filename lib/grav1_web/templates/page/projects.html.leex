@@ -24,18 +24,7 @@
         </div>
       <% end %>
       <%= for {id, project} <- @projects |> Enum.sort_by(& elem(&1, 1).id, :desc) do %>
-        <div id="proj_<%= project.id %>" class="project" data-id="<%= project.id %>" phx-hook="view_project">
-          <div class="top"><%= render_project_name(project) %></div>
-          <div class="bottom">
-            <%= render_project_progressbar(project) %>
-            <div class="progress_left">
-              <%= render_project_left(project) %>
-            </div>
-            <div class="progress_right">
-              <%= render_project_right(project) %>
-            </div>
-          </div>
-        </div>
+        <%= Phoenix.View.render(Grav1Web.PageView, "project.html", project: project, selected: project_selected(@selected_projects, project)) %>
       <% end %>
     </div>
   </div>

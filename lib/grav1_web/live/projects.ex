@@ -10,38 +10,31 @@ defmodule Grav1Web.ProjectsLive do
     Grav1Web.PageView.render("projects.html", assigns)
   end
 
-  def mount(params = %{"id" => id}, session, socket) do
-    case Projects.get_project(id) do
-      nil ->
-        mount(%{}, session, socket)
-
-      project ->
-        page =
-          live_component(socket, Grav1Web.ProjectPageComponent,
-            id: "project:#{project.id}",
-            project: project,
-            page:
-              live_component(socket, Grav1Web.ProjectSegmentsComponent,
-                id: "#{Grav1Web.ProjectSegmentsComponent}:#{project.id}",
-                segments: get_segments(project)
-              )
-          )
-
-        mount(params, session, socket, page)
-    end
+  def mount(%{"id" => ids, "page" => page}, session, socket) do
+    mount(%{}, session, socket, ids, String.to_atom(page))
   end
 
-  def mount(_, session, socket, page \\ nil) do
+  def mount(%{"id" => ids}, session, socket) do
+    mount(%{}, session, socket, ids)
+  end
+
+  def mount(_, session, socket, ids \\ "", page \\ nil) do
     if connected?(socket), do: Grav1Web.Endpoint.subscribe(@topic)
+
+    selected_projects =
+      String.split(ids, ",")
+      |> Enum.map(&Projects.get_project(&1))
+      |> Enum.filter(&(!is_nil(&1)))
 
     socket =
       socket
       |> assign(user: Grav1.Guardian.user(session))
       |> assign(projects: Projects.get_projects())
+      |> assign(selected_projects: selected_projects)
       |> assign(project_changeset: Project.changeset(%Project{}))
-      |> assign(page: page)
       |> assign(encoder_params: Grav1.Encoder.params())
       |> assign(encoder_params_json: Grav1.Encoder.params_json())
+      |> view_project_page(page, false)
 
     {:ok, socket, temporary_assigns: [encoder_params: %{}, encoder_params_json: ""]}
   end
@@ -66,34 +59,40 @@ defmodule Grav1Web.ProjectsLive do
     end
   end
 
-  def handle_event("view_project", %{"id" => id}, socket) do
-    view_project_page(socket, id, fn project ->
-      case get_segments(project) do
-        [] ->
-          {Grav1Web.ProjectLogComponent, [log: project.log]}
+  def handle_event("select_project", %{"id" => id, "multi" => multi}, socket) do
+    socket =
+      case Projects.get_project(id) do
+        nil ->
+          socket
 
-        segments ->
-          {Grav1Web.ProjectSegmentsComponent, [segments: segments]}
+        project ->
+          if multi do
+            selected_projects =
+              if project.id not in Enum.map(socket.assigns.selected_projects, & &1.id) do
+                socket.assigns.selected_projects ++ [project]
+              else
+                Enum.filter(socket.assigns.selected_projects, &(&1.id != project.id))
+              end
+
+            assign(socket, selected_projects: selected_projects)
+          else
+            assign(socket, selected_projects: [project])
+          end
       end
-    end)
+
+    {:noreply, view_project_page(socket, socket.assigns.tab)}
   end
 
   def handle_event("view_project_segments", _, socket) do
-    view_project_page(socket, socket.assigns.page.assigns.project.id, fn project ->
-      {Grav1Web.ProjectSegmentsComponent, [segments: get_segments(project)]}
-    end)
+    {:noreply, view_project_page(socket, :segments)}
   end
 
   def handle_event("view_project_log", _, socket) do
-    view_project_page(socket, socket.assigns.page.assigns.project.id, fn project ->
-      {Grav1Web.ProjectLogComponent, [log: project.log]}
-    end)
+    {:noreply, view_project_page(socket, :logs)}
   end
 
   def handle_event("view_project_settings", _, socket) do
-    view_project_page(socket, socket.assigns.page.assigns.project.id, fn project ->
-      {Grav1Web.ProjectSettingsComponent, [project: project]}
-    end)
+    {:noreply, view_project_page(socket, :settings)}
   end
 
   def handle_event(
@@ -114,8 +113,9 @@ defmodule Grav1Web.ProjectsLive do
   def handle_event("start_project", _, socket) do
     case User.has_permissions(socket) do
       :yes ->
-        Projects.start_project(socket.assigns.page.assigns.project)
-        |> update_project()
+        socket.assigns.selected_projects
+        |> Enum.filter(&Grav1.Project.can_start(&1))
+        |> Projects.start_projects()
 
         {:reply, %{success: true}, socket}
 
@@ -127,8 +127,9 @@ defmodule Grav1Web.ProjectsLive do
   def handle_event("stop_project", _, socket) do
     case User.has_permissions(socket) do
       :yes ->
-        Projects.stop_project(socket.assigns.page.assigns.project)
-        |> update_project()
+        socket.assigns.selected_projects
+        |> Enum.filter(&(&1.state == :ready))
+        |> Projects.stop_projects()
 
         {:reply, %{success: true}, socket}
 
@@ -137,12 +138,13 @@ defmodule Grav1Web.ProjectsLive do
     end
   end
 
-  def handle_event("reset_project", %{"encoder_params" => params}, socket) do
+  def handle_event("reset_project", %{"from" => from, "encoder_params" => params}, socket) do
     case User.has_permissions(socket) do
       :yes ->
-        project = socket.assigns.page.assigns.project
-
-        case Projects.reset_project(project, params) do
+        socket.assigns.selected_projects
+        |> Enum.filter(&(Enum.join(&1.encoder_params, " ") == from))
+        |> Projects.reset_projects(params)
+        |> case do
           :ok ->
             {:reply, %{success: true}, socket}
 
@@ -158,13 +160,16 @@ defmodule Grav1Web.ProjectsLive do
     end
   end
 
-  def handle_event("set_priority", %{"priority" => priority}, socket) do
+  def handle_event("set_priority", %{"from" => from, "priority" => priority}, socket) do
+    {from, _} = Integer.parse(to_string(from))
     {priority, _} = Integer.parse(to_string(priority))
 
     case User.has_permissions(socket) do
       :yes ->
-        socket.assigns.page.assigns.project
-        |> Projects.update_project(%{priority: priority}, true)
+        socket.assigns.selected_projects
+        |> Enum.filter(&(&1.priority == from))
+        |> Enum.map(& &1.id)
+        |> Projects.update_projects(%{priority: priority}, true)
 
         {:reply, %{success: true}, socket}
 
@@ -194,30 +199,83 @@ defmodule Grav1Web.ProjectsLive do
      }, socket}
   end
 
-  # update project list and project
+  # update project and project list
   def handle_info(
-        %{topic: @topic, event: "update", payload: %{project: project, projects: true}},
+        %{topic: @topic, event: "update", payload: %{project: project, project_list: true}},
         socket
       ) do
-    send_update(Grav1Web.ProjectComponent,
-      id: "#{Grav1Web.ProjectComponent}:#{project.id}",
-      project: project
+    handle_info(
+      %{
+        topic: @topic,
+        event: "update_projects",
+        payload: %{projects: [project], project_list: true}
+      },
+      socket
     )
-
-    send_update(Grav1Web.ProjectSettingsComponent,
-      id: "#{Grav1Web.ProjectSettingsComponent}:#{project.id}",
-      project: project
-    )
-
-    {:noreply, socket |> assign(projects: Projects.get_projects())}
   end
 
   # update only project list
   def handle_info(
-        %{topic: @topic, event: "update_projects", payload: %{projects: projects}},
+        %{topic: @topic, event: "update_project_list", payload: %{projects: projects}},
         socket
       ) do
     {:noreply, socket |> assign(projects: projects)}
+  end
+
+  # update projects and project list
+  def handle_info(
+        %{
+          topic: @topic,
+          event: "update_projects",
+          payload: %{projects: projects, project_list: true}
+        },
+        socket
+      ) do
+    handle_info(
+      %{topic: @topic, event: "update_projects", payload: %{projects: projects}},
+      assign(socket, projects: Projects.get_projects())
+    )
+  end
+
+  # update only projects
+  def handle_info(
+        %{topic: @topic, event: "update_projects", payload: %{projects: projects}},
+        socket
+      ) do
+    Enum.reduce(projects, {false, socket}, fn project, {in_selected, acc} ->
+      send_update(Grav1Web.ProjectComponent,
+        id: "#{Grav1Web.ProjectComponent}:#{project.id}",
+        project: project
+      )
+
+      send_update(Grav1Web.ProjectSettingsComponent,
+        id: "#{Grav1Web.ProjectSettingsComponent}:#{project.id}",
+        project: project
+      )
+
+      if project.id in Enum.map(socket.assigns.selected_projects, & &1.id) do
+        selected_projects =
+          acc.assigns.selected_projects
+          |> Enum.filter(&(&1.id != project.id))
+          |> Enum.concat([project])
+
+        {true, assign(acc, selected_projects: selected_projects)}
+      else
+        {in_selected, acc}
+      end
+    end)
+    |> case do
+      {true, socket} ->
+        send_update(Grav1Web.ProjectSettingsMultiComponent,
+          id: "#{Grav1Web.ProjectSettingsMultiComponent}",
+          projects: socket.assigns.selected_projects
+        )
+
+        {:noreply, socket}
+
+      {false, socket} ->
+        {:noreply, socket}
+    end
   end
 
   # update only project
@@ -225,17 +283,10 @@ defmodule Grav1Web.ProjectsLive do
         %{topic: @topic, event: "update_project", payload: %{project: project}},
         socket
       ) do
-    send_update(Grav1Web.ProjectComponent,
-      id: "#{Grav1Web.ProjectComponent}:#{project.id}",
-      project: project
+    handle_info(
+      %{topic: @topic, event: "update_projects", payload: %{projects: [project]}},
+      socket
     )
-
-    send_update(Grav1Web.ProjectSettingsComponent,
-      id: "#{Grav1Web.ProjectSettingsComponent}:#{project.id}",
-      project: project
-    )
-
-    {:noreply, socket}
   end
 
   # update only project logs
@@ -266,34 +317,27 @@ defmodule Grav1Web.ProjectsLive do
     {:noreply, socket}
   end
 
-  def view_project_page(socket, id, assign) do
-    case Projects.get_project(id) do
-      nil ->
-        {:noreply, socket |> assign(page: nil)}
+  def view_project_page(socket, tab, patch \\ true) do
+    socket =
+      if patch do
+        ids = socket.assigns.selected_projects |> Enum.map(& &1.id) |> Enum.join(",")
 
-      project ->
-        {page, assigns} = assign.(project)
+        socket
+        |> push_patch(to: "/projects/#{ids}/#{tab}")
+      else
+        socket
+      end
+      |> assign(tab: tab)
 
-        assigns =
-          [
-            id: "#{page}:#{project.id}",
-            assigns: socket.assigns
-          ] ++ assigns
-
-        new_socket =
-          socket
-          |> push_patch(to: "/projects/#{id}")
-          |> assign(
-            page:
-              live_component(socket, Grav1Web.ProjectPageComponent,
-                id: "project:#{project.id}",
-                project: project,
-                page: live_component(socket, page, assigns)
-              )
-          )
-
-        {:noreply, new_socket}
-    end
+    assign(socket,
+      page:
+        live_component(socket, Grav1Web.ProjectPageComponent,
+          id: "project_page",
+          projects: socket.assigns.selected_projects,
+          page: tab,
+          assigns: socket.assigns
+        )
+    )
   end
 
   def get_segments(project, workers) do
@@ -384,6 +428,16 @@ defmodule Grav1Web.ProjectsLive do
     end
   end
 
+  # update projects
+  def update_projects(projects, project_list \\ false) do
+    Endpoint.broadcast(@topic, "update_projects", %{
+      projects: projects,
+      project_list: project_list
+    })
+
+    projects
+  end
+
   # update only log of project
   def update_log(project) do
     Endpoint.broadcast(@topic, "log", %{
@@ -401,6 +455,8 @@ defmodule Grav1Web.ProjectsLive do
 
   # update only project list
   def update() do
-    Grav1Web.Endpoint.broadcast(@topic, "update_projects", %{projects: Projects.get_projects()})
+    Grav1Web.Endpoint.broadcast(@topic, "update_project_list", %{
+      projects: Projects.get_projects()
+    })
   end
 end

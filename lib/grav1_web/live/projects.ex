@@ -23,6 +23,7 @@ defmodule Grav1Web.ProjectsLive do
 
     selected_projects =
       String.split(ids, ",")
+      |> Enum.filter(&(String.length(&1) > 0))
       |> Enum.map(&Projects.get_project(&1))
       |> Enum.filter(&(!is_nil(&1)))
 
@@ -318,7 +319,7 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   def view_project_page(socket, tab, patch \\ true) do
-    socket =
+    if length(socket.assigns.selected_projects) > 0 do
       if patch do
         ids = socket.assigns.selected_projects |> Enum.map(& &1.id) |> Enum.join(",")
 
@@ -328,16 +329,18 @@ defmodule Grav1Web.ProjectsLive do
         socket
       end
       |> assign(tab: tab)
-
-    assign(socket,
-      page:
-        live_component(socket, Grav1Web.ProjectPageComponent,
-          id: "project_page",
-          projects: socket.assigns.selected_projects,
-          page: tab,
-          assigns: socket.assigns
-        )
-    )
+      |> assign(
+        page:
+          live_component(socket, Grav1Web.ProjectPageComponent,
+            id: "project_page",
+            projects: socket.assigns.selected_projects,
+            page: tab,
+            assigns: socket.assigns
+          )
+      )
+    else
+      assign(socket, page: nil, tab: nil)
+    end
   end
 
   def get_segments(project, workers) do

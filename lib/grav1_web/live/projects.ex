@@ -419,7 +419,7 @@ defmodule Grav1Web.ProjectsLive do
     if not ratelimit or RateLimit.can_execute?("projects", 1 / 10) do
       Endpoint.broadcast(@topic, "update", %{
         project: project,
-        projects: true
+        project_list: true
       })
     end
   end

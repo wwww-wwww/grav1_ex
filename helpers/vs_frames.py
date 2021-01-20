@@ -1,5 +1,4 @@
 from vapoursynth import core
-import sys
 
 
 def get_attr(obj, attr, ex=False):

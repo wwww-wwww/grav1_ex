@@ -24,27 +24,30 @@ def correct_split(path_vspipe, path_ffmpeg, path_in, path_out, start, length):
     "-y", path_out
   ]
 
-  pipe1 = subprocess.Popen(vspipe_cmd,
+  pipe1 = subprocess.Popen(
+    vspipe_cmd,
     stdout=subprocess.PIPE,
     stderr=subprocess.STDOUT,
-    creationflags=CREATE_NO_WINDOW)
+    creationflags=CREATE_NO_WINDOW
+  )
 
-  pipe2 = subprocess.Popen(ffmpeg_cmd,
+  pipe2 = subprocess.Popen(
+    ffmpeg_cmd,
     stdin=pipe1.stdout,
     stdout=subprocess.PIPE,
     stderr=subprocess.STDOUT,
     universal_newlines=True,
-    creationflags=CREATE_NO_WINDOW)
+    creationflags=CREATE_NO_WINDOW
+  )
 
   frame = -1
   while True:
-    line = pipe2.stdout.readline().strip()
+    line = pipe2.stdout.readline()
 
     if len(line) == 0 and pipe2.poll() is not None:
       break
 
-    if not cb: continue
-    matches = re.findall(r"frame= *([^ ]+?) ", line)
+    matches = re.findall(r"frame= *([^ ]+?) ", line.strip())
     if matches:
       new_frame = matches[-1]
       if new_frame != frame:

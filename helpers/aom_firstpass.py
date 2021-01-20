@@ -6,18 +6,20 @@ else:
   CREATE_NO_WINDOW = 0
 
 
-def get_aom_keyframes(ffmpeg_path, aomenc_path, src, width, height):
+def get_aom_keyframes(path_ffmpeg, path_aomenc, path_in, scale_n, scale_d):
   ffmpeg = [
-    ffmpeg_path,
+    path_ffmpeg,
     "-loglevel", "error",
-    "-i", src,
+    "-i", path_in,
     "-map", "0:v:0",
     "-vsync", "0",
-    "-f", "yuv4mpegpipe", "-"
+    "-f", "yuv4mpegpipe", 
+    "-vf", f"scale=iw*{scale_n}/{scale_d}:-1",
+    "-"
   ]
 
   aom = [
-    aomenc_path, "-",
+    path_aomenc, "-",
     "--ivf", f"--fpf=fpf.log",
     f"--threads=8", "--passes=2",
     "--pass=1", "--auto-alt-ref=1",
@@ -25,42 +27,41 @@ def get_aom_keyframes(ffmpeg_path, aomenc_path, src, width, height):
     "-o", os.devnull
   ]
 
-  if width > 0 and height > 0:
-    aom.extend(["-w", str(width), "-h", str(height)])
+  try:
+    ffmpeg_pipe = subprocess.Popen(
+      ffmpeg,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.STDOUT,
+      creationflags=CREATE_NO_WINDOW
+    )
 
-  ffmpeg_pipe = subprocess.Popen(ffmpeg,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.STDOUT,
-    creationflags=CREATE_NO_WINDOW)
+    pipe = subprocess.Popen(
+      aom,
+      stdin=ffmpeg_pipe.stdout,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.STDOUT,
+      universal_newlines=True,
+      creationflags=CREATE_NO_WINDOW
+    )
 
-  pipe = subprocess.Popen(aom,
-    stdin=ffmpeg_pipe.stdout,
-    stdout=subprocess.PIPE,
-    stderr=subprocess.STDOUT,
-    universal_newlines=True,
-    creationflags=CREATE_NO_WINDOW)
+    frame = -1
+    while True:
+      line = pipe.stdout.readline()
 
-  frame = -1
-  while True:
-    line = pipe.stdout.readline().strip()
+      if len(line) == 0 and pipe.poll() is not None:
+        break
 
-    if len(line) == 0 and pipe.poll() is not None:
-      break
+      match = re.search(r"frame.*?\/([^ ]+?) ", line.strip())
+      if match:
+        new_frame = int(match.group(1))
+        if new_frame != frame:
+          frame = new_frame
+          print("frame", frame)
 
-    match = re.search(r"frame.*?\/([^ ]+?) ", line)
-    if match:
-      new_frame = int(match.group(1))
-      if new_frame != frame:
-        frame = new_frame
-        print("frame", frame)
-
-  ffmpeg_pipe.kill()
-  pipe.kill()
+  finally:
+    ffmpeg_pipe.kill()
+    pipe.kill()
 
 if __name__ == "__main__":
   if len(sys.argv) == 4:
-    get_aom_keyframes(
-      sys.argv[1],
-      sys.argv[2],
-      sys.argv[3],
-      1280, 720)
+    get_aom_keyframes(sys.argv[1], sys.argv[2], sys.argv[3], 1, 1.5)

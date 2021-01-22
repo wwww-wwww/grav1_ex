@@ -1,11 +1,11 @@
 <div id="<%= @id %>" class="project_settings">
   <div class="card">
   <div>
-    <span>Name</span>
+    <span><%= gettext("Name") %></span>
     <%= if edit_perms?(@assigns.user) do %>
       <%= content_tag(:div, @project.name, [class: "editable", id: "#{@id}:name", phx_hook: "settings_change_name"]) %>
-      <%= submit("Save", class: "hidden", id: "#{@id}:name_save", source: "#{@id}:name", phx_hook: "settings_name_save") %>
-      <%= submit("Cancel", class: "hidden", id: "#{@id}:name_cancel", source: "#{@id}:name", phx_hook: "settings_name_cancel") %>
+      <%= submit(gettext("Save"), class: "hidden", id: "#{@id}:name_save", source: "#{@id}:name", phx_hook: "settings_name_save") %>
+      <%= submit(gettext("Cancel"), class: "hidden", id: "#{@id}:name_cancel", source: "#{@id}:name", phx_hook: "settings_name_cancel") %>
     <% else %>
       <%= content_tag(:div, @project.name) %>
     <% end %>
@@ -14,19 +14,19 @@
 
   <div class="card">
   <div>
-    <span>Encoder</span>
+    <span><%= gettext("Encoder") %></span>
     <div><%= @project.encoder %></div>
   </div>
   </div>
 
   <div class="card">
   <div>
-    <span>Encoder parameters</span>
+    <span><%= gettext("Encoder parameters") %></span>
     <% encoder_params = @project.encoder_params |> Enum.join(" ") %>
     <%= if edit_perms?(@assigns.user) do %>
       <%= content_tag(:div, encoder_params, [original_value: encoder_params, class: "editable", id: "#{@id}:encoder_params", phx_hook: "settings_change_encoder_params"]) %>
-      <%= submit("Save", class: "hidden", id: "#{@id}:encoder_params_save", source: "#{@id}:encoder_params", phx_hook: "settings_encoder_params_save") %>
-      <%= submit("Cancel", class: "hidden", id: "#{@id}:encoder_params_cancel", source: "#{@id}:encoder_params", phx_hook: "settings_encoder_params_cancel") %>
+      <%= submit(gettext("Save"), class: "hidden", id: "#{@id}:encoder_params_save", source: "#{@id}:encoder_params", phx_hook: "settings_encoder_params_save") %>
+      <%= submit(gettext("Cancel"), class: "hidden", id: "#{@id}:encoder_params_cancel", source: "#{@id}:encoder_params", phx_hook: "settings_encoder_params_cancel") %>
     <% else %>
       <%= content_tag(:div, encoder_params) %>
     <% end %>
@@ -35,12 +35,12 @@
 
   <div class="card">
   <div>
-    <span>Priority</span>
+    <span><%= gettext("Priority") %></span>
     <div>
     <%= if edit_perms?(@assigns.user) do %>
       <%= content_tag(:input, "", [value: @project.priority, original_value: @project.priority, type: "number", id: "#{@id}:priority", phx_hook: "settings_change_priority"]) %>
-      <%= submit("Save", class: "hidden", id: "#{@id}:priority_save", source: "#{@id}:priority", phx_hook: "settings_priority_save") %>
-      <%= submit("Cancel", class: "hidden", id: "#{@id}:priority_cancel", source: "#{@id}:priority", phx_hook: "settings_priority_cancel") %>
+      <%= submit(gettext("Save"), class: "hidden", id: "#{@id}:priority_save", source: "#{@id}:priority", phx_hook: "settings_priority_save") %>
+      <%= submit(gettext("Cancel"), class: "hidden", id: "#{@id}:priority_cancel", source: "#{@id}:priority", phx_hook: "settings_priority_cancel") %>
     <% else %>
       <%= @project.priority %>
     <% end %>
@@ -49,36 +49,52 @@
   </div>
 
   <%= if edit_perms?(@assigns.user) do %>
-    <%= if @project.state == :completed do %>
-      <div class="card">
+    <div class="card">
+    <div>
+      <span><%= gettext("Action") %></span>
       <div>
-        <span>Action</span>
-        <div>
+        <%= if @project.state == :completed do %>
           <select id="<%= @id %>:on_complete_actions">
-            <%= for action <- Application.fetch_env!(:on_complete_actions, :actions) do %>
+            <%= for action <- Grav1.Actions.get() do %>
               <option><%= action %></option>
             <% end %>
           </select>
           <div>
             <input id="<%= @id %>:on_complete_action_params" placeholder="Action parameters">
           </div>
-          <%= submit("Run", id: "#{@id}:settings_actions_submit", phx_hook: "settings_actions") %>
-        </div>
+          <%= submit(gettext("Run"), id: "#{@id}:settings_actions_submit", phx_hook: "settings_actions") %>
+        <% else %>
+          <select id="<%= @id %>:on_complete_actions">
+            <option><%= gettext("No action") %></option>
+            <%= for action <- Grav1.Actions.get() do %>
+              <%= if @project.on_complete == action do %>
+                <option selected><%= action %></option>
+              <% else %>
+                <option><%= action %></option>
+              <% end %>
+            <% end %>
+          </select>
+          <div>
+            <input id="<%= @id %>:on_complete_action_params" placeholder="Action parameters" value="<%= Enum.join(@project.on_complete_params, " ") %>">
+          </div>
+          <%= submit(gettext("Save"), class: "hidden", id: "#{@id}:action_save", source: "#{@id}:action", phx_hook: "settings_action_save") %>
+          <%= submit(gettext("Cancel"), class: "hidden", id: "#{@id}:action_cancel", source: "#{@id}:action", phx_hook: "settings_action_cancel") %>
+        <% end %>
       </div>
-      </div>
-    <% end %>
+    </div>
+    </div>
 
     <%= if Grav1.Project.can_start(@project) do %>
       <div class="card">
       <div>
-        <%= submit("Start project", id: "#{@id}:settings_start_project", phx_click: "start_project") %>
+        <%= submit(gettext("Start Project"), id: "#{@id}:settings_start_project", phx_click: "start_project") %>
       </div>
       </div>
     <% else %>
       <%= if @project.state == :ready do %>
         <div class="card">
         <div>
-          <%= submit("Stop project", id: "#{@id}:settings_stop_project", phx_click: "stop_project") %>
+          <%= submit(gettext("Stop project"), id: "#{@id}:settings_stop_project", phx_click: "stop_project") %>
         </div>
         </div>
       <% end %>
@@ -87,7 +103,7 @@
     <div class="card">
     <div>
       <%= if @project.state in [:idle, :ready, :completed] do %>
-        <%= submit("Delete", id: "#{@id}settings_delete", phx_hook: "settings_delete", disabled: true) %>
+        <%= submit(gettext("Delete"), id: "#{@id}settings_delete", phx_hook: "settings_delete", disabled: true) %>
       <% end %>
     </div>
     </div>

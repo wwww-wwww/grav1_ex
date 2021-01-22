@@ -26,6 +26,21 @@ defmodule Grav1Web.Router do
     plug Guardian.Plug.EnsureNotAuthenticated
   end
 
+  pipeline :admin do
+    plug :ensure_admin
+  end
+
+  defp ensure_admin(conn, _) do
+    if Guardian.Plug.current_resource(conn).level >= 100 do
+      conn
+    else
+      conn
+      |> put_flash(:info, "you can't do this!")
+      |> redirect(to: "/")
+      |> halt()
+    end
+  end
+
   scope "/", Grav1Web do
     pipe_through [:browser, :auth]
 
@@ -54,6 +69,11 @@ defmodule Grav1Web.Router do
       scope "/user" do
         live "/", UserLive
         post "/generate_apikey", UserController, :generate_apikey
+      end
+
+      scope "/" do
+        pipe_through :admin
+        live "/settings", SettingsLive
       end
     end
   end

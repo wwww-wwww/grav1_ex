@@ -84,7 +84,7 @@
       <label for="opt_extra_on_complete">On complete</label>
       <select id="opt_extra_on_complete">
         <option value="">Do nothing</option>
-        <%= for action <- Application.fetch_env!(:on_complete_actions, :actions) do %>
+        <%= for action <- Grav1.Actions.get() do %>
           <option><%= action %></option>
         <% end %>
       </select>

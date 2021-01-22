@@ -1,7 +1,7 @@
 <div id="<%= @id %>" class="project_settings">
   <div class="card">
   <div>
-    <span>Encoder parameters</span>
+    <span><%= gettext("Encoder parameters") %></span>
     <% grouped = Enum.group_by(@projects, & &1.encoder_params) |> Enum.with_index() %>
     <%= for {{encoder_params, projects}, i} <- grouped do %>
       <%= if length(grouped) > 1 do %>
@@ -10,9 +10,9 @@
         </div>
       <% end %>
       <%= if edit_perms?(@assigns.user) do %>
-        <%= content_tag(:div, encoder_params |> Enum.join(" "), [class: "editable", id: "#{@id}:#{i}:encoder_params", phx_hook: "settings_change_encoder_params"]) %>
-        <%= submit("Save", class: "hidden", id: "#{@id}:#{i}:encoder_params_save", source: "#{@id}:#{i}:encoder_params", phx_hook: "settings_encoder_params_save") %>
-        <%= submit("Cancel", class: "hidden", id: "#{@id}:#{i}:encoder_params_cancel", source: "#{@id}:#{i}:encoder_params", phx_hook: "settings_encoder_params_cancel") %>
+        <%= content_tag(:div, encoder_params |> Enum.join(" "), [original_value: encoder_params |> Enum.join(" "), class: "editable", id: "#{@id}:#{i}:encoder_params", phx_hook: "settings_change_encoder_params"]) %>
+        <%= submit(gettext("Save"), class: "hidden", id: "#{@id}:#{i}:encoder_params_save", source: "#{@id}:#{i}:encoder_params", phx_hook: "settings_encoder_params_save") %>
+        <%= submit(gettext("Cancel"), class: "hidden", id: "#{@id}:#{i}:encoder_params_cancel", source: "#{@id}:#{i}:encoder_params", phx_hook: "settings_encoder_params_cancel") %>
       <% else %>
         <%= content_tag(:div, encoder_params |> Enum.join(" ")) %>
       <% end %>
@@ -22,7 +22,7 @@
 
   <div class="card">
   <div>
-    <span>Priority</span>
+    <span><%= gettext("Priority") %></span>
     <div>
     <% grouped = Enum.group_by(@projects, & &1.priority) |> Enum.with_index() %>
     <%= for {{priority, projects}, i} <- grouped do %>
@@ -33,8 +33,8 @@
       <% end %>
     <%= if edit_perms?(@assigns.user) do %>
       <%= content_tag(:input, "", [value: priority, original_value: priority, type: "number", id: "#{@id}:#{i}:priority", phx_hook: "settings_change_priority"]) %>
-      <%= submit("Save", class: "hidden", id: "#{@id}:#{i}:priority_save", source: "#{@id}:#{i}:priority", phx_hook: "settings_priority_save") %>
-      <%= submit("Cancel", class: "hidden", id: "#{@id}:#{i}:priority_cancel", source: "#{@id}:#{i}:priority", phx_hook: "settings_priority_cancel") %>
+      <%= submit(gettext("Save"), class: "hidden", id: "#{@id}:#{i}:priority_save", source: "#{@id}:#{i}:priority", phx_hook: "settings_priority_save") %>
+      <%= submit(gettext("Cancel"), class: "hidden", id: "#{@id}:#{i}:priority_cancel", source: "#{@id}:#{i}:priority", phx_hook: "settings_priority_cancel") %>
     <% else %>
       <%= priority %>
     <% end %>
@@ -55,7 +55,7 @@
               </div>
             <% end %>
             <div>
-              <%= submit("Start projects", id: "#{@id}:#{i}:settings_start_project", phx_click: "start_project") %>
+              <%= submit(gettext("Start projects"), id: "#{@id}:#{i}:settings_start_project", phx_click: "start_project") %>
             </div>
           </div>
         </div>
@@ -70,7 +70,7 @@
                 </div>
               <% end %>
               <div>
-                <%= submit("Stop projects", id: "#{@id}:settings_stop_project", phx_click: "stop_project") %>
+                <%= submit(gettext("Stop projects"), id: "#{@id}:settings_stop_project", phx_click: "stop_project") %>
               </div>
             </div>
           </div>

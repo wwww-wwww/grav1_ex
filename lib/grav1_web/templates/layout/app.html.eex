@@ -6,6 +6,7 @@
     <%= nav_link(@conn, assigns, gettext("Workers"), Grav1Web.WorkersLive) %>
     <%= nav_link(@conn, assigns, gettext("Clients"), Grav1Web.ClientsLive) %>
     <%= nav_link(@conn, assigns, gettext("Users"), Grav1Web.UsersLive) %>
+    <%= nav_link(@conn, assigns, gettext("Settings"), Grav1Web.SettingsLive) %>
     <%= if logged_in?(@conn) do %>
       <%= nav_link(@conn, assigns, gettext("Profile"), Grav1Web.UserLive) %>
       <%= nav_link(@conn, assigns, gettext("Sign Out"), &Routes.user_path/2, :sign_out) %>

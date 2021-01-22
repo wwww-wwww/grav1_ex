@@ -1,0 +1,12 @@
+<div class="card">
+<div>
+  <div class="title"><%= gettext("Actions") %> <%= submit("Reload", phx_click: "reload_actions") %></div>
+  <div class="body">
+    <%= for action <- @actions do %>
+      <div>
+        <%= action %>
+      </div>
+    <% end %>
+  </div>
+</div>
+</div>

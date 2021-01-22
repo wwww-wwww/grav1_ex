@@ -140,16 +140,20 @@ table table table tr:not(:last-child) {
   border-bottom: 1px solid rgba(0, 0, 0, 0.4);
 }
 
-.card>div {
-  padding: 0.5em;
-  display: inline-block;
-  border-radius: 0.2em;
-  box-shadow: 0 0 0.2em rgba(0, 0, 0, 0.4);
-  background-color: rgba(255, 255, 255, 0.2);
+.card {
+  margin: 0.5em;
+
+  >div {
+    padding: 0.5em;
+    display: inline-block;
+    border-radius: 0.2em;
+    box-shadow: 0 0 0.2em rgba(0, 0, 0, 0.4);
+    background-color: rgba(255, 255, 255, 0.2);
+  }
 }
 
 .card:not(:last-child) {
-  margin-bottom: 0.5em;
+  margin-bottom: 0;
 }
 
 .square {
@@ -200,6 +204,10 @@ table table table tr:not(:last-child) {
 
 .circle:active::before {
   opacity: 1;
+}
+
+hr {
+  margin: 0.5em 0.25em;
 }
 
 @import "./buttons.scss";

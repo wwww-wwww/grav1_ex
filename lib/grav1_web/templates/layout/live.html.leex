@@ -5,6 +5,7 @@
     <%= nav_link(@socket, assigns, gettext("Workers"), Grav1Web.WorkersLive) %>
     <%= nav_link(@socket, assigns, gettext("Clients"), Grav1Web.ClientsLive) %>
     <%= nav_link(@socket, assigns, gettext("Users"), Grav1Web.UsersLive) %>
+    <%= nav_link(@socket, assigns, gettext("Settings"), Grav1Web.SettingsLive) %>
     <%= if assigns |> Map.get(:user) do %>
       <%= nav_link(@socket, assigns, gettext("Profile"), Grav1Web.UserLive) %>
       <%= nav_link(@socket, assigns, gettext("Sign Out"), &Routes.user_path/2, :sign_out) %>

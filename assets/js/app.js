@@ -87,6 +87,7 @@ hooks.load_encoders = {
       }
 
       const params = {
+        encoder: selected_encoder,
         encoder_params: enc_params,
         split_min_frames: opt_split_min_frames.value,
         split_max_frames: opt_split_max_frames.value,
@@ -96,8 +97,7 @@ hooks.load_encoders = {
         on_complete_params: [...opt_extra_on_complete_params.value.matchAll(re_args)].flat(),
         ffmpeg_params: [...opt_extra_ffmpeg_params.value.matchAll(re_args)].flat(),
         start_after_split: opt_extra_start_after_split.checked,
-        copy_timestamps: opt_extra_copy_timestamps.checked,
-        encoder: selected_encoder
+        copy_timestamps: opt_extra_copy_timestamps.checked
       }
 
       console.log(params)

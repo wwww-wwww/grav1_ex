@@ -40,7 +40,7 @@ defmodule Grav1.Actions do
   end
 
   def add(project, action, params \\ []) do
-    if project != nil and action in Application.fetch_env!(:on_complete_actions, :actions) do
+    if project != nil and action in get() do
       GenServer.call(
         ActionsQueue,
         {:push,
@@ -67,6 +67,21 @@ defmodule Grav1.Actions do
     end
 
     {:noreply, state}
+  end
+
+  def get() do
+    Application.fetch_env!(:on_complete_actions, :actions)
+  end
+
+  def reload() do
+    case File.ls("actions") do
+      {:ok, files} ->
+        files = Enum.map(files, &Path.join("actions", &1))
+        Application.put_env(:on_complete_actions, :actions, files)
+
+      _ ->
+        Application.put_env(:on_complete_actions, :actions, [])
+    end
   end
 end
 

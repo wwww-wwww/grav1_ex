@@ -5,7 +5,7 @@
       <th><%= gettext("User") %></th>
       <th><%= gettext("Frames") %></th>
     </tr>
-    <%= for user <- @users do %>
+    <%= for user <- @users |> Enum.filter(&(&1.frames > 0)) do %>
       <tr>
         <td><%= user.username %></td>
         <td><%= user.frames %></td>

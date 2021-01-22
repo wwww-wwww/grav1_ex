@@ -1,20 +1,24 @@
 <div class="page_project">
   <div class="header">
-    <%= for project <- @projects do %>
-      <div class="title"><%= project.input %></div>
-      <div class="details">
-        <span><%= project.id %></span>
-        <span><%= project.encoder %></span>
-        <span style="float: right"><%= project.inserted_at %></span>
-      </div>
-    <% end %>
+    <div class="selected_projects">
+      <%= for project <- @projects do %>
+        <div class="project">
+          <div class="title"><%= project.input %></div>
+          <div class="details">
+            <span><%= project.id %></span>
+            <span><%= project.encoder %></span>
+            <span style="float: right"><%= project.inserted_at %></span>
+          </div>
+        </div>
+      <% end %>
+    </div>
     <div class="tabs">
-      <%= submit("Segments", phx_click: "view_project_segments", class: tab_selected(@page, :segments)) %>
-      <%= submit("Settings", phx_click: "view_project_settings", class: tab_selected(@page, :settings)) %>
-      <%= submit("Logs", phx_click: "view_project_log", class: tab_selected(@page, :logs)) %>
+      <%= submit(gettext("Segments"), phx_click: "view_project_segments", class: tab_selected(@page, :segments)) %>
+      <%= submit(gettext("Settings"), phx_click: "view_project_settings", class: tab_selected(@page, :settings)) %>
+      <%= submit(gettext("Logs"), phx_click: "view_project_log", class: tab_selected(@page, :logs)) %>
     </div>
   </div>
-  <div id="projects_page" style="height: 100%; overflow-y: auto; display: flex;">
+  <div id="projects_page">
     <%= if is_multi_page(@page, @projects) do %>
       <%= render_component(@socket, @assigns, @page, @projects) %>
     <% else %>

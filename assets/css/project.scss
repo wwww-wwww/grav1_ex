@@ -2,6 +2,8 @@
   .page_project {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    overflow: hidden;
 
     .logs {
       overflow-y: auto;
@@ -13,19 +15,26 @@
     }
 
     .header {
-      padding: 0.3em 0.3em 0 0.3em;
       border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      max-height: 40%;
 
-      .title {
-        margin-bottom: 0.4em;
-      }
+      .selected_projects {
+        padding: 0.3em 0.3em 0 0.3em;
+        overflow-y: auto;
 
-      .details {
-        font-size: 0.8em;
+        .project:not(:last-child) {
+          margin-bottom: 0.4em;
+        }
+
+        .details {
+          font-size: 0.8em;
+        }
       }
 
       .tabs {
-        margin-top: 0.5em;
+        padding: 0.3em 0.3em 0 0.3em;
 
         .tab {
           font-size: 0.8em;
@@ -56,11 +65,15 @@
         }
       }
     }
+
+    #projects_page {
+      overflow-y: auto;
+      display: flex;
+      flex: 1;
+    }
   }
 
   .project_settings {
-    margin: 0.5em;
-
     .editable {
       background-color: rgba(100, 100, 100, 0.1);
       padding: 0.25em;

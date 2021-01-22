@@ -378,12 +378,12 @@ defmodule Grav1.Projects do
 
       opts ->
         if String.length(opts["on_complete"]) == 0 or
-             opts["on_complete"] in Application.fetch_env!(:on_complete_actions, :actions) do
+             opts["on_complete"] in Grav1.Actions.get() do
           opts
         else
           {:error,
            "Action not supported. Supported actions: " <>
-             inspect(Application.fetch_env!(:on_complete_actions, :actions))}
+             inspect(Grav1.Actions.get())}
         end
     end
   end

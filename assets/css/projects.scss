@@ -16,84 +16,6 @@
     flex-direction: column;
   }
 
-  .project {
-    border-top: 1px solid rgba(0, 0, 0, 0.3);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.3);
-    position: relative;
-    margin-bottom: 0.25em;
-    animation: fadein 0.2s;
-    background-color: rgba(255, 255, 255, 0.6);
-    padding: 0.25em 0.5em;
-    cursor: pointer;
-
-    .top {
-      font-size: 0.9em;
-      margin-bottom: 0.25em;
-    }
-
-    .bottom {
-      font-size: 0.7em;
-      width: 100%;
-      position: relative;
-      line-height: 1em;
-      display: flex;
-      justify-content: center;
-
-      * {
-        z-index: 0;
-      }
-
-      .progress_bar {
-        max-width: 100%;
-        height: 100%;
-        width: 0%;
-        background-color: rgba(80, 210, 240, 0.4);
-        position: absolute;
-        left: 0;
-        transition: width 0.5s;
-      }
-
-      div:not(:first-child) {
-        padding: 0 0.2em;
-      }
-
-      .progress_left {
-        flex: 1;
-      }
-
-      .progress_center {
-        text-align: center;
-      }
-
-      .progress_right {
-        text-align: right;
-        flex-shrink: 0;
-      }
-    }
-
-    div:first-child>div:last-child {
-      font-size: 0.8em;
-    }
-  }
-
-  .project.selected {
-    background-color: rgba(200, 200, 200, 0.6);
-  }
-
-  .project:hover {
-    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.4), 0px -2px 4px rgba(0, 0, 0, 0.2);
-    background-color: rgba(230, 230, 230, 0.6);
-  }
-
-  .project.selected:hover {
-    background-color: rgba(150, 150, 150, 0.6);
-  }
-
-  .page_project {
-    flex: 1;
-    overflow: hidden;
-  }
-
   #text_refresh {
     flex: 1;
     text-align: right;
@@ -105,13 +27,6 @@
     display: flex;
     overflow: hidden;
     flex: 1;
-  }
-
-  #list_projects {
-    overflow-y: scroll;
-    border-top: 1px solid rgba(0, 0, 0, 0.5);
-    flex: 1;
-    padding-top: 0.25em;
   }
 
   .list_projects-controls {
@@ -138,6 +53,86 @@
       >*:not(last-child) {
         margin: 0.25em 0.25em 0 0.25em;
       }
+    }
+  }
+
+  #list_projects {
+    overflow-y: scroll;
+    border-top: 1px solid rgba(0, 0, 0, 0.5);
+    flex: 1;
+    padding-top: 0.25em;
+
+    >.project {
+      border-top: 1px solid rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+      position: relative;
+      margin-bottom: 0.25em;
+      animation: fadein 0.2s;
+      background-color: rgba(255, 255, 255, 0.6);
+      padding: 0.25em 0.5em;
+      cursor: pointer;
+
+      .top {
+        font-size: 0.9em;
+        margin-bottom: 0.25em;
+      }
+
+      .bottom {
+        font-size: 0.7em;
+        width: 100%;
+        position: relative;
+        line-height: 1em;
+        display: flex;
+        justify-content: center;
+
+        * {
+          z-index: 0;
+        }
+
+        .progress_bar {
+          max-width: 100%;
+          height: 100%;
+          width: 0%;
+          background-color: rgba(80, 210, 240, 0.4);
+          position: absolute;
+          left: 0;
+          transition: width 0.5s;
+        }
+
+        div:not(:first-child) {
+          padding: 0 0.2em;
+        }
+
+        .progress_left {
+          flex: 1;
+        }
+
+        .progress_center {
+          text-align: center;
+        }
+
+        .progress_right {
+          text-align: right;
+          flex-shrink: 0;
+        }
+      }
+
+      div:first-child>div:last-child {
+        font-size: 0.8em;
+      }
+    }
+
+    >.project.selected {
+      background-color: rgba(200, 200, 200, 0.6);
+    }
+
+    >.project:hover {
+      box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.4), 0px -2px 4px rgba(0, 0, 0, 0.2);
+      background-color: rgba(230, 230, 230, 0.6);
+    }
+
+    >.project.selected:hover {
+      background-color: rgba(150, 150, 150, 0.6);
     }
   }
 

@@ -3,6 +3,9 @@ defmodule Grav1.AuthErrorHandler do
 
   def auth_error(conn, {type, _reason}, _opts) do
     body = Jason.encode!(%{error: to_string(type)})
-    send_resp(conn, 401, body)
+
+    conn
+    |> Phoenix.Controller.put_flash(:info, "You must be logged in to do this")
+    |> Phoenix.Controller.redirect(to: "/sign_in")
   end
 end

@@ -112,7 +112,8 @@ defmodule Grav1Web.WorkerChannel do
           "job_queue" => job_queue,
           "upload_queue" => upload_queue,
           "downloading" => downloading,
-          "uploading" => uploading
+          "uploading" => uploading,
+          "weighted_workers" => weighted_workers
         },
         socket
       ) do
@@ -131,7 +132,8 @@ defmodule Grav1Web.WorkerChannel do
         downloading: downloading,
         uploading: uploading,
         workers: new_workers,
-        max_workers: max_workers
+        max_workers: max_workers,
+        weighted_workers: weighted_workers
       }
     )
 
@@ -151,6 +153,8 @@ defmodule Grav1Web.WorkerChannel do
       passes: 2,
       encoder_params: segment.project.encoder_params,
       ffmpeg_params: segment.project.ffmpeg_params,
+      # target_metric: segment.project.target_metric,
+      # target_metric_score: segment.project.target_metric_score,
       grain_table: "",
       split_name: "p#{segment.project.id}s#{segment.file}",
       url: Grav1Web.Router.Helpers.api_url(%URI{}, :get_segment, segment.id)

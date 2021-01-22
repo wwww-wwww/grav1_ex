@@ -55,7 +55,7 @@ defmodule Grav1.Projects do
       clients
       |> Enum.reduce({[], 0}, fn {_, client}, {acc_w, acc_l} ->
         {acc_w ++ client.state.workers,
-         acc_l + client.state.max_workers + client.state.queue_size}
+         acc_l + length(client.state.workers) + client.state.max_workers + client.state.queue_size}
       end)
 
     sorted =

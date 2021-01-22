@@ -28,8 +28,71 @@ msgstr "Username"
 msgid "Password"
 msgstr "Password"
 
+msgid "User"
+msgstr "User"
+
 msgid "Users"
 msgstr "Users"
 
 msgid "Frames"
 msgstr "Frames"
+
+msgid "Action"
+msgstr "Action"
+
+msgid "No action"
+msgstr "No action"
+
+msgid "Actions"
+msgstr "Actions"
+
+msgid "Save"
+msgstr "Save"
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Start Project"
+msgstr "Start Project"
+
+msgid "Encoder"
+msgstr "Encoder"
+
+msgid "Encoder parameters"
+msgstr "Encoder parameters"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Priority"
+msgstr "Priority"
+
+msgid "Run"
+msgstr "Run"
+
+msgid "Delete"
+msgstr "Delete"
+
+msgid "Start project"
+msgstr "Start project"
+
+msgid "Start projects"
+msgstr "Start projects"
+
+msgid "Stop project"
+msgstr "Stop project"
+
+msgid "Stop projects"
+msgstr "Stop projects"
+
+msgid "Settings"
+msgstr "Settings"
+
+msgid "Capacity"
+msgstr "Capacity"
+
+msgid "Segments"
+msgstr "Segmeents"
+
+msgid "Logs"
+msgstr "Logs"

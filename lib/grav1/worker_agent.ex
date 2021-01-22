@@ -213,11 +213,11 @@ defmodule Grav1.WorkerAgent do
           client.sending.downloading == nil and client.meta.connected and
             client.state.downloading == nil and client.state.max_workers > 0 and
             (length(client.state.job_queue) < client.state.queue_size or
-               ((length(client.state.job_queue) == 0 and
-                   (client.state.weighted_workers == nil and
-                      length(client.state.workers) < client.state.max_workers)) or
-                  (client.state.weighted_workers != nil and
-                     client.state.weighted_workers < client.state.max_workers)))
+               (length(client.state.job_queue) == 0 and
+                  ((client.state.weighted_workers == nil and
+                      length(client.state.workers) < client.state.max_workers) or
+                     (client.state.weighted_workers != nil and
+                        client.state.weighted_workers < client.state.max_workers))))
         end,
         clients
       )

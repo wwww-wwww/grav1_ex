@@ -24,7 +24,9 @@ params = {
     "--enable-keyframe-filtering=0",
   ],
   "ffmpeg_params": [],
-  "on_complete": "actions/merge.py"
+  "on_complete": "actions/merge.py",
+  "start_after_split": True,
+  "copy_timestamps": True
 }
 
 session = requests.Session()

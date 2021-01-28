@@ -1,5 +1,10 @@
 <div id="<%= @id %>" class="logs">
   <%= for {timestamp, message} <- @log do %>
-  <div>[<%= timestamp %>] <%= message %></div>
+    <div class="message">
+      <span class="timestamp">[<%= timestamp %>]</span>
+      <%= for line <- String.split(message, "\n") do %>
+      <div><%= line %></div>
+      <% end %>
+    </div>
   <% end %>
 </div>

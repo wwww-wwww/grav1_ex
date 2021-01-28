@@ -103,7 +103,9 @@ defmodule Grav1Web.ProjectsLive do
       ) do
     case User.has_permissions(socket) do
       :yes ->
-        Grav1.Actions.add(socket.assigns.page.assigns.project, action, params)
+        socket.assigns.selected_projects
+        |> Enum.each(&Grav1.Actions.add(&1, action, params))
+
         {:reply, %{success: true}, socket}
 
       reason ->
@@ -171,6 +173,31 @@ defmodule Grav1Web.ProjectsLive do
         |> Enum.filter(&(&1.priority == from))
         |> Enum.map(& &1.id)
         |> Projects.update_projects(%{priority: priority}, true)
+
+        {:reply, %{success: true}, socket}
+
+      reason ->
+        {:reply, %{success: false, reason: reason}, socket}
+    end
+  end
+
+  def handle_event(
+        "set_action",
+        %{
+          "from_action" => from_action,
+          "action" => action,
+          "from_params" => from_params,
+          "params" => params
+        },
+        socket
+      ) do
+    case User.has_permissions(socket) do
+      :yes ->
+        socket.assigns.selected_projects
+        |> Enum.filter(&(&1.on_complete == from_action))
+        |> Enum.filter(&(Enum.join(&1.on_complete_params, " ") == from_params))
+        |> Enum.map(& &1.id)
+        |> Projects.update_projects(%{on_complete: action, on_complete_params: params}, true)
 
         {:reply, %{success: true}, socket}
 
@@ -320,20 +347,26 @@ defmodule Grav1Web.ProjectsLive do
 
   def view_project_page(socket, tab, patch \\ true) do
     if length(socket.assigns.selected_projects) > 0 do
+      selected_projects =
+        socket.assigns.selected_projects
+        |> Enum.map(&Projects.get_project(&1.id))
+        |> Enum.filter(&(!is_nil(&1)))
+
       if patch do
-        ids = socket.assigns.selected_projects |> Enum.map(& &1.id) |> Enum.join(",")
+        ids = selected_projects |> Enum.map(& &1.id) |> Enum.join(",")
 
         socket
         |> push_patch(to: "/projects/#{ids}/#{tab}")
       else
         socket
       end
+      |> assign(selected_projects: selected_projects)
       |> assign(tab: tab)
       |> assign(
         page:
           live_component(socket, Grav1Web.ProjectPageComponent,
             id: "project_page",
-            projects: socket.assigns.selected_projects,
+            projects: selected_projects,
             page: tab,
             assigns: socket.assigns
           )

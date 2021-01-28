@@ -3,7 +3,7 @@
   <div>
     <span><%= gettext("Name") %></span>
     <%= if edit_perms?(@assigns.user) do %>
-      <%= content_tag(:div, @project.name, [class: "editable", id: "#{@id}:name", phx_hook: "settings_change_name"]) %>
+      <%= content_tag(:div, @project.name, [class: "editable", id: "#{@id}:name", original_value: @project.name, phx_hook: "settings_change_name"]) %>
       <%= submit(gettext("Save"), class: "hidden", id: "#{@id}:name_save", source: "#{@id}:name", phx_hook: "settings_name_save") %>
       <%= submit(gettext("Cancel"), class: "hidden", id: "#{@id}:name_cancel", source: "#{@id}:name", phx_hook: "settings_name_cancel") %>
     <% else %>
@@ -54,17 +54,17 @@
       <span><%= gettext("Action") %></span>
       <div>
         <%= if @project.state == :completed do %>
-          <select id="<%= @id %>:on_complete_actions">
+          <select id="<%= @id %>:settings_run_action_list">
             <%= for action <- Grav1.Actions.get() do %>
               <option><%= action %></option>
             <% end %>
           </select>
           <div>
-            <input id="<%= @id %>:on_complete_action_params" placeholder="Action parameters">
+            <input id="<%= @id %>:settings_run_action_params" placeholder="Action parameters">
           </div>
-          <%= submit(gettext("Run"), id: "#{@id}:settings_actions_submit", phx_hook: "settings_actions") %>
+          <%= submit(gettext("Run"), id: "#{@id}:settings_run_action", phx_hook: "settings_run_action") %>
         <% else %>
-          <select id="<%= @id %>:on_complete_actions">
+          <select id="<%= @id %>:settings_action" original-value="<%= @project.on_complete %>" phx-hook="settings_action">
             <option><%= gettext("No action") %></option>
             <%= for action <- Grav1.Actions.get() do %>
               <%= if @project.on_complete == action do %>
@@ -75,10 +75,11 @@
             <% end %>
           </select>
           <div>
-            <input id="<%= @id %>:on_complete_action_params" placeholder="Action parameters" value="<%= Enum.join(@project.on_complete_params, " ") %>">
+            <% action_params = Enum.join(@project.on_complete_params, " ") %>
+            <%= content_tag(:input, "", [value: action_params, original_value: action_params, id: "#{@id}:settings_action_params", source: "#{@id}:settings_action", phx_hook: "settings_action_params"]) %>
           </div>
-          <%= submit(gettext("Save"), class: "hidden", id: "#{@id}:action_save", source: "#{@id}:action", phx_hook: "settings_action_save") %>
-          <%= submit(gettext("Cancel"), class: "hidden", id: "#{@id}:action_cancel", source: "#{@id}:action", phx_hook: "settings_action_cancel") %>
+          <%= submit(gettext("Save"), class: "hidden", id: "#{@id}:settings_action_save", source: "#{@id}:settings_action", phx_hook: "settings_action_save") %>
+          <%= submit(gettext("Cancel"), class: "hidden", id: "#{@id}:settings_action_cancel", source: "#{@id}:settings_action", phx_hook: "settings_action_cancel") %>
         <% end %>
       </div>
     </div>

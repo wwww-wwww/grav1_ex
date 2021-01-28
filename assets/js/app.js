@@ -204,13 +204,100 @@ hooks.select_project = {
   }
 }
 
-hooks.settings_actions = {
+hooks.settings_run_action = {
   mounted() {
     this.el.addEventListener("click", () => {
-      const params = [...on_complete_action_params.value.matchAll(re_args)].flat()
+      const params = [...document.getElementById(`${this.el.id}_params`).value.matchAll(re_args)].flat()
       this.pushEvent("run_complete_action", {
-        action: on_complete_actions.value,
+        action: document.getElementById(`${this.el.id}_list`).value,
         params: params
+      })
+    })
+  }
+}
+
+hooks.settings_action = {
+  mounted() {
+    this.el.addEventListener("change", () => {
+      const original_value = this.el.getAttribute("original-value")
+      const settings_action_params = document.getElementById(`${this.el.id}_params`)
+      const original_params = settings_action_params.getAttribute("original-value")
+
+      const unchanged = ((original_value == "" && this.el.value == "No action") ||
+        original_value == this.el.value) && original_params == settings_action_params.value
+
+      document.getElementById(`${this.el.id}_save`).classList.toggle("hidden", unchanged)
+      document.getElementById(`${this.el.id}_cancel`).classList.toggle("hidden", unchanged)
+    })
+  }
+}
+
+hooks.settings_action_params = {
+  mounted() {
+    const on_change = () => {
+      const settings_action = document.getElementById(this.el.getAttribute("source"))
+      const original_value = settings_action.getAttribute("original-value")
+      const original_params = this.el.getAttribute("original-value")
+
+      const unchanged = ((original_value == "" && settings_action.value == "No action") ||
+        original_value == settings_action.value) && original_params == this.el.value
+
+      document.getElementById(`${settings_action.id}_save`).classList.toggle("hidden", unchanged)
+      document.getElementById(`${settings_action.id}_cancel`).classList.toggle("hidden", unchanged)
+    }
+    this.el.addEventListener("change", on_change)
+    this.el.addEventListener("keyup", on_change)
+  }
+}
+
+hooks.settings_action_cancel = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      const settings_action = document.getElementById(this.el.getAttribute("source"))
+      const settings_action_params = document.getElementById(`${settings_action.id}_params`)
+
+      const original_value = settings_action.getAttribute("original-value")
+      const original_params = settings_action_params.getAttribute("original-value")
+
+      if (original_value == "") {
+        settings_action.value = "No action"
+      } else {
+        settings_action.value = original_value
+      }
+      settings_action_params.value = original_params
+
+      document.getElementById(`${settings_action.id}_save`).classList.toggle("hidden", true)
+      document.getElementById(`${settings_action.id}_cancel`).classList.toggle("hidden", true)
+    })
+  }
+}
+
+hooks.settings_action_save = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      const settings_action = document.getElementById(this.el.getAttribute("source"))
+      const settings_action_params = document.getElementById(`${settings_action.id}_params`)
+
+      const original_value = settings_action.getAttribute("original-value")
+      const original_params = settings_action_params.getAttribute("original-value")
+
+      const params = [...settings_action_params.value.matchAll(re_args)].flat()
+
+      this.pushEvent("set_action", {
+        from_action: original_value || null,
+        action: settings_action.value,
+        from_params: original_params,
+        params: params
+      }, (reply, _ref) => {
+        if (!reply.success) {
+          const err_modal = new Modal({
+            title: "Error"
+          })
+          const reason_t = create_element(err_modal, "div")
+          reason_t.textContent = "Reason:"
+          const reason = create_element(err_modal, "div")
+          reason.innerHTML = reply.reason
+        }
       })
     })
   }
@@ -228,7 +315,6 @@ hooks.settings_delete = {
 
 hooks.settings_change_encoder_params = {
   mounted() {
-    this.el.original_value = this.el.textContent
     this.el.addEventListener("click", () => {
       this.el.contentEditable = true
       this.el.classList.toggle("div-editing", true)
@@ -340,7 +426,6 @@ hooks.settings_priority_cancel = {
 
 hooks.settings_change_name = {
   mounted() {
-    this.el.original_value = this.el.textContent
     this.el.addEventListener("click", () => {
       this.el.contentEditable = true
       this.el.classList.toggle("div-editing", true)
@@ -378,7 +463,7 @@ hooks.settings_name_cancel = {
   mounted() {
     this.el.addEventListener("click", () => {
       const settings_name = document.getElementById(this.el.getAttribute("source"))
-      settings_name.textContent = settings_name.original_value
+      settings_name.textContent = settings_name.getAttribute("original-value")
       settings_name.contentEditable = false
       settings_name.classList.toggle("div-editing", false)
       document.getElementById(`${settings_name.id}_save`).classList.toggle("hidden", true)

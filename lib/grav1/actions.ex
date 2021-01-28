@@ -29,13 +29,16 @@ defmodule Grav1.Actions do
 
     Projects.log(project, "Running #{action} " <> Enum.join(args, " "))
 
-    case System.cmd(Grav1.get_path(:python), args, stderr_to_stdout: true) do
-      {_, 0} ->
-        Projects.log(project, action <> " exited with code 0")
-
-      {resp, 1} ->
-        Projects.log(project, action <> " exited with code 1")
-        Projects.log(project, resp)
+    Port.open(
+      {:spawn_executable, Grav1.get_path(:python)},
+      [:stderr_to_stdout, :binary, :exit_status, :line, args: args]
+    )
+    |> Grav1.Split.stream_port(0, fn line, _acc ->
+      Projects.log(project, line)
+    end)
+    |> case do
+      resp ->
+        Projects.log(project, "#{action} exited: #{elem(resp, 0)}")
     end
   end
 

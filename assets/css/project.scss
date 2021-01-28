@@ -8,9 +8,16 @@
     .logs {
       overflow-y: auto;
       padding: 0.2em;
+      flex: 1;
 
-      >div {
-        word-wrap: break-word;
+      >.message {
+        >div {
+          word-wrap: break-word;
+        }
+
+        >div:nth-child(2) {
+          display: inline-block;
+        }
       }
     }
 

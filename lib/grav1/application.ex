@@ -28,6 +28,14 @@ defmodule Grav1.Application do
       Grav1.Projects
     ]
 
+    load_versions()
+    Grav1.Actions.reload()
+
+    opts = [strategy: :one_for_one, name: Grav1.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+
+  def load_versions() do
     paths = Application.fetch_env!(:grav1, :paths)
 
     get_version(:ffmpeg, paths[:ffmpeg], ["-version"], ~r/ffmpeg version (.+?) /)
@@ -48,11 +56,6 @@ defmodule Grav1.Application do
       ["-u", "helpers/vs_version.py"],
       ~r/([^\r\n]+)/
     )
-
-    Grav1.Actions.reload()
-
-    opts = [strategy: :one_for_one, name: Grav1.Supervisor]
-    Supervisor.start_link(children, opts)
   end
 
   def get_version(key, executable, args, re) do

@@ -2,7 +2,7 @@ use Mix.Config
 
 config :grav1,
   ecto_repos: [Grav1.Repo],
-  encoders: [:aomenc, :vpxenc],
+  encoders: [:aomenc],
   paths: [
     ffmpeg: System.find_executable("ffmpeg"),
     aomenc: System.find_executable("aomenc"),

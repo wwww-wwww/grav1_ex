@@ -95,6 +95,8 @@ defmodule Grav1Web.Router do
     post "/set_workers", ApiController, :set_workers
 
     get "/segment/:id", ApiController, :get_segment
+
+    get "/versions", ApiController, :versions
   end
 
   if Mix.env() in [:dev, :test] do

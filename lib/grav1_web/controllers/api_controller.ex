@@ -127,4 +127,9 @@ defmodule Grav1Web.ApiController do
     IO.inspect(opts)
     conn |> json(%{success: false, reason: "bad request"})
   end
+
+  def versions(conn, _) do
+    conn
+    |> json(Application.get_all_env(:versions) |> Map.new())
+  end
 end

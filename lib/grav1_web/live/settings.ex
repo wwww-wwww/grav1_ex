@@ -16,7 +16,7 @@ defmodule Grav1Web.SettingsLive do
       socket
       |> assign(user: Grav1.Guardian.user(session))
       |> assign(actions: Grav1.Actions.get())
-    
+
     {:ok, socket}
   end
 
@@ -27,6 +27,11 @@ defmodule Grav1Web.SettingsLive do
   def handle_event("reload_actions", %{}, socket) do
     Grav1.Actions.reload()
     Endpoint.broadcast(@topic, "reload_actions", %{})
+    {:reply, %{success: true}, socket}
+  end
+
+  def handle_event("reload_versions", %{}, socket) do
+    Grav1.Application.load_versions()
     {:reply, %{success: true}, socket}
   end
 

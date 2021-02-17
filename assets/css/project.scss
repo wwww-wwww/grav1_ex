@@ -12,7 +12,7 @@
 
       >.message {
         >div {
-          word-wrap: break-word;
+          word-wrap: anywhere;
         }
 
         >div:nth-child(2) {

@@ -1,4 +1,6 @@
 defmodule Grav1.Split do
+  alias Grav1.Python
+
   @re_ffmpeg_frames ~r/frame= *([^ ]+?) /
   @re_ffmpeg_frames2 ~r/([0-9]+?) frames successfully decoded/
   @re_ffmpeg_keyframe ~r/n:([0-9]+)\.[0-9]+ pts:.+key:(.).+pict_type:(.)/
@@ -199,7 +201,7 @@ defmodule Grav1.Split do
     port =
       if Application.fetch_env!(:versions, :vapoursynth) != nil do
         try do
-          Grav1.Python.create_port()
+          Python.create_port()
         rescue
           _ -> nil
         end
@@ -376,7 +378,7 @@ defmodule Grav1.Split do
 
   defp get_frames_vs(input, fast, callback) do
     try do
-      port = Grav1.Python.create_port()
+      port = Python.create_port()
 
       try do
         elem(get_frames_vs(port, input), 1)
@@ -392,9 +394,9 @@ defmodule Grav1.Split do
 
   defp get_frames_vs(port, input) do
     try do
-      {:ok, :python.call(port, :vs_frames, :get_frames, [input])}
+      {:ok, Python.call(port, :vs_frames, :get_frames, [input])}
     rescue
-      _ -> {:error, get_frames(input)}
+      _ -> {:error, get_frames_ffmpeg(input, true, nil)}
     end
   end
 
@@ -448,10 +450,10 @@ defmodule Grav1.Split do
     callback.(:log, "getting keyframes from ebml")
 
     try do
-      port = Grav1.Python.create_port()
+      port = Python.create_port()
 
       try do
-        :python.call(port, :ebml_keyframes, :get_keyframes, [input])
+        Python.call(port, :ebml_keyframes, :get_keyframes, [input])
       rescue
         _ -> {:undefined, :undefined}
       after
@@ -466,10 +468,10 @@ defmodule Grav1.Split do
     callback.(:log, "getting keyframes using vs")
 
     try do
-      port = Grav1.Python.create_port()
+      port = Python.create_port()
 
       try do
-        :python.call(port, :vs_frames, :get_keyframes, [input])
+        Python.call(port, :vs_frames, :get_keyframes, [input])
       rescue
         _ -> get_keyframes_ffmpeg(input, callback)
       after

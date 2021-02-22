@@ -40,3 +40,5 @@ assets/package-lock.json
 
 fpf.log
 *.pyc
+*.lwi
+*.ffindex

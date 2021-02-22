@@ -3,6 +3,7 @@ defmodule Grav1.Concat do
 
   @re_ffmpeg_frames ~r/frame= *([^ ]+?) /
   @re_mkvmerge_frames ~r/Appending track 0 from file no. ([0-9]+)/
+  @re_mkvmerge_track_v ~r/Track ID ([0-9]+?): video/
 
   def concat(project) do
     encode_path =
@@ -62,15 +63,37 @@ defmodule Grav1.Concat do
     end
   end
 
-  def copy_timestamps(project, from, to) do
-    timestamps_file = "0:#{from}.timestamps.txt"
+  def get_trackid(file) do
+    case System.cmd(Grav1.get_path(:mkvmerge), ["--identify", file], stderr_to_stdout: true) do
+      {out, 0} ->
+        case Regex.run(@re_mkvmerge_track_v, out) do
+          [_, trackid] -> trackid
+          nil -> 0
+        end
 
-    extract = [project.input, "timestamps_v2", timestamps_file]
+      {resp, 1} ->
+        {:error, resp}
+    end
+  end
+
+  def copy_timestamps(project, from, to) do
+    timestamps_file =
+      Application.fetch_env!(:grav1, :path_projects)
+      |> Path.join(to_string(project.id))
+      |> Path.join("timestamps.txt")
+
+    Projects.log(project, "Getting track id")
+
+    trackid = get_trackid(project.input)
+
+    Projects.log(project, "Extracting timestamps for track #{trackid}")
+
+    extract = [project.input, "timestamps_v2", "#{trackid}:#{timestamps_file}"]
 
     case System.cmd(Grav1.get_path(:mkvextract), extract, stderr_to_stdout: true) do
       {_, 0} ->
         Projects.log(project, "Extracted timestamps")
-        merge = ["--timestamps", timestamps_file, from, "-o", to]
+        merge = ["--timestamps", "0:#{timestamps_file}", from, "-o", to]
 
         case System.cmd(Grav1.get_path(:mkvmerge), merge, stderr_to_stdout: true) do
           {_, 0} ->
@@ -87,7 +110,7 @@ defmodule Grav1.Concat do
   end
 
   def concat(:ffmpeg, project, segments, output) do
-    Projects.log(project, "concatenating using ffmpeg")
+    Projects.log(project, "Concatenating using ffmpeg")
 
     case File.open("concat.txt", [:write]) do
       {:ok, file} ->
@@ -153,7 +176,7 @@ defmodule Grav1.Concat do
   end
 
   def concat(:mkvmerge, project, segments, output, flip \\ 0) do
-    Projects.log(project, "concatenating using mkvmerge")
+    Projects.log(project, "Concatenating using mkvmerge")
 
     path_mkvmerge = Grav1.get_path(:mkvmerge)
 

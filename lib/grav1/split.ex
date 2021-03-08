@@ -368,7 +368,7 @@ defmodule Grav1.Split do
     end
   end
 
-  defp get_frames(input, fast \\ true, callback \\ nil) do
+  defp get_frames(input, fast, callback \\ nil) do
     if fast and Application.fetch_env!(:versions, :vapoursynth) != nil do
       get_frames_vs(input, fast, callback)
     else

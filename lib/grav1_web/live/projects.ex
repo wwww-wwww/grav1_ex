@@ -3,7 +3,7 @@ defmodule Grav1Web.ProjectsLive do
 
   @topic "projects_live"
 
-  alias Grav1.{Projects, Project, RateLimit, Repo, WorkerAgent, User}
+  alias Grav1.{Projects, Project, RateLimit, WorkerAgent, User}
   alias Grav1Web.Endpoint
 
   def render(assigns) do
@@ -135,6 +135,25 @@ defmodule Grav1Web.ProjectsLive do
         |> Projects.stop_projects()
 
         {:reply, %{success: true}, socket}
+
+      reason ->
+        {:reply, %{success: false, reason: reason}, socket}
+    end
+  end
+
+  def handle_event("delete_project", _, socket) do
+    case User.has_permissions(socket) do
+      :yes ->
+        socket.assigns.selected_projects
+        |> Enum.filter(&(&1.state == :ready))
+        |> Projects.stop_projects()
+
+        socket.assigns.selected_projects
+        |> Enum.map(& &1.id)
+        |> Projects.remove_projects()
+
+        {:reply, %{success: true},
+         socket |> assign(selected_projects: []) |> view_project_page(nil)}
 
       reason ->
         {:reply, %{success: false, reason: reason}, socket}

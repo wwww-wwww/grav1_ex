@@ -36,7 +36,7 @@ defmodule Grav1.Project do
     field :start_after_split, :boolean, default: true
     field :copy_timestamps, :boolean, default: true
 
-    has_many :segments, Grav1.Segment
+    has_many :segments, Grav1.Segment, on_delete: :delete_all
 
     timestamps()
   end

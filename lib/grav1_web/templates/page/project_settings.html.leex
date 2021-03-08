@@ -104,7 +104,7 @@
     <div class="card">
     <div>
       <%= if @project.state in [:idle, :ready, :completed] do %>
-        <%= submit(gettext("Delete"), id: "#{@id}settings_delete", phx_hook: "settings_delete", disabled: true) %>
+        <%= submit(gettext("Delete"), id: "#{@id}settings_delete_project", phx_click: "delete_project") %>
       <% end %>
     </div>
     </div>

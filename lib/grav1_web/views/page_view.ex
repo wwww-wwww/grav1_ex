@@ -149,7 +149,7 @@ defmodule Grav1Web.PageView do
     {Grav1Web.ProjectLogComponent, [log: project.log]}
   end
 
-  def project_page(_, project) do
+  def project_page(_, _project) do
     {nil, []}
   end
 

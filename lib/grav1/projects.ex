@@ -185,6 +185,19 @@ defmodule Grav1.Projects do
     {:reply, new_project, new_state}
   end
 
+  def handle_call(:sync, _, state) do
+    q =
+      from p in Project,
+        select: p.id
+
+    projects = Repo.all(q)
+
+    new_projects = :maps.filter(fn _, v -> v.id in projects end, state.projects)
+    new_segments = :maps.filter(fn _, v -> v.project_id in projects end, state.segments)
+
+    {:reply, new_projects, %{state | projects: new_projects, segments: new_segments}}
+  end
+
   def handle_cast({:log, id, message}, state) do
     case Map.get(state.projects, id) do
       nil ->
@@ -326,6 +339,32 @@ defmodule Grav1.Projects do
 
   def stop_project(project) do
     stop_projects([project]) |> Enum.at(0)
+  end
+
+  def remove_projects(ids) do
+    ids
+    |> Enum.filter(fn id ->
+      case Repo.get(Project, id) do
+        nil ->
+          false
+
+        project ->
+          Repo.delete(project)
+      end
+    end)
+    |> case do
+      [_ | _] ->
+        sync()
+
+      _ ->
+        :nothing
+    end
+  end
+
+  def sync() do
+    GenServer.call(__MODULE__, :sync)
+    |> Map.values()
+    |> Grav1Web.ProjectsLive.update_projects(true)
   end
 
   def log(project, message) do

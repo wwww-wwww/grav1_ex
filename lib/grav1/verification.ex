@@ -104,7 +104,7 @@ defmodule Grav1.VerificationExecutor do
         segment: segment,
         path: path,
         user: user,
-        socket_id: socket_id
+        socket_id: _socket_id
       }) do
     frames = segment.frames
     username = user.username

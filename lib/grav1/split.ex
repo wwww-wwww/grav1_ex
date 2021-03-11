@@ -7,9 +7,9 @@ defmodule Grav1.Split do
   @re_python_aom ~r/frame ([0-9]+)/
   @re_aom_onepass ~r/frame ([0-9]+) (0|1)/
 
-  @split_args ["-c:v", "copy"]
+  @ffmpeg_split_args ["-c:v", "copy"]
 
-  @split_args_reencode [
+  @ffmpeg_split_args_reencode [
     "-c:v",
     "ffv1",
     "-g",
@@ -106,9 +106,9 @@ defmodule Grav1.Split do
             {frames ++ [frame], splits ++ [new_split], segments ++ [new_segment]}
           end)
 
-        {@split_args_reencode, {frames, splits, segments}}
+        {@ffmpeg_split_args_reencode, {frames, splits, segments}}
       else
-        {@split_args, {frames, splits, segments}}
+        {@ffmpeg_split_args, {frames, splits, segments}}
       end
 
     callback.(:log, "#{length(splits)} splits, #{length(segments)} segments")
@@ -219,7 +219,7 @@ defmodule Grav1.Split do
 
         path_segment = Path.join(path_split, file)
 
-        {vs, num_frames} = get_frames_vs(port, path_segment)
+        {method, num_frames} = get_frames(path_segment, true, nil, port)
 
         misalignment = total_frames != start
         bad_framecount = num_frames != length
@@ -243,7 +243,7 @@ defmodule Grav1.Split do
 
         # if not using vs
         {num_frames, bad_framecount_slow} =
-          if vs != :ok do
+          if method != :vs do
             case get_frames(path_segment, false) do
               ^num_frames ->
                 {num_frames, false}
@@ -281,15 +281,7 @@ defmodule Grav1.Split do
     resp
   end
 
-  defp correct_split(input, output, start, length, callback) do
-    if Grav1.get_path(:vspipe) != nil do
-      correct_split_vspipe(input, output, start, length, callback)
-    else
-      correct_split_ffmpeg(input, output, start, length, callback)
-    end
-  end
-
-  defp correct_split_ffmpeg(input, output, start, length, callback) do
+  defp correct_split(:ffmpeg, input, output, start, length, callback) do
     args = [
       "-hide_banner",
       "-i",
@@ -331,7 +323,7 @@ defmodule Grav1.Split do
     end)
   end
 
-  defp correct_split_vspipe(input, output, start, length, callback) do
+  defp correct_split(:vspipe, input, output, start, length, callback) do
     args = [
       "-u",
       "helpers/vspipe_correct_split.py",
@@ -361,46 +353,46 @@ defmodule Grav1.Split do
     end)
     |> case do
       {:error, _} ->
-        correct_split_ffmpeg(input, output, start, length, callback)
+        correct_split(:ffmpeg, input, output, start, length, callback)
 
       resp ->
         resp
     end
   end
 
-  defp get_frames(input, fast, callback \\ nil) do
-    if fast and Application.fetch_env!(:versions, :vapoursynth) != nil do
-      get_frames_vs(input, fast, callback)
+  defp correct_split(input, output, start, length, callback) do
+    if Grav1.get_path(:vspipe) != nil do
+      correct_split(:vspipe, input, output, start, length, callback)
     else
-      get_frames_ffmpeg(input, fast, callback)
+      correct_split(:ffmpeg, input, output, start, length, callback)
     end
   end
 
-  defp get_frames_vs(input, fast, callback) do
+  defp get_frames(:vs, input, port) do
     try do
-      port = Python.create_port()
+      case port do
+        nil ->
+          port = Python.create_port()
 
-      try do
-        elem(get_frames_vs(port, input), 1)
-      rescue
-        _ -> get_frames_ffmpeg(input, fast, callback)
-      after
-        :python.stop(port)
+          try do
+            {:ok, Python.call(port, :vs_frames, :get_frames, [input])}
+          rescue
+            _ -> :error
+          after
+            :python.stop(port)
+          end
+
+        port ->
+          {:ok, Python.call(port, :vs_frames, :get_frames, [input])}
       end
     rescue
-      _ -> get_frames_ffmpeg(input, fast, callback)
+      _ -> :error
     end
   end
 
-  defp get_frames_vs(port, input) do
-    try do
-      {:ok, Python.call(port, :vs_frames, :get_frames, [input])}
-    rescue
-      _ -> {:error, get_frames_ffmpeg(input, true, nil)}
-    end
-  end
+  defp get_frames(a, b, c \\ nil, d \\ nil)
 
-  defp get_frames_ffmpeg(input, fast, callback) do
+  defp get_frames(:ffmpeg, input, fast, callback) do
     fast_args = if fast, do: ["-c", "copy"], else: []
     args = ["-hide_banner", "-i", input, "-map", "0:v:0"] ++ fast_args ++ ["-f", "null", "-"]
 
@@ -424,29 +416,21 @@ defmodule Grav1.Split do
     frames
   end
 
-  defp get_keyframes(input, callback) do
-    case Path.extname(String.downcase(input)) do
-      ".mkv" -> get_keyframes_ebml(input, callback)
-      _ -> {:undefined, :undefined}
-    end
-    |> case do
-      {:undefined, _} ->
-        if Application.fetch_env!(:versions, :vapoursynth) != nil do
-          get_keyframes_vs(input, callback)
-        else
-          get_keyframes_ffmpeg(input, callback)
-        end
+  defp get_frames(input, fast, callback, port) do
+    if fast and Application.fetch_env!(:versions, :vapoursynth) != nil do
+      case get_frames(:vs, input, port) do
+        :error ->
+          {:ffmpeg, get_frames(:ffmpeg, input, fast, callback)}
 
-      {frames, :undefined} ->
-        callback.(:log, "getting total number of frames")
-        {frames, get_frames(input, true, callback)}
-
-      {frames, total_frames} ->
-        {frames, total_frames}
+        {:ok, frames} ->
+          {:vs, frames}
+      end
+    else
+      {:ffmpeg, get_frames(:ffmpeg, input, fast, callback)}
     end
   end
 
-  defp get_keyframes_ebml(input, callback) do
+  defp get_keyframes(:ebml, input, callback) do
     callback.(:log, "getting keyframes from ebml")
 
     try do
@@ -464,25 +448,7 @@ defmodule Grav1.Split do
     end
   end
 
-  defp get_keyframes_vs(input, callback) do
-    callback.(:log, "getting keyframes using vs")
-
-    try do
-      port = Python.create_port()
-
-      try do
-        Python.call(port, :vs_frames, :get_keyframes, [input])
-      rescue
-        _ -> get_keyframes_ffmpeg(input, callback)
-      after
-        :python.stop(port)
-      end
-    rescue
-      _ -> get_keyframes_ffmpeg(input, callback)
-    end
-  end
-
-  defp get_keyframes_ffmpeg(input, callback) do
+  defp get_keyframes(:ffmpeg, input, callback) do
     callback.(:log, "getting keyframes using ffmpeg")
 
     args = [
@@ -531,6 +497,46 @@ defmodule Grav1.Split do
 
       nil ->
         {keyframes, :undefined}
+    end
+  end
+
+  defp get_keyframes(:vs, input, callback) do
+    callback.(:log, "getting keyframes using vs")
+
+    try do
+      port = Python.create_port()
+
+      try do
+        Python.call(port, :vs_frames, :get_keyframes, [input])
+      rescue
+        _ -> get_keyframes(:ffmpeg, input, callback)
+      after
+        :python.stop(port)
+      end
+    rescue
+      _ -> get_keyframes(:ffmpeg, input, callback)
+    end
+  end
+
+  defp get_keyframes(input, callback) do
+    case Path.extname(String.downcase(input)) do
+      ".mkv" -> get_keyframes(:ebml, input, callback)
+      _ -> {:undefined, :undefined}
+    end
+    |> case do
+      {:undefined, _} ->
+        if Application.fetch_env!(:versions, :vapoursynth) != nil do
+          get_keyframes(:vs, input, callback)
+        else
+          get_keyframes(:ffmpeg, input, callback)
+        end
+
+      {frames, :undefined} ->
+        callback.(:log, "getting total number of frames")
+        {frames, elem(get_frames(input, true, callback), 1)}
+
+      {frames, total_frames} ->
+        {frames, total_frames}
     end
   end
 

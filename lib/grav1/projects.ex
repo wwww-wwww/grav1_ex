@@ -266,7 +266,7 @@ defmodule Grav1.Projects do
         end
       end)
 
-    Grav1Web.ProjectsLive.update_projects(new_projects)
+    Grav1Web.ProjectsLive.update_projects(new_projects, true)
 
     {:noreply, new_state}
   end

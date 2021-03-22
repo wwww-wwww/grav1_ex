@@ -129,7 +129,7 @@ defmodule Grav1.Split do
         {:error, reason}
 
       fr ->
-        {:error, "expected #{total_frames}, got #{to_string(fr)}"}
+        {:error, "failed to split, expected #{total_frames}, got #{to_string(fr)}"}
     end
   end
 
@@ -212,9 +212,8 @@ defmodule Grav1.Split do
     resp =
       splits
       |> Enum.with_index(1)
-      |> Enum.reduce(0, fn {segment, i}, total_frames ->
-        %{file: file, start: start, length: length} = segment
-
+      |> Enum.reduce(0, fn {%{file: file, start: start, length: length} = segment, i},
+                           total_frames ->
         callback.({:progress, :verify_split}, {i, length(splits)})
 
         path_segment = Path.join(path_split, file)
@@ -251,7 +250,7 @@ defmodule Grav1.Split do
               num_frames_slow ->
                 callback.(
                   :log,
-                  "bad framecount #{segment} expected: #{num_frames}, got: #{num_frames_slow}"
+                  "bad framecount #{inspect(segment)} expected: #{length}, got: #{num_frames_slow}"
                 )
 
                 {num_frames_slow, true}

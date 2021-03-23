@@ -244,10 +244,10 @@ defmodule Grav1.Split do
         {num_frames, bad_framecount_slow} =
           if method != :vs do
             case get_frames(path_segment, false) do
-              ^num_frames ->
+              {_, ^num_frames} ->
                 {num_frames, false}
 
-              num_frames_slow ->
+              {_, num_frames_slow} ->
                 callback.(
                   :log,
                   "bad framecount #{inspect(segment)} expected: #{length}, got: #{num_frames_slow}"

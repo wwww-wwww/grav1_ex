@@ -325,6 +325,7 @@ defmodule Grav1.Projects do
     Enum.map(projects, & &1.id)
     |> update_projects(%{state: :ready}, true)
     |> reload_projects()
+    WorkerAgent.distribute_segments()
   end
 
   def start_project(project) do

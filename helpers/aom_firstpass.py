@@ -31,7 +31,7 @@ def get_aom_keyframes(path_ffmpeg, path_aomenc, path_in, scale_n, scale_d):
     ffmpeg_pipe = subprocess.Popen(
       ffmpeg,
       stdout=subprocess.PIPE,
-      stderr=subprocess.STDOUT,
+      stderr=subprocess.PIPE,
       creationflags=CREATE_NO_WINDOW
     )
 

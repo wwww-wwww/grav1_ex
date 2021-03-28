@@ -1,38 +1,37 @@
 defmodule Grav1.Projects do
   use GenServer
 
-  alias Grav1.{Repo, Project, Projects, WorkerAgent, ProjectsExecutor}
+  alias Grav1.{Repo, Project, Projects, Segment, WorkerAgent, ProjectsExecutor}
   alias Ecto.Multi
 
   import Ecto.Query, only: [from: 2]
 
-  defstruct projects: %{},
-            segments: %{}
+  defstruct projects: nil,
+            segments: nil
 
   def start_link(_) do
-    {projects, segments} =
-      Repo.all(Project)
-      |> Repo.preload(:segments)
-      |> Enum.reduce({%{}, %{}}, fn project, {acc, acc2} ->
-        segments =
-          project.segments
-          |> Enum.reduce(%{}, fn segment, segments ->
-            Map.put(segments, segment.id, %{segment | project: %{project | segments: %{}}})
-          end)
+    ets_projects = :ets.new(:projects, [:set, :public])
+    ets_segments = :ets.new(:segments, [:set, :public])
 
-        new_segments =
-          if project.state == :ready do
-            :maps.filter(fn _, v -> v.filesize == 0 end, segments)
-            |> Map.merge(acc2)
-          else
-            acc2
-          end
+    Repo.all(Project)
+    |> Repo.preload(:segments)
+    |> Enum.each(fn project ->
+      segments =
+        project.segments
+        |> Enum.map(&{&1.id, %{&1 | project: %{project | segments: nil}}})
+        |> Map.new()
 
-        new_project = %{project | segments: segments}
-        {Map.put(acc, project.id, new_project), new_segments}
-      end)
+      if project.state == :ready do
+        :maps.filter(fn _, v -> v.filesize == 0 end, segments)
+        |> Enum.each(&:ets.insert(ets_segments, &1))
+      end
 
-    GenServer.start_link(__MODULE__, %__MODULE__{projects: projects, segments: segments},
+      :ets.insert(ets_projects, {project.id, %{project | segments: segments}})
+    end)
+
+    GenServer.start_link(
+      __MODULE__,
+      %__MODULE__{projects: ets_projects, segments: ets_segments},
       name: __MODULE__
     )
   end
@@ -42,12 +41,22 @@ defmodule Grav1.Projects do
     {:ok, state}
   end
 
+  defp ets_get(table, id) do
+    (:ets.member(table, id) and :ets.lookup_element(table, id, 2)) || nil
+  end
+
+  def handle_call(:get, _, state) do
+    {:reply, state, state}
+  end
+
   def handle_call({:add_projects, projects}, _, state) do
-    {:reply, :ok, %{state | projects: Map.merge(state.projects, projects)}}
+    Enum.each(projects, &:ets.insert(state.projects, &1))
+
+    {:reply, :ok, state}
   end
 
   def handle_call({:get_segment, id}, _, state) do
-    {:reply, Map.get(state.segments, id), state}
+    {:reply, ets_get(state.segments, id), state}
   end
 
   def handle_call({:get_segments, clients, filter}, _, state) do
@@ -60,7 +69,8 @@ defmodule Grav1.Projects do
 
     sorted =
       state.segments
-      |> Map.values()
+      |> :ets.match({:_, :"$1"})
+      |> Enum.map(&Enum.at(&1, 0))
       |> Enum.sort_by(& &1.frames, :desc)
       |> Enum.sort_by(& &1.project.priority, :asc)
       |> Enum.take(limit)
@@ -83,48 +93,48 @@ defmodule Grav1.Projects do
         &length(Enum.filter(workers, fn worker -> worker.segment == &1.id end)),
         :asc
       )
-      |> Enum.sort_by(
-        &(&1.id in filter),
-        :asc
-      )
+      |> Enum.sort_by(&(&1.id in filter), :asc)
 
     {:reply, sorted, state}
   end
 
   def handle_call(:get_segments, _, state) do
-    {:reply, state.segments, state}
+    {:reply, :ets.tab2list(state.segments) |> Map.new(), state}
   end
 
   def handle_call(:get_segments_keys, _, state) do
-    {:reply, Map.keys(state.segments), state}
+    {:reply, :ets.match(state.segments, {:"$1", :_}) |> Enum.map(&Enum.at(&1, 0)), state}
   end
 
   def handle_call(:get_projects, _, state) do
-    {:reply, state.projects, state}
+    {:reply, :ets.tab2list(state.projects) |> Map.new(), state}
   end
 
   def handle_call({:get_project, id}, _, state) do
-    {:reply, Map.get(state.projects, id), state}
+    {:reply, ets_get(state.projects, id), state}
   end
 
   def handle_call({:finish_segment, segment, filesize}, _, state) do
-    case Map.get(state.projects, segment.project_id) do
+    case ets_get(state.projects, segment.project_id) do
       nil ->
-        {:reply, {:error, "cant find project"}, state}
+        {:reply, {:error, "can't find project"}, state}
 
       project ->
-        case Repo.update(Ecto.Changeset.change(segment, filesize: filesize)) do
-          {:ok, new_segment} ->
-            {new_project, new_projects} =
-              Map.get_and_update(state.projects, project.id, fn state_project ->
-                new_project_segments =
-                  state_project.segments
+        case Repo.get(Segment, segment.id) do
+          nil ->
+            {:reply, {:error, "can't find segment"}, state}
+
+          segment ->
+            case Repo.update(Segment.changeset(segment, %{filesize: filesize})) do
+              {:ok, new_segment} ->
+                new_segments =
+                  project.segments
                   |> Map.update!(segment.id, fn _ ->
                     %{new_segment | filesize: filesize}
                   end)
 
                 completed_frames =
-                  new_project_segments
+                  new_segments
                   |> Enum.reduce(0, fn {_, segment}, acc ->
                     if segment.filesize != 0 do
                       acc + segment.frames
@@ -134,27 +144,28 @@ defmodule Grav1.Projects do
                   end)
 
                 new_project = %{
-                  state_project
-                  | segments: new_project_segments,
+                  project
+                  | segments: new_segments,
                     progress_num: completed_frames
                 }
 
-                {new_project, new_project}
-              end)
+                :ets.delete(state.segments, segment.id)
+                :ets.insert(state.projects, {project.id, new_project})
 
-            new_segments = Map.delete(state.segments, segment.id)
+                {:reply, {:ok, new_project}, state}
 
-            {:reply, {:ok, new_project},
-             %{state | projects: new_projects, segments: new_segments}}
-
-          {:error, cs} ->
-            {:reply, {:error, cs}, state}
+              {:error, cs} ->
+                {:reply, {:error, cs}, state}
+            end
         end
     end
   end
 
   def handle_call({:add_segments, segments}, _, state) do
-    {:reply, :ok, %{state | segments: Map.merge(state.segments, segments)}}
+    segments
+    |> Enum.each(&:ets.insert(state.segments, &1))
+
+    {:reply, :ok, state}
   end
 
   def handle_call({:reload_project, id}, _, state) do
@@ -162,27 +173,25 @@ defmodule Grav1.Projects do
       Repo.get(Project, id)
       |> Repo.preload(:segments)
 
+    state.segments
+    |> :ets.match({:"$1", %{project_id: id}})
+    |> Enum.each(&:ets.delete(state.segments, Enum.at(&1, 0)))
+
     segments =
       project.segments
-      |> Enum.reduce(%{}, fn segment, segments ->
-        Map.put(segments, segment.id, %{segment | project: %{project | segments: %{}}})
-      end)
+      |> Enum.map(&{&1.id, %{&1 | project: %{project | segments: nil}}})
+      |> Map.new()
 
-    new_segments = :maps.filter(fn _, v -> v.project_id != id end, state.segments)
-
-    new_segments =
-      if project.state == :ready do
-        :maps.filter(fn _, v -> v.filesize == 0 end, segments)
-        |> Map.merge(new_segments)
-      else
-        new_segments
-      end
+    if project.state == :ready do
+      :maps.filter(fn _, v -> v.filesize == 0 end, segments)
+      |> Enum.each(&:ets.insert(state.segments, &1))
+    end
 
     new_project = %{project | segments: segments}
-    new_projects = Map.put(state.projects, project.id, new_project)
-    new_state = %{state | projects: new_projects, segments: new_segments}
 
-    {:reply, new_project, new_state}
+    :ets.insert(state.projects, {project.id, new_project})
+
+    {:reply, new_project, state}
   end
 
   def handle_call(:sync, _, state) do
@@ -192,26 +201,34 @@ defmodule Grav1.Projects do
 
     projects = Repo.all(q)
 
-    new_projects = :maps.filter(fn _, v -> v.id in projects end, state.projects)
-    new_segments = :maps.filter(fn _, v -> v.project_id in projects end, state.segments)
+    state.projects
+    |> :ets.match({:"$1", :_})
+    |> Enum.filter(&(Enum.at(&1, 0) not in projects))
+    |> Enum.each(&:ets.delete(state.projects, &1))
 
-    {:reply, new_projects, %{state | projects: new_projects, segments: new_segments}}
+    state.segments
+    |> :ets.match({:"$2", %{project_id: :"$1"}})
+    |> Enum.filter(&(Enum.at(&1, 0) not in projects))
+    |> Enum.each(&:ets.delete(state.segments, Enum.at(&1, 1)))
+
+    {:reply, :ets.tab2list(state.projects) |> Map.new(), state}
   end
 
   def handle_cast({:log, id, message}, state) do
-    case Map.get(state.projects, id) do
+    case ets_get(state.projects, id) do
       nil ->
         {:noreply, state}
 
       project ->
         new_project = %{project | log: project.log ++ [{DateTime.utc_now(), message}]}
+        :ets.insert(state.projects, {id, new_project})
         Grav1Web.ProjectsLive.update_log(new_project)
-        {:noreply, %{state | projects: Map.put(state.projects, project.id, new_project)}}
+        {:noreply, state}
     end
   end
 
   def handle_cast({:update_progress, id, status, message}, state) do
-    case Map.get(state.projects, id) do
+    case ets_get(state.projects, id) do
       nil ->
         {:noreply, state}
 
@@ -226,55 +243,46 @@ defmodule Grav1.Projects do
           end
 
         new_project = Map.merge(project, opts)
-
+        :ets.insert(state.projects, {id, new_project})
         Grav1Web.ProjectsLive.update(new_project, true)
-        {:noreply, %{state | projects: Map.put(state.projects, project.id, new_project)}}
+        {:noreply, state}
     end
   end
 
   def handle_cast({:update, ids, opts, save}, state) do
-    {new_projects, new_state} =
-      Enum.reduce(ids, {[], state}, fn id, {projects, acc} ->
-        case Map.get(state.projects, id) do
-          nil ->
-            {projects, acc}
+    Enum.reduce(ids, [], fn id, projects ->
+      case ets_get(state.projects, id) do
+        nil ->
+          projects
 
-          project ->
-            new_project = Map.merge(project, opts)
+        project ->
+          new_project = Map.merge(project, opts)
 
-            if save do
-              Repo.update(Project.changeset(project, opts))
-            end
+          if save do
+            Repo.update(Project.changeset(project, opts))
+          end
 
-            new_segments =
-              acc.segments
-              |> Enum.map(fn {sid, segment} ->
-                if segment.project_id == id do
-                  {sid, %{segment | project: new_project}}
-                else
-                  {sid, segment}
-                end
-              end)
-              |> Map.new()
+          state.segments
+          |> :ets.match_object({:_, %{project_id: id}})
+          |> Enum.each(
+            &:ets.insert(
+              state.segments,
+              {elem(&1, 0), %{elem(&1, 1) | project: %{new_project | segments: nil}}}
+            )
+          )
 
-            {projects ++ [new_project],
-             %{
-               acc
-               | projects: Map.put(acc.projects, project.id, new_project),
-                 segments: new_segments
-             }}
-        end
-      end)
+          :ets.insert(state.projects, {id, new_project})
+          projects ++ [new_project]
+      end
+    end)
+    |> Grav1Web.ProjectsLive.update_projects(true)
 
-    Grav1Web.ProjectsLive.update_projects(new_projects, true)
-
-    {:noreply, new_state}
+    {:noreply, state}
   end
 
   def handle_info(:startup, state) do
-    Enum.each(state.projects, fn {_, project} ->
-      load_project(project)
-    end)
+    :ets.tab2list(state.projects)
+    |> Enum.each(&load_project(elem(&1, 1)))
 
     WorkerAgent.distribute_segments()
 
@@ -289,6 +297,10 @@ defmodule Grav1.Projects do
 
   def get_segments(clients, filter) do
     GenServer.call(__MODULE__, {:get_segments, clients, filter})
+  end
+
+  def get() do
+    GenServer.call(__MODULE__, :get)
   end
 
   def get_segments() do
@@ -325,6 +337,7 @@ defmodule Grav1.Projects do
     Enum.map(projects, & &1.id)
     |> update_projects(%{state: :ready}, true)
     |> reload_projects()
+
     WorkerAgent.distribute_segments()
   end
 

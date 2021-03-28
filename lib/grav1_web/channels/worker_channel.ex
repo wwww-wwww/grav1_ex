@@ -156,7 +156,7 @@ defmodule Grav1Web.WorkerChannel do
       # target_metric: segment.project.target_metric,
       # target_metric_score: segment.project.target_metric_score,
       grain_table: "",
-      split_name: "p#{segment.project.id}s#{segment.file}",
+      split_name: "p#{segment.project_id}s#{segment.file}",
       url: Grav1Web.Router.Helpers.api_url(%URI{}, :get_segment, segment.id)
     }
 

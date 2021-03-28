@@ -2,7 +2,7 @@ defmodule Grav1.VerificationQueue do
   use GenServer
 
   def start_link(_) do
-    GenServer.start_link(__MODULE__, {:queue.new(), []}, name: __MODULE__)
+    GenServer.start_link(__MODULE__, {:queue.new(), []}, name: __MODULE__, hibernate_after: 1_000)
   end
 
   def init(state) do
@@ -53,7 +53,7 @@ defmodule Grav1.VerificationExecutor do
   @re_ffmpeg_frames_d ~r/([0-9]+?) frames successfully decoded/
 
   def start_link(_) do
-    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
+    GenServer.start_link(__MODULE__, %{}, name: __MODULE__, hibernate_after: 1_000)
   end
 
   def init(state) do
@@ -119,7 +119,7 @@ defmodule Grav1.VerificationExecutor do
             case Projects.finish_segment(segment, size) do
               {:ok, project} ->
                 Application.fetch_env!(:grav1, :path_projects)
-                |> Path.join(to_string(segment.project.id))
+                |> Path.join(to_string(segment.project_id))
                 |> Path.join("encode")
                 |> (&{File.mkdir_p(&1), &1}).()
                 |> case do

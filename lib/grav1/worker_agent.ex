@@ -44,7 +44,7 @@ defmodule Grav1.WorkerAgent do
   alias Grav1.{Client, Projects, Worker}
 
   def start_link(_) do
-    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
+    GenServer.start_link(__MODULE__, %{}, name: __MODULE__, hibernate_after: 1_000)
   end
 
   def init(state) do

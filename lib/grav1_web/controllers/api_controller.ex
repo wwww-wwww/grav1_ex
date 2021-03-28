@@ -12,7 +12,7 @@ defmodule Grav1Web.ApiController do
       segment ->
         path =
           "/segment"
-          |> Path.join(to_string(segment.project.id))
+          |> Path.join(to_string(segment.project_id))
           |> Path.join("split")
           |> Path.join(segment.file)
 

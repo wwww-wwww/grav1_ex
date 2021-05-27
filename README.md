@@ -49,4 +49,8 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser
 
 Now you can add projects at [`localhost:4000/projects`](http://localhost:4000/projects)
 
+## Managing users:
+  Upgrading to argon2 will break users' passwords.  
+  Simply delete the user using `Grav1.Repo.get(Grav1.User, "USERNAME") |> Grav1.Repo.delete()`
+
 Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).

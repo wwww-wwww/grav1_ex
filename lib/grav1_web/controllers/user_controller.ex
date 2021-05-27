@@ -35,7 +35,7 @@ defmodule Grav1Web.UserController do
         |> redirect(to: Routes.user_path(conn, :sign_in))
 
       user ->
-        if Bcrypt.verify_pass(password |> to_string(), user.password) do
+        if Argon2.verify_pass(password |> to_string(), user.password) do
           conn
           |> Guardian.Plug.sign_in(user)
           |> redirect(to: Routes.page_path(conn, :index))
@@ -80,7 +80,7 @@ defmodule Grav1Web.UserController do
         |> json(%{success: false, reason: "bad username or password"})
 
       user ->
-        if Bcrypt.verify_pass(password |> to_string(), user.password) do
+        if Argon2.verify_pass(password |> to_string(), user.password) do
           token =
             conn
             |> Guardian.Plug.sign_in(user)

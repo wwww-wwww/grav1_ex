@@ -85,7 +85,7 @@ defmodule Grav1.User do
   defp generate_password_hash(changeset) do
     case changeset do
       %Ecto.Changeset{valid?: true, changes: %{password: password}} ->
-        put_change(changeset, :password, Bcrypt.hash_pwd_salt(password))
+        put_change(changeset, :password, Argon2.hash_pwd_salt(password))
 
       _ ->
         changeset

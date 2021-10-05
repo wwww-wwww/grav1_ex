@@ -153,19 +153,17 @@ defmodule Grav1Web.PageView do
     {nil, []}
   end
 
-  def render_component(socket, assigns, page, project) do
+  def render_component(assigns, page, project) do
     {page, page_assigns} = project_page(page, project)
 
     if not is_nil(page) do
       if is_list(project) do
         live_component(
-          socket,
           page,
           [id: "#{page}", assigns: assigns] ++ page_assigns
         )
       else
         live_component(
-          socket,
           page,
           [id: "#{page}:#{project.id}", assigns: assigns] ++ page_assigns
         )

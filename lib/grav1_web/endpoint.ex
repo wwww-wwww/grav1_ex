@@ -7,7 +7,7 @@ defmodule Grav1Web.Endpoint do
   @session_options [
     store: :cookie,
     key: "_grav1_key",
-    signing_salt: "t+R7WE2a"
+    signing_salt: "5IvrPECi"
   ]
 
   socket "/", Grav1Web.UserSocket,
@@ -24,8 +24,7 @@ defmodule Grav1Web.Endpoint do
     at: "/",
     from: :grav1,
     gzip: false,
-    only: ~w(css fonts images js favicon.ico robots.txt),
-    content_types: %{"subtitles-octopus-worker.wasm" => "application/wasm"}
+    only: ~w(assets fonts images favicon.ico robots.txt)
 
   plug Plug.Static,
     at: "/segment",

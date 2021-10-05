@@ -20,11 +20,11 @@
     <div id="list_projects">
       <%= if edit_perms?(@user) do %>
         <div phx-update="ignore">
-          <%= render(Grav1Web.PageView, "add_project.html", encoder_params: @encoder_params, encoder_params_json: @encoder_params_json) %>
+          <%= render(Grav1Web.PageView, "add_project.html", encoder_params: @encoder_params) %>
         </div>
       <% end %>
-      <%= for {id, project} <- @projects |> Enum.sort_by(& elem(&1, 1).id, :desc) do %>
-        <%= Phoenix.View.render(Grav1Web.PageView, "project.html", project: project, selected: project_selected(@selected_projects, project)) %>
+      <%= for {_, project} <- @projects |> Enum.sort_by(& elem(&1, 1).id, :desc) do %>
+        <%= render(Grav1Web.PageView, "project.html", project: project, selected: project_selected(@selected_projects, project)) %>
       <% end %>
     </div>
   </div>

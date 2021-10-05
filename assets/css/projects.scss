@@ -196,6 +196,10 @@
     float: right
   }
 
+  textarea {
+    width: calc(100% - 1em);
+  }
+
   #encoder_params>div>div>div>div,
   .extra_cat>div {
     display: flex;
@@ -220,6 +224,10 @@
     input {
       flex: 1;
     }
+  }
+
+  h2 {
+    margin-bottom: 0.25em;
   }
 }
 

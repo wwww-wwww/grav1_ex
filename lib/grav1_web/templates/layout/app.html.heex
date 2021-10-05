@@ -1,0 +1,25 @@
+<div class="app">
+<header>
+  <nav role="navigation">
+    <%= nav_link(@conn, gettext("Home"), &Routes.page_path/2, :index) %>
+    <%= nav_link(@conn, gettext("Projects"), Grav1Web.ProjectsLive) %>
+    <%= nav_link(@conn, gettext("Workers"), Grav1Web.WorkersLive) %>
+    <%= nav_link(@conn, gettext("Clients"), Grav1Web.ClientsLive) %>
+    <%= nav_link(@conn, gettext("Users"), Grav1Web.UsersLive) %>
+    <%= nav_link(@conn, gettext("Settings"), Grav1Web.SettingsLive) %>
+    <%= if logged_in?(@conn) do %>
+      <%= nav_link(@conn, gettext("Profile"), Grav1Web.UserLive) %>
+      <%= nav_link(@conn, gettext("Sign Out"), &Routes.user_path/2, :sign_out) %>
+    <% else %>
+      <%= nav_link(@conn, gettext("Sign Up"), Grav1Web.SignUpLive) %>
+      <%= nav_link(@conn, gettext("Sign In"), Grav1Web.SignInLive) %>
+    <% end %>
+  </nav>
+</header>
+
+<main class={"container " <> (title(@conn) |> inspect() |> String.replace(".", "-"))}>
+  <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
+  <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
+  <%= @inner_content %>
+</main>
+</div>

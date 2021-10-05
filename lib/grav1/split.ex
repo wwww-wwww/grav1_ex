@@ -5,7 +5,7 @@ defmodule Grav1.Split do
   @re_ffmpeg_frames2 ~r/([0-9]+?) frames successfully decoded/
   @re_ffmpeg_keyframe ~r/n:([0-9]+)\.[0-9]+ pts:.+key:(.).+pict_type:(.)/
   @re_python_aom ~r/frame ([0-9]+)/
-  @re_aom_onepass ~r/frame ([0-9]+) (0|1)/
+  @re_aom_onepass ~r/f ([0-9]+):(0|1)/
 
   @ffmpeg_split_args ["-c:v", "copy"]
 
@@ -558,6 +558,8 @@ defmodule Grav1.Split do
       input
     ]
 
+    callback.(:log, ([Grav1.get_path(:python)] ++ args) |> Enum.join(" "))
+
     Port.open(
       {:spawn_executable, Grav1.get_path(:python)},
       [:exit_status, :line, args: args]
@@ -566,6 +568,7 @@ defmodule Grav1.Split do
       case Regex.scan(@re_aom_onepass, line) |> List.last() do
         [_, frame_str, is_keyframe] ->
           {frame, _} = Integer.parse(frame_str)
+
           callback.({:progress, :aom_keyframes}, {frame, total_frames})
 
           if is_keyframe == "1" or is_keyframe == 1 do

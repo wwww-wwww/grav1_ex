@@ -1,13 +1,12 @@
-<div><%= gettext("Sign in") %></div>
-<hr>
+<div class="title"><%= gettext("Sign in") %></div>
 <div class="card">
-	<div>
-		<%= form_for(:user, Routes.user_path(@socket, :sign_in), [class: "form"], fn f -> %>
-			<%= text_input(f, :username, placeholder: gettext("Username")) %>
-			<%= text_input(f, :password, placeholder: gettext("Password"), type: "password") %>
-			<%= submit(gettext("Sign in")) %>
-		<% end) %>
-	</div>
+<div>
+	<%= form_for(:user, Routes.user_path(@socket, :sign_in), [class: "form"], fn f -> %>
+		<%= text_input(f, :username, placeholder: gettext("Username")) %>
+		<%= text_input(f, :password, placeholder: gettext("Password"), type: "password") %>
+		<%= submit(gettext("Sign in")) %>
+	<% end) %>
+</div>
 </div>
 
 <style>
@@ -19,7 +18,7 @@
 		margin-bottom: 0.5em;
 	}
 
-	main>div {
+	.title {
 		padding: 0.5em;
 	}
 </style>

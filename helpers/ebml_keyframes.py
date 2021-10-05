@@ -1,4 +1,3 @@
-import sys, enzyme
 from enzyme.parsers import ebml
 from enzyme.exceptions import MalformedMKVError
 from datetime import timedelta

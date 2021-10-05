@@ -6,8 +6,6 @@
   <% encoder_params = @encoder_params %>
   <% encoders = @encoder_params |> Map.keys() %>
 
-  <div id="encoders" style="display: none"><%= @encoder_params_json %></div>
-
   <label for="select_encoder">encoder</label>
   <select id="select_encoder">
     <%= for encoder <- encoders do %>
@@ -23,37 +21,10 @@
   </div>
 
   <div id="encoder_params">
-    <%= for encoder <- encoders do %>
+    <%= for {encoder, params} <- @encoder_params do %>
       <div id="params_<%= encoder %>" class="hidden">
         <h2><%= encoder %> params</h2>
-        <%= for {cat_name, params} <- encoder_params[encoder] do %>
-          <div>
-            <h3><%= cat_name %></h3>
-            <div>
-              <%= for param <- params do %>
-                <div>
-                  <%= if param.data.type == :flag do %>
-                    <%= if param.enabled do %>
-                      <input id="opt_<%= encoder %>_<%= param.name %>" type="checkbox" checked/>
-                    <% else %>
-                      <input id="opt_<%= encoder %>_<%= param.name %>" type="checkbox"/>
-                    <% end %>
-                  <% else %>
-                    <%= if param.optional do %>
-                      <%= if param.enabled do %>
-                        <input id="chk_<%= encoder %>_<%= param.name %>" type="checkbox" checked/>
-                      <% else %>
-                        <input id="chk_<%= encoder %>_<%= param.name %>" type="checkbox"/>
-                      <% end %>
-                    <% end %>
-                  <% end %>
-                  <label for="opt_<%= encoder %>_<%= param.name %>"><%= param.name %></label>
-                  <%= render_encoder_param(encoder, param) %>
-                </div>
-              <% end %>
-            </div>
-          </div>
-        <% end %>
+        <textarea id="opt_encoder_params"><%= params |> Enum.join(" ") %></textarea>
       </div>
     <% end %>
   </div>
@@ -92,10 +63,6 @@
     <div>
       <label for="opt_extra_on_complete_params">On complete params</label>
       <input id="opt_extra_on_complete_params">
-    </div>
-    <div>
-      <label for="opt_extra_encoder_params">Encoder params</label>
-      <input id="opt_extra_encoder_params">
     </div>
     <div>
       <label for="opt_extra_ffmpeg_params">FFmpeg params</label>

@@ -33,11 +33,10 @@ defmodule Grav1Web.ProjectsLive do
       |> assign(projects: Projects.get_projects())
       |> assign(selected_projects: selected_projects)
       |> assign(project_changeset: Project.changeset(%Project{}))
-      |> assign(encoder_params: Grav1.Encoder.params())
-      |> assign(encoder_params_json: Grav1.Encoder.params_json())
+      |> assign(encoder_params: Grav1.Encoder.default_params())
       |> view_project_page(page, false)
 
-    {:ok, socket, temporary_assigns: [encoder_params: %{}, encoder_params_json: ""]}
+    {:ok, socket, temporary_assigns: [encoder_params: %{}]}
   end
 
   def handle_params(_, _, socket) do
@@ -290,15 +289,15 @@ defmodule Grav1Web.ProjectsLive do
         socket
       ) do
     Enum.reduce(projects, {false, socket}, fn project, {in_selected, acc} ->
-      send_update(Grav1Web.ProjectComponent,
-        id: "#{Grav1Web.ProjectComponent}:#{project.id}",
-        project: project
-      )
+      # send_update(Grav1Web.ProjectComponent,
+      #  id: "#{Grav1Web.ProjectComponent}:#{project.id}",
+      #  project: project
+      # )
 
-      send_update(Grav1Web.ProjectSettingsComponent,
-        id: "#{Grav1Web.ProjectSettingsComponent}:#{project.id}",
-        project: project
-      )
+      # send_update(Grav1Web.ProjectSettingsComponent,
+      #  id: "#{Elixir.Grav1Web.ProjectSettingsComponent}:#{project.id}",
+      #  project: project
+      # )
 
       if project.id in Enum.map(socket.assigns.selected_projects, & &1.id) do
         selected_projects =
@@ -313,10 +312,10 @@ defmodule Grav1Web.ProjectsLive do
     end)
     |> case do
       {true, socket} ->
-        send_update(Grav1Web.ProjectSettingsMultiComponent,
-          id: "#{Grav1Web.ProjectSettingsMultiComponent}",
-          projects: socket.assigns.selected_projects
-        )
+        # send_update(Grav1Web.ProjectSettingsMultiComponent,
+        #  id: "#{Elixir.Grav1Web.ProjectSettingsMultiComponent}",
+        #  projects: socket.assigns.selected_projects
+        # )
 
         {:noreply, socket}
 
@@ -338,10 +337,10 @@ defmodule Grav1Web.ProjectsLive do
 
   # update only project logs
   def handle_info(%{topic: @topic, event: "log", payload: %{project: project}}, socket) do
-    send_update(Grav1Web.ProjectLogComponent,
-      id: "#{Grav1Web.ProjectLogComponent}:#{project.id}",
-      log: project.log
-    )
+    # send_update(Grav1Web.ProjectLogComponent,
+    #  id: "#{Grav1Web.ProjectLogComponent}:#{project.id}",
+    #  log: project.log
+    # )
 
     {:noreply, socket}
   end
@@ -355,11 +354,11 @@ defmodule Grav1Web.ProjectsLive do
         },
         socket
       ) do
-    send_update(Grav1Web.ProjectSegmentsComponent,
-      id: "#{Grav1Web.ProjectSegmentsComponent}:#{project.id}",
-      segments: segments,
-      update_action: :append
-    )
+    # send_update(Grav1Web.ProjectSegmentsComponent,
+    #  id: "#{Grav1Web.ProjectSegmentsComponent}:#{project.id}",
+    #  segments: segments,
+    #  update_action: :append
+    # )
 
     {:noreply, socket}
   end
@@ -383,7 +382,7 @@ defmodule Grav1Web.ProjectsLive do
       |> assign(tab: tab)
       |> assign(
         page:
-          live_component(socket, Grav1Web.ProjectPageComponent,
+          live_component(Grav1Web.ProjectPageComponent,
             id: "project_page",
             projects: selected_projects,
             page: tab,

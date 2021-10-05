@@ -31,11 +31,27 @@ defmodule Grav1Web.Telemetry do
       ),
 
       # Database Metrics
-      summary("grav1.repo.query.total_time", unit: {:native, :millisecond}),
-      summary("grav1.repo.query.decode_time", unit: {:native, :millisecond}),
-      summary("grav1.repo.query.query_time", unit: {:native, :millisecond}),
-      summary("grav1.repo.query.queue_time", unit: {:native, :millisecond}),
-      summary("grav1.repo.query.idle_time", unit: {:native, :millisecond}),
+      summary("grav1.repo.query.total_time",
+        unit: {:native, :millisecond},
+        description: "The sum of the other measurements"
+      ),
+      summary("grav1.repo.query.decode_time",
+        unit: {:native, :millisecond},
+        description: "The time spent decoding the data received from the database"
+      ),
+      summary("grav1.repo.query.query_time",
+        unit: {:native, :millisecond},
+        description: "The time spent executing the query"
+      ),
+      summary("grav1.repo.query.queue_time",
+        unit: {:native, :millisecond},
+        description: "The time spent waiting for a database connection"
+      ),
+      summary("grav1.repo.query.idle_time",
+        unit: {:native, :millisecond},
+        description:
+          "The time the connection spent waiting before being checked out for the query"
+      ),
 
       # VM Metrics
       summary("vm.memory.total", unit: {:byte, :kilobyte}),

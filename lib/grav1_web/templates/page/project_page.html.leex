@@ -20,10 +20,10 @@
   </div>
   <div id="projects_page">
     <%= if is_multi_page(@page, @projects) do %>
-      <%= render_component(@socket, @assigns, @page, @projects) %>
+      <%= render_component(@assigns, @page, @projects) %>
     <% else %>
       <%= for project <- @projects do %>
-        <%= render_component(@socket, @assigns, @page, project) %>
+        <%= render_component(@assigns, @page, project) %>
       <% end %>
     <% end %>
   </div>

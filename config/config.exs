@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :grav1,
   ecto_repos: [Grav1.Repo],
@@ -20,23 +20,37 @@ config :grav1,
 # Configures the endpoint
 config :grav1, Grav1Web.Endpoint,
   url: [host: "localhost"],
-  secret_key_base: "+HkR7QSiAXWDhfxRGzEyQVvZQRJNHxgJqN8J06KURrqG7seAik9Z2zDdV8xs0AtC",
   render_errors: [view: Grav1Web.ErrorView, accepts: ~w(html json), layout: false],
   pubsub_server: Grav1.PubSub,
-  live_view: [signing_salt: "nNb2S5Xn"]
+  live_view: [signing_salt: "0RN4b/N8"]
+
+# Configure esbuild (the version is required)
+config :esbuild,
+  version: "0.12.18",
+  default: [
+    args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ]
+
+config :dart_sass,
+  version: "1.39.0",
+  default: [
+    args: ~w(css/app.scss ../priv/static/assets/app.css),
+    cd: Path.expand("../assets", __DIR__)
+  ]
 
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id],
-  level: :info
+  metadata: [:request_id]
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
-import_config "#{Mix.env()}.exs"
+import_config "#{config_env()}.exs"
 
 config :grav1, Grav1.Guardian,
   issuer: "grav1",

@@ -1,5 +1,5 @@
-@import "../node_modules/nprogress/nprogress.css";
 @import url("https://fonts.googleapis.com/css2?family=Signika&family=Roboto&display=swap");
+@import "window", "buttons", "user", "workers", "projects";
 
 @media only screen and (max-width: 767px) {
   body {
@@ -64,40 +64,42 @@ body {
 
 body {
   overflow: hidden;
-}
 
-body>div:not(.window) {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: absolute;
-  width: 100%;
-  height: 100%;
-
-  nav {
-    font-family: "Signika", sans-serif;
+  > div.phx-connected,
+  > div.phx-disconnected,
+  > div.app {
     display: flex;
-    border-bottom: 1px solid black;
-    align-items: stretch;
-    font-size: 1.1em;
-    background-color: rgba(255, 255, 255, 0.7);
-    overflow-x: auto;
+    flex-direction: column;
+    overflow: hidden;
+    position: absolute;
+    width: 100%;
+    height: 100%;
 
-    a {
-      display: block;
-      padding: 0.25em;
-      text-decoration: none;
-      white-space: nowrap;
-      color: rgba(0, 0, 0, 0.7);
-    }
+    nav {
+      font-family: "Signika", sans-serif;
+      display: flex;
+      border-bottom: 1px solid black;
+      align-items: stretch;
+      font-size: 1.1em;
+      background-color: rgba(255, 255, 255, 0.7);
+      overflow-x: auto;
 
-    a:hover {
-      background-color: rgba(0, 0, 0, 0.1);
-      color: rgba(0, 0, 0, 0.8);
-    }
+      a {
+        display: block;
+        padding: 0.25em;
+        text-decoration: none;
+        white-space: nowrap;
+        color: rgba(0, 0, 0, 0.7);
+      }
 
-    a.header-active {
-      text-decoration: underline;
+      a:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+        color: rgba(0, 0, 0, 0.8);
+      }
+
+      a.header-active {
+        text-decoration: underline;
+      }
     }
   }
 }
@@ -107,8 +109,9 @@ main {
   flex: 1;
   overflow-x: hidden;
   overflow-y: auto;
+  flex-direction: column;
 
-  >div {
+  > div {
     overflow-x: auto;
   }
 }
@@ -142,8 +145,9 @@ table table table tr:not(:last-child) {
 
 .card {
   margin: 0.5em;
+  overflow: visible;
 
-  >div {
+  > div {
     padding: 0.5em;
     display: inline-block;
     border-radius: 0.2em;
@@ -209,10 +213,3 @@ table table table tr:not(:last-child) {
 hr {
   margin: 0.5em 0.25em;
 }
-
-@import "./buttons.scss";
-
-@import "./index.scss";
-@import "./user.scss";
-@import "./workers.scss";
-@import "./projects.scss";

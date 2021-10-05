@@ -1,4 +1,3 @@
-import "../css/window.scss"
 import { create_element } from "./util"
 
 class Window {

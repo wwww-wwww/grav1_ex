@@ -15,7 +15,7 @@
     <th>upload_queue</th>
     <th>uploading</th>
   </tr>
-  <%= for {user, clients} <- @clients do %>
+  <%= for {_, clients} <- @clients do %>
     <%= for {_, client} <- clients do %>
       <tr>
         <td><%= client.meta.connected %></td>

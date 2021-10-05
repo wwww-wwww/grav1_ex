@@ -1,17 +1,16 @@
-import "../css/app.scss"
-
 import { create_element } from "./util"
 import { create_window, Modal } from "./window"
 
 import "phoenix_html"
 
 import { Socket } from "phoenix"
-import LiveSocket from "phoenix_live_view"
+import { LiveSocket } from "phoenix_live_view"
 
-import NProgress from "nprogress"
+import topbar from "../vendor/topbar"
 
-window.addEventListener("phx:page-loading-start", _ => NProgress.start())
-window.addEventListener("phx:page-loading-stop", _ => NProgress.done())
+topbar.config({ barColors: { 0: "#29d" }, shadowColor: "rgba(0, 0, 0, .3)" })
+window.addEventListener("phx:page-loading-start", info => topbar.show())
+window.addEventListener("phx:page-loading-stop", info => topbar.hide())
 
 const hooks = {}
 
@@ -19,62 +18,10 @@ const re_args = /"[^"\\]*(?:\\[\S\s][^"\\]*)*"|'[^'\\]*(?:\\[\S\s][^'\\]*)*'|\/[
 
 hooks.load_encoders = {
   mounted() {
-    const encoders = JSON.parse(document.getElementById("encoders").textContent)
-
     btn_add_project.addEventListener("click", () => {
       const selected_encoder = select_encoder.value
 
-      const options = {}
-      const overrides = []
-      for (const param_name of Object.keys(encoders[selected_encoder])) {
-        const param = encoders[selected_encoder][param_name]
-        const data = param.data
-        const e = document.getElementById(`opt_${selected_encoder}_${param_name}`)
-        if (param.optional) {
-          const enabled = document.getElementById(`chk_${selected_encoder}_${param_name}`)
-          if (!enabled.checked) continue;
-        }
-        if (data.requires) {
-          const req_e = document.getElementById(`opt_${selected_encoder}_${data.requires}`)
-          if (!data.requires_values.includes(req_e.value)) continue
-        }
-        if (data.overrides) {
-          if (data.overrides[e.value]) {
-            overrides.push(...data.overrides[e.value])
-          }
-        }
-        if (param_name == "Resolution") {
-          if (e.value != "custom") {
-            const res_dims = e.value.split("x")
-            options["--width"] = res_dims[0]
-            options["--height"] = res_dims[1]
-          }
-        } else if (data.type == "flag") {
-          if (e.checked) options[param_name] = true
-        } else {
-          options[param_name] = e.value
-        }
-      }
-
-      const enc_params = []
-      for (const param_name of Object.keys(options)) {
-        const param = encoders[selected_encoder][param_name].data
-        if (options[param_name].length > 0) {
-          if (param.oneword) {
-            enc_params.push(`${param_name}=${options[param_name]}`)
-          } else if (param.type == "flag") {
-            enc_params.push(param_name)
-          } else {
-            enc_params.push(param_name)
-            enc_params.push(options[param_name])
-          }
-        } else {
-          enc_params.push(param_name)
-        }
-      }
-
-      enc_params.push(...overrides)
-      enc_params.push(...[...opt_extra_encoder_params.value.matchAll(re_args)].flat())
+      const enc_params = [...opt_encoder_params.value.matchAll(re_args)].flat()
 
       const files = []
       for (const c of files_list.children) {
@@ -126,30 +73,6 @@ hooks.load_encoders = {
         })
       })
     })
-
-    for (const encoder_name of Object.keys(encoders)) {
-      for (const param_name of Object.keys(encoders[encoder_name])) {
-        const param = encoders[encoder_name][param_name]
-        const data = param.data
-        const e = document.getElementById(`opt_${encoder_name}_${param_name}`)
-
-        if (param.optional) {
-          const enabled = document.getElementById(`chk_${encoder_name}_${param_name}`)
-          e.style.display = enabled.checked ? "" : "none"
-
-          enabled.addEventListener("change", () => {
-            e.style.display = enabled.checked ? "" : "none"
-          })
-        }
-
-        if (data.requires) {
-          const req_e = document.getElementById(`opt_${encoder_name}_${data.requires}`)
-          const onchange = () => e.parentElement.classList.toggle("hidden", !data.requires_values.includes(req_e.value))
-          req_e.addEventListener("change", onchange)
-          onchange()
-        }
-      }
-    }
 
     function show_params() {
       for (const encoder_param of encoder_params.children) {

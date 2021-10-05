@@ -7,25 +7,24 @@ defmodule Grav1Web.LayoutView do
     Guardian.Plug.authenticated?(conn) and Guardian.Plug.current_resource(conn) != nil
   end
 
-  def title(conn, assigns) do
-    cond do
-      Map.has_key?(assigns, :live_module) -> assigns[:live_module]
-      Map.has_key?(assigns, :view_module) -> action_name(conn)
-      true -> nil
+  def title(conn) do
+    case conn do
+      %{view: view} -> view
+      _ -> action_name(conn)
     end
   end
 
-  def nav_link(conn, assigns, name, page, id) do
+  def nav_link(conn, name, page, id) do
     live_redirect(name,
       to: page.(conn, id),
-      class: if(title(conn, assigns) == id, do: "header-active")
+      class: if(title(conn) == id, do: "header-active")
     )
   end
 
-  def nav_link(conn, assigns, name, page) do
+  def nav_link(conn, name, page) do
     live_redirect(name,
       to: Routes.live_path(conn, page),
-      class: if(title(conn, assigns) == page, do: "header-active")
+      class: if(title(conn) == page, do: "header-active")
     )
   end
 end

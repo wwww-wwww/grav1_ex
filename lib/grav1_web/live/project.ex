@@ -1,11 +1,3 @@
-defmodule Grav1Web.ProjectComponent do
-  use Grav1Web, :live_component
-
-  def render(assigns) do
-    Grav1Web.PageView.render("project.html", assigns)
-  end
-end
-
 defmodule Grav1Web.ProjectPageComponent do
   use Grav1Web, :live_component
 

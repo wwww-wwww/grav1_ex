@@ -6,12 +6,15 @@
     <%= nav_link(@socket, gettext("Clients"), Grav1Web.ClientsLive) %>
     <%= nav_link(@socket, gettext("Users"), Grav1Web.UsersLive) %>
     <%= nav_link(@socket, gettext("Settings"), Grav1Web.SettingsLive) %>
-    <%= if logged_in?(@socket) do %>
+    <%= if logged_in?(assigns) do %>
       <%= nav_link(@socket, gettext("Profile"), Grav1Web.UserLive) %>
       <%= nav_link(@socket, gettext("Sign Out"), &Routes.user_path/2, :sign_out) %>
     <% else %>
       <%= nav_link(@socket, gettext("Sign Up"), Grav1Web.SignUpLive) %>
       <%= nav_link(@socket, gettext("Sign In"), Grav1Web.SignInLive) %>
+    <% end %>
+    <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
+      <%= live_redirect("LiveDashboard", to: Routes.live_dashboard_path(@socket, :home)) %>
     <% end %>
   </nav>
 </header>

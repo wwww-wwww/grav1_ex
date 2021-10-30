@@ -14,6 +14,9 @@
       <%= nav_link(@conn, gettext("Sign Up"), Grav1Web.SignUpLive) %>
       <%= nav_link(@conn, gettext("Sign In"), Grav1Web.SignInLive) %>
     <% end %>
+    <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
+      <%= live_redirect("LiveDashboard", to: Routes.live_dashboard_path(@conn, :home)) %>
+    <% end %>
   </nav>
 </header>
 

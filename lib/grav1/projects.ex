@@ -196,8 +196,9 @@ defmodule Grav1.Projects do
 
   def handle_call(:sync, _, state) do
     q =
-      from p in Project,
+      from(p in Project,
         select: p.id
+      )
 
     projects = Repo.all(q)
 
@@ -249,33 +250,37 @@ defmodule Grav1.Projects do
     end
   end
 
-  def handle_cast({:update, ids, opts, save}, state) do
-    Enum.reduce(ids, [], fn id, projects ->
-      case ets_get(state.projects, id) do
-        nil ->
-          projects
+  def handle_cast({:update, ids, opts, save, broadcast}, state) do
+    new_projects =
+      Enum.reduce(ids, [], fn id, projects ->
+        case ets_get(state.projects, id) do
+          nil ->
+            projects
 
-        project ->
-          new_project = Map.merge(project, opts)
+          project ->
+            new_project = Map.merge(project, opts)
 
-          if save do
-            Repo.update(Project.changeset(project, opts))
-          end
+            if save do
+              Repo.update(Project.changeset(project, opts))
+            end
 
-          state.segments
-          |> :ets.match_object({:_, %{project_id: id}})
-          |> Enum.each(
-            &:ets.insert(
-              state.segments,
-              {elem(&1, 0), %{elem(&1, 1) | project: %{new_project | segments: nil}}}
+            state.segments
+            |> :ets.match_object({:_, %{project_id: id}})
+            |> Enum.each(
+              &:ets.insert(
+                state.segments,
+                {elem(&1, 0), %{elem(&1, 1) | project: %{new_project | segments: nil}}}
+              )
             )
-          )
 
-          :ets.insert(state.projects, {id, new_project})
-          projects ++ [new_project]
-      end
-    end)
-    |> Grav1Web.ProjectsLive.update_projects(true)
+            :ets.insert(state.projects, {id, new_project})
+            projects ++ [new_project]
+        end
+      end)
+
+    if broadcast do
+      Grav1Web.ProjectsLive.update_projects(new_projects, ids, true)
+    end
 
     {:noreply, state}
   end
@@ -326,7 +331,7 @@ defmodule Grav1.Projects do
       GenServer.call(__MODULE__, {:reload_project, id})
       |> load_project(false)
     end)
-    |> Grav1Web.ProjectsLive.update_projects(true)
+    |> Grav1Web.ProjectsLive.update_projects(ids, true)
   end
 
   def reload_project(id) do
@@ -335,7 +340,7 @@ defmodule Grav1.Projects do
 
   def start_projects(projects) do
     Enum.map(projects, & &1.id)
-    |> update_projects(%{state: :ready}, true)
+    |> update_projects(%{state: :ready}, true, false)
     |> reload_projects()
 
     WorkerAgent.distribute_segments()
@@ -347,7 +352,7 @@ defmodule Grav1.Projects do
 
   def stop_projects(projects) do
     Enum.map(projects, & &1.id)
-    |> update_projects(%{state: :idle}, true)
+    |> update_projects(%{state: :idle}, true, false)
     |> reload_projects()
   end
 
@@ -378,7 +383,7 @@ defmodule Grav1.Projects do
   def sync() do
     GenServer.call(__MODULE__, :sync)
     |> Map.values()
-    |> Grav1Web.ProjectsLive.update_projects(true)
+    |> Grav1Web.ProjectsLive.update_projects([], true)
   end
 
   def log(project, message) do
@@ -389,13 +394,13 @@ defmodule Grav1.Projects do
     GenServer.cast(__MODULE__, {:update_progress, project.id, status, message})
   end
 
-  def update_projects(projects, opts, save \\ false) do
-    GenServer.cast(__MODULE__, {:update, projects, opts, save})
+  def update_projects(projects, opts, save \\ false, broadcast \\ true) do
+    GenServer.cast(__MODULE__, {:update, projects, opts, save, broadcast})
     projects
   end
 
-  def update_project(project, opts, save \\ false) do
-    update_projects([project.id], opts, save)
+  def update_project(project, opts, save \\ false, broadcast \\ true) do
+    update_projects([project.id], opts, save, broadcast)
 
     log(project, "updated: " <> inspect(opts))
   end
@@ -558,10 +563,15 @@ defmodule Grav1.Projects do
           completed_segments
           |> Enum.reduce(0, &(&2 + elem(&1, 1).frames))
 
-        update_project(project, %{
-          progress_num: completed_frames,
-          progress_den: project.input_frames
-        })
+        update_project(
+          project,
+          %{
+            progress_num: completed_frames,
+            progress_den: project.input_frames
+          },
+          false,
+          false
+        )
 
         if map_size(completed_segments) == map_size(project.segments) do
           ProjectsExecutor.add_action(:concat, project)
@@ -585,7 +595,7 @@ defmodule Grav1.Projects do
       changeset = Project.changeset(project, %{state: :idle, encoder_params: params})
 
       segments_query =
-        from s in Grav1.Segment, where: s.project_id == ^id, update: [set: [filesize: 0]]
+        from(s in Grav1.Segment, where: s.project_id == ^id, update: [set: [filesize: 0]])
 
       acc
       |> Ecto.Multi.update("project:#{project.id}", changeset)

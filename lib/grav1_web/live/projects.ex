@@ -254,7 +254,7 @@ defmodule Grav1Web.ProjectsLive do
       %{
         topic: @topic,
         event: "update_projects",
-        payload: %{projects: [project], project_list: true}
+        payload: %{projects: [project], updated_projects: [project], project_list: true}
       },
       socket
     )
@@ -273,55 +273,55 @@ defmodule Grav1Web.ProjectsLive do
         %{
           topic: @topic,
           event: "update_projects",
-          payload: %{projects: projects, project_list: true}
+          payload: %{projects: projects, updated_projects: updated_projects, project_list: true}
         },
         socket
       ) do
     handle_info(
-      %{topic: @topic, event: "update_projects", payload: %{projects: projects}},
+      %{
+        topic: @topic,
+        event: "update_projects",
+        payload: %{projects: projects, updated_projects: updated_projects}
+      },
       assign(socket, projects: Projects.get_projects())
     )
   end
 
   # update only projects
   def handle_info(
-        %{topic: @topic, event: "update_projects", payload: %{projects: projects}},
+        %{
+          topic: @topic,
+          event: "update_projects",
+          payload: %{projects: projects, updated_projects: updated_projects}
+        },
         socket
       ) do
-    Enum.reduce(projects, {false, socket}, fn project, {in_selected, acc} ->
-      # send_update(Grav1Web.ProjectComponent,
-      #  id: "#{Grav1Web.ProjectComponent}:#{project.id}",
-      #  project: project
-      # )
+    selected_projects =
+      projects
+      |> Enum.filter(&Enum.any?(socket.assigns.selected_projects, fn p -> &1.id == p.id end))
 
-      # send_update(Grav1Web.ProjectSettingsComponent,
-      #  id: "#{Elixir.Grav1Web.ProjectSettingsComponent}:#{project.id}",
-      #  project: project
-      # )
-
-      if project.id in Enum.map(socket.assigns.selected_projects, & &1.id) do
-        selected_projects =
-          acc.assigns.selected_projects
-          |> Enum.filter(&(&1.id != project.id))
-          |> Enum.concat([project])
-
-        {true, assign(acc, selected_projects: selected_projects)}
-      else
-        {in_selected, acc}
+    if length(selected_projects) > 1 do
+      if socket.assigns.tab == :settings do
+        send_update(Grav1Web.ProjectSettingsMultiComponent,
+          id: "#{Elixir.Grav1Web.ProjectSettingsMultiComponent}",
+          projects: selected_projects
+        )
       end
-    end)
-    |> case do
-      {true, socket} ->
-        # send_update(Grav1Web.ProjectSettingsMultiComponent,
-        #  id: "#{Elixir.Grav1Web.ProjectSettingsMultiComponent}",
-        #  projects: socket.assigns.selected_projects
-        # )
-
-        {:noreply, socket}
-
-      {false, socket} ->
-        {:noreply, socket}
+    else
+      projects
+      |> Enum.filter(&(&1.id in updated_projects))
+      |> Enum.filter(&Enum.any?(selected_projects, fn p -> &1.id == p.id end))
+      |> Enum.each(fn project ->
+        if socket.assigns.tab == :settings do
+          send_update(Grav1Web.ProjectSettingsComponent,
+            id: "#{Elixir.Grav1Web.ProjectSettingsComponent}:#{project.id}",
+            project: project
+          )
+        end
+      end)
     end
+
+    {:noreply, assign(socket, selected_projects: selected_projects)}
   end
 
   # update only project
@@ -337,10 +337,13 @@ defmodule Grav1Web.ProjectsLive do
 
   # update only project logs
   def handle_info(%{topic: @topic, event: "log", payload: %{project: project}}, socket) do
-    # send_update(Grav1Web.ProjectLogComponent,
-    #  id: "#{Grav1Web.ProjectLogComponent}:#{project.id}",
-    #  log: project.log
-    # )
+    if socket.assigns.tab == :logs and
+         socket.assigns.selected_projects |> Enum.any?(&(&1.id == project.id)) do
+      send_update(Grav1Web.ProjectLogComponent,
+        id: "#{Grav1Web.ProjectLogComponent}:#{project.id}",
+        log: project.log
+      )
+    end
 
     {:noreply, socket}
   end
@@ -354,11 +357,13 @@ defmodule Grav1Web.ProjectsLive do
         },
         socket
       ) do
-    # send_update(Grav1Web.ProjectSegmentsComponent,
-    #  id: "#{Grav1Web.ProjectSegmentsComponent}:#{project.id}",
-    #  segments: segments,
-    #  update_action: :append
-    # )
+    if socket.assigns.tab == :segments do
+      send_update(Grav1Web.ProjectSegmentsComponent,
+        id: "#{Grav1Web.ProjectSegmentsComponent}:#{project.id}",
+        segments: segments,
+        update_action: :append
+      )
+    end
 
     {:noreply, socket}
   end
@@ -483,9 +488,10 @@ defmodule Grav1Web.ProjectsLive do
   end
 
   # update projects
-  def update_projects(projects, project_list \\ false) do
+  def update_projects(projects, updated_projects, project_list \\ false) do
     Endpoint.broadcast(@topic, "update_projects", %{
       projects: projects,
+      updated_projects: updated_projects,
       project_list: project_list
     })
 

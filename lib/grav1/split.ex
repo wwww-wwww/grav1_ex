@@ -62,7 +62,6 @@ defmodule Grav1.Split do
 
   def split(input, path_split, min_frames, max_frames, callback) do
     callback.(:log, "started split")
-
     callback.(:log, "getting keyframes")
 
     {source_keyframes, total_frames} = get_keyframes(input, callback)
@@ -79,7 +78,6 @@ defmodule Grav1.Split do
       |> ensure_total_frames(total_frames)
 
     callback.(:log, inspect(aom_keyframes))
-
     callback.(:log, "segmenting")
 
     {frames, splits, segments} =

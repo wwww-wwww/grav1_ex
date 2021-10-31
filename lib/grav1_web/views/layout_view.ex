@@ -4,8 +4,9 @@ defmodule Grav1Web.LayoutView do
   alias Grav1.Guardian
 
   def logged_in?(conn) do
-    conn |> Map.has_key?(:user) or
-      (Guardian.Plug.authenticated?(conn) and Guardian.Plug.current_resource(conn) != nil)
+    Map.has_key?(conn, :user) or
+      (Map.has_key?(conn, :private) and
+         (Guardian.Plug.authenticated?(conn) and Guardian.Plug.current_resource(conn) != nil))
   end
 
   def title(conn) do

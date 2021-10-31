@@ -45,16 +45,16 @@ select {
 }
 
 button,
-input[type=submit] {
+input[type="submit"] {
   padding: 0.25em 0.5em;
 }
 
 button:not(:disabled),
-input[type=submit]:not(:disabled) {
+input[type="submit"]:not(:disabled) {
   cursor: pointer;
 }
 
 button:not(:disabled):hover,
-input[type=submit]:not(:disabled):hover {
+input[type="submit"]:not(:disabled):hover {
   background-color: rgba(230, 230, 230, 0.5);
 }

@@ -10,12 +10,12 @@
       padding: 0.2em;
       flex: 1;
 
-      >.message {
-        >div {
+      > .message {
+        > div {
           word-wrap: anywhere;
         }
 
-        >div:nth-child(2) {
+        > div:nth-child(2) {
           display: inline-block;
         }
       }

@@ -1,10 +1,10 @@
 .Grav1Web-UserLive {
-  >div {
-    flex: 1;
+  > div {
+    flex-shrink: 0;
   }
 
   .userinfo {
-    div>span:not(:last-child) {
+    div > span:not(:last-child) {
       margin-right: 0.5em;
     }
   }

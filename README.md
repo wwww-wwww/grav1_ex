@@ -13,7 +13,6 @@ Client is located [here](https://github.com/wwww-wwww/grav1_ex_client)
 
 - elixir ~> 1.7 (Erlang/OTP ~> 21)
 - postgres
-- nodejs
 
 ### External dependencies
 
@@ -36,7 +35,6 @@ vapoursynth
 
   * Install dependencies with `mix deps.get`
   * Create and migrate your database with `mix ecto.setup`
-  * Install Node.js dependencies with `npm install` inside the `assets` directory
   * Start Phoenix endpoint with `mix phx.server`
     * Or enter the interactive shell with `iex -S mix phx.server`
 
